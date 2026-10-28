@@ -20,6 +20,7 @@ if ( $is_admin ) {
 }
 $urgent_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_tasks WHERE type = 'urgent' AND status != 'completed'" );
 $sos_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_tasks WHERE help_status = 'requested'" );
+$pending_orders_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}sgd_redemptions WHERE status = 'pending'" );
 
 $flash = sgd_get_flash();
 ?>
@@ -85,11 +86,24 @@ $flash = sgd_get_flash();
             <!-- ADMIN LIVE SOS HELP BEACON ALERT (If any employee needs help) -->
             <?php if ( $is_admin && $sos_count > 0 ): ?>
                 <a href="<?php echo esc_url( sgd_get_portal_url( 'admin' ) ); ?>" style="text-decoration:none;" title="Click to open SOS Help Dispatch Board">
-                    <div class="sgd-sos-active-alert" style="background:radial-gradient(circle, #5e1616 0%, #290808 100%); border:2px solid #ff4444; border-radius:6px; padding:6px 14px; display:flex; align-items:center; gap:10px; animation:pulse-urgent 1.2s infinite; box-shadow:0 0 15px rgba(255,68,68,0.6);">
+                    <div class="sgd-sos-active-alert" style="background:radial-gradient(circle, #5e1616 0%, #290808 100%); border:2px solid #ff4444; border-radius:6px; padding:6px 14px; display:flex; align-items:center; gap:10px; animation:pulse-urgent 1.2s infinite; box-shadow:0 0 15px rgba(255,68,68,0.5);">
                         <span style="font-size:20px;">🚨</span>
                         <div>
                             <div style="font-family:var(--font-pixel); font-size:7px; color:#ff9999; letter-spacing:1px;">SOS ALERT</div>
                             <div style="font-family:var(--font-pixel); font-size:10px; color:#fff; font-weight:bold;"><?php echo $sos_count; ?> NEED HELP ➔</div>
+                        </div>
+                    </div>
+                </a>
+            <?php endif; ?>
+
+            <!-- ADMIN CASH SHOP REDEMPTION ORDERS BADGE -->
+            <?php if ( $is_admin && $pending_orders_count > 0 ): ?>
+                <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'admin', 'tab' => 'orders' ], home_url( '/' ) ) ); ?>" style="text-decoration:none;" title="Click to review pending Cash Shop orders">
+                    <div style="background:radial-gradient(circle, #422d06 0%, #1a1202 100%); border:2px solid var(--wow-gold); border-radius:6px; padding:6px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 0 15px rgba(255,215,0,0.4);">
+                        <span style="font-size:20px;">🎁</span>
+                        <div>
+                            <div style="font-family:var(--font-pixel); font-size:7px; color:#ffd700; letter-spacing:1px;">SHOP ORDERS</div>
+                            <div style="font-family:var(--font-pixel); font-size:10px; color:#fff; font-weight:bold;"><?php echo $pending_orders_count; ?> PENDING ➔</div>
                         </div>
                     </div>
                 </a>

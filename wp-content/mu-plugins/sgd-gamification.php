@@ -632,6 +632,15 @@ function sgd_handle_form_actions() {
             'notes'          => sanitize_textarea_field( $_POST['redeem_notes'] ?? '' ),
             'created_at'     => current_time( 'mysql' ),
         ] );
+        $new_order_id = $wpdb->insert_id;
+
+        // Send Email Notification to Admin
+        $admin_email = get_option( 'admin_email' );
+        $buyer = get_user_by( 'id', $current_user_id );
+        $buyer_name = $buyer ? $buyer->display_name : 'Employee #' . $current_user_id;
+        $order_subject = "🎁 [CASH SHOP ORDER] {$buyer_name} redeemed: {$item['name']} ({$cost} 💎)";
+        $order_body = "Guild Master Alert,\n\nEmployee {$buyer_name} ({$buyer->user_email}) has placed a new Cash Shop order!\n\nOrder ID: #{$new_order_id}\nItem: {$item['name']}\nDiamonds Deducted: " . number_format($cost) . " 💎\nOrder Time: " . current_time('mysql') . "\n\nPlease review and approve this order in the Admin Command Center:\n" . add_query_arg(['sgd_page' => 'admin', 'tab' => 'orders'], home_url('/')) . "\n";
+        @wp_mail( $admin_email, $order_subject, $order_body );
 
         // Award "Goblin Trader" achievement
         $ach_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}sgd_achievements WHERE slug = %s", 'shop_baron' ) );
@@ -841,6 +850,49 @@ function sgd_handle_form_actions() {
                 $extra_args['view_employee'] = $target_user_id;
             }
             wp_safe_redirect( add_query_arg( $extra_args, home_url( '/' ) ) );
+            exit;
+        }
+
+        // Admin Approve Cash Shop Redemption
+        if ( $action === 'sgd_admin_approve_redemption' ) {
+            $order_id = (int) ( $_POST['order_id'] ?? 0 );
+            $notes = sanitize_textarea_field( $_POST['admin_notes'] ?? 'Order fulfilled & delivered.' );
+            $table_redemptions = $wpdb->prefix . 'sgd_redemptions';
+
+            if ( $order_id ) {
+                $wpdb->update( $table_redemptions, [
+                    'status' => 'approved',
+                    'notes'  => $notes,
+                ], [ 'id' => $order_id ] );
+                sgd_set_flash( 'celebration', "✅ Cash Shop Order #{$order_id} marked as APPROVED & FULFILLED!" );
+            }
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'admin', 'tab' => 'orders' ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // Admin Reject Cash Shop Redemption (with automatic Diamond refund)
+        if ( $action === 'sgd_admin_reject_redemption' ) {
+            $order_id = (int) ( $_POST['order_id'] ?? 0 );
+            $reason = sanitize_textarea_field( $_POST['admin_notes'] ?? 'Order declined.' );
+            $table_redemptions = $wpdb->prefix . 'sgd_redemptions';
+
+            if ( $order_id ) {
+                $order = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_redemptions WHERE id = %d", $order_id ) );
+                if ( $order && $order->status !== 'rejected' ) {
+                    // Refund diamonds back to employee
+                    sgd_add_diamonds( $order->user_id, $order->diamonds_spent );
+
+                    $wpdb->update( $table_redemptions, [
+                        'status' => 'rejected',
+                        'notes'  => 'Rejected: ' . $reason . ' (Diamonds refunded)',
+                    ], [ 'id' => $order_id ] );
+
+                    $buyer = get_user_by( 'id', $order->user_id );
+                    $buyer_name = $buyer ? $buyer->display_name : 'Employee';
+                    sgd_set_flash( 'error', "❌ Order #{$order_id} rejected. Refunded +{$order->diamonds_spent} 💎 back to {$buyer_name}'s treasury." );
+                }
+            }
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'admin', 'tab' => 'orders' ], home_url( '/' ) ) );
             exit;
         }
     }

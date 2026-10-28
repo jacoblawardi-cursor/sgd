@@ -19,6 +19,7 @@ if ( current_user_can( 'administrator' ) ) {
 $urgent_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_tasks WHERE type = 'urgent' AND status != 'completed'" );
 $is_admin = current_user_can( 'administrator' );
 $sos_requests = $is_admin ? $wpdb->get_results( "SELECT * FROM $table_tasks WHERE help_status = 'requested' ORDER BY need_help_time DESC" ) : [];
+$pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}sgd_redemptions WHERE status = 'pending'" ) : 0;
 ?>
 
 <div class="sgd-main-menu-container">
@@ -133,6 +134,21 @@ $sos_requests = $is_admin ? $wpdb->get_results( "SELECT * FROM $table_tasks WHER
                 <div class="sgd-menu-btn-content">
                     <span class="sgd-menu-btn-label" style="color:#ffd700;">ADMIN COMMAND CENTER</span>
                     <span class="sgd-menu-btn-desc">Add/Edit/Delete Tasks • Dispatch Help • Manage Employee Achievements & Diamonds</span>
+                </div>
+                <span class="sgd-menu-btn-arrow" style="color:#ffd700;">➔</span>
+            </a>
+
+            <!-- ADMIN DIRECT SHORTCUT TO CASH SHOP ORDERS -->
+            <a href="<?php echo esc_url( add_query_arg(['sgd_page' => 'admin', 'tab' => 'orders'], home_url('/')) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #2b1f07 0%, #110c02 100%); border-color:#ffd700;">
+                <span class="sgd-menu-btn-icon" style="border-color:#ffd700;">🎁</span>
+                <div class="sgd-menu-btn-content">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="sgd-menu-btn-label" style="color:#ffd700;">CASH SHOP ORDERS & APPROVALS</span>
+                        <?php if ( $pending_orders_count > 0 ): ?>
+                            <span class="sgd-pill-count" style="background:#e67e22; border-color:#f39c12;"><?php echo $pending_orders_count; ?> Pending</span>
+                        <?php endif; ?>
+                    </div>
+                    <span class="sgd-menu-btn-desc">Review employee reward claims (IDR 200k, leave, holidays), fulfill orders, or refund diamonds</span>
                 </div>
                 <span class="sgd-menu-btn-arrow" style="color:#ffd700;">➔</span>
             </a>

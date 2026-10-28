@@ -23,6 +23,10 @@ $all_tasks = $wpdb->get_results( "SELECT * FROM $table_tasks ORDER BY type DESC,
 $completed_proofs = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE status = 'completed' AND proof_image_url IS NOT NULL AND proof_image_url != '' ORDER BY completed_time DESC" );
 $admin_tab = sanitize_text_field( $_GET['tab'] ?? '' );
 
+// Cash Shop Redemptions
+$all_orders = $wpdb->get_results( "SELECT * FROM $table_redemptions ORDER BY id DESC" );
+$pending_orders_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_redemptions WHERE status = 'pending'" );
+
 // All achievements
 $achievements = $wpdb->get_results( "SELECT * FROM $table_ach ORDER BY id ASC" );
 
@@ -87,6 +91,9 @@ foreach ( $emp_unlocked_raw as $eu ) {
         </button>
         <button type="button" class="sgd-admin-subtab <?php echo ( $edit_ach || isset($_GET['view_employee']) || ( empty( $sos_requests ) && ! $edit_task && $admin_tab !== 'proofs' ) ) ? 'active' : ''; ?>" data-target="admin-sec-achievements">
             🏆 Employee Achievements Manager
+        </button>
+        <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'orders' ) ? 'active' : ''; ?>" data-target="admin-sec-orders">
+            🎁 Cash Shop Orders (<?php echo $pending_orders_count; ?>)
         </button>
         <button type="button" class="sgd-admin-subtab" data-target="admin-sec-users">
             💎 Diamonds Treasury
@@ -592,6 +599,117 @@ foreach ( $emp_unlocked_raw as $eu ) {
                 </button>
             </form>
         </div>
+    </div>
+
+    <!-- 4. CASH SHOP REDEMPTION ORDERS BOARD -->
+    <div id="admin-sec-orders" class="sgd-admin-section" style="<?php echo ( $admin_tab === 'orders' ) ? 'display:block;' : 'display:none;'; ?>">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+            <div>
+                <h3 style="font-family:var(--font-title); font-size:18px; color:var(--wow-gold-light);">
+                    🎁 Goblin Cash Shop Redemption Requests & Approvals
+                </h3>
+                <p style="color:#8fa0bd; font-size:12px; margin-top:2px;">
+                    Review employee reward redemptions (cash vouchers, paid leaves, holiday trips), fulfill requests, or reject with automatic diamond refund.
+                </p>
+            </div>
+            <span style="background:#111522; border:1px solid var(--wow-gold); padding:4px 10px; border-radius:4px; font-family:var(--font-pixel); font-size:9px; color:#ffd700;">
+                PENDING APPROVAL: <?php echo $pending_orders_count; ?>
+            </span>
+        </div>
+
+        <?php if ( empty( $all_orders ) ): ?>
+            <div style="background:#161c28; border:1px solid #2f3c55; padding:35px; text-align:center; border-radius:6px; color:#8fa0bd;">
+                🎁 No redemption orders have been placed yet. When employees trade diamonds in the Cash Shop, their orders appear here for processing!
+            </div>
+        <?php else: ?>
+            <div style="background:#111420; border:2px solid var(--wow-gold-border); border-radius:8px; overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                    <thead>
+                        <tr style="background:#090b12; border-bottom:2px solid var(--wow-gold); font-family:var(--font-pixel); font-size:8px; color:var(--wow-gold-light);">
+                            <th style="padding:10px 14px;">ORDER #</th>
+                            <th style="padding:10px 14px;">DATE</th>
+                            <th style="padding:10px 14px;">EMPLOYEE</th>
+                            <th style="padding:10px 14px;">REWARD ITEM</th>
+                            <th style="padding:10px 14px;">DIAMONDS</th>
+                            <th style="padding:10px 14px;">STATUS</th>
+                            <th style="padding:10px 14px;">EMPLOYEE NOTES</th>
+                            <th style="padding:10px 14px; text-align:right;">ADMIN ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $all_orders as $ord ): 
+                            $order_emp = get_user_by( 'id', $ord->user_id );
+                            $is_pending = ( $ord->status === 'pending' );
+                            $is_approved = ( $ord->status === 'approved' );
+                        ?>
+                            <tr style="border-bottom:1px solid #1f2538; <?php echo $is_pending ? 'background:rgba(230, 126, 34, 0.08);' : ''; ?>">
+                                <td style="padding:10px 14px; font-family:var(--font-pixel); font-size:9px; color:#8fa0bd;">
+                                    #<?php echo $ord->id; ?>
+                                </td>
+                                <td style="padding:10px 14px; color:#ddd; font-size:12px; white-space:nowrap;">
+                                    <?php echo esc_html( $ord->created_at ); ?>
+                                </td>
+                                <td style="padding:10px 14px; font-weight:bold; color:#fff;">
+                                    <?php echo $order_emp ? esc_html( $order_emp->display_name ) : 'Employee #' . $ord->user_id; ?>
+                                    <div style="font-size:11px; color:#8fa0bd; font-weight:normal;"><?php echo $order_emp ? esc_html( $order_emp->user_email ) : ''; ?></div>
+                                </td>
+                                <td style="padding:10px 14px; color:#ffd700; font-weight:bold;">
+                                    <?php echo esc_html( $ord->item_name ); ?>
+                                </td>
+                                <td style="padding:10px 14px; color:#00e5ff; font-family:var(--font-pixel); font-size:9px; white-space:nowrap;">
+                                    -<?php echo number_format( $ord->diamonds_spent ); ?> 💎
+                                </td>
+                                <td style="padding:10px 14px;">
+                                    <?php if ( $is_pending ): ?>
+                                        <span class="sgd-status-badge" style="background:#e67e22; color:#fff; animation:pulse-urgent 1.5s infinite;">
+                                            ⏳ PENDING
+                                        </span>
+                                    <?php elseif ( $is_approved ): ?>
+                                        <span class="sgd-status-badge" style="background:#27ae60; color:#fff;">
+                                            ✅ FULFILLED
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="sgd-status-badge" style="background:#c0392b; color:#fff;">
+                                            ❌ REJECTED
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding:10px 14px; font-size:12px; color:#ccc;">
+                                    <?php echo esc_html( $ord->notes ? $ord->notes : '-' ); ?>
+                                </td>
+                                <td style="padding:10px 14px; text-align:right;">
+                                    <?php if ( $is_pending ): ?>
+                                        <div style="display:inline-flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                                            <!-- APPROVE ACTION -->
+                                            <form method="post" style="display:inline;" onsubmit="return confirm('Approve and fulfill this Cash Shop order?');">
+                                                <input type="hidden" name="sgd_action" value="sgd_admin_approve_redemption">
+                                                <input type="hidden" name="order_id" value="<?php echo $ord->id; ?>">
+                                                <input type="hidden" name="admin_notes" value="Approved by Admin">
+                                                <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-green" style="font-size:7px; padding:4px 8px;">
+                                                    ✅ Approve & Fulfill
+                                                </button>
+                                            </form>
+
+                                            <!-- REJECT ACTION (REFUNDS DIAMONDS) -->
+                                            <form method="post" style="display:inline;" onsubmit="return confirm('Reject order and REFUND <?php echo number_format($ord->diamonds_spent); ?> diamonds back to employee?');">
+                                                <input type="hidden" name="sgd_action" value="sgd_admin_reject_redemption">
+                                                <input type="hidden" name="order_id" value="<?php echo $ord->id; ?>">
+                                                <input type="hidden" name="admin_notes" value="Declined by Admin">
+                                                <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-red" style="font-size:7px; padding:4px 8px;">
+                                                    ❌ Reject & Refund
+                                                </button>
+                                            </form>
+                                        </div>
+                                    <?php else: ?>
+                                        <span style="color:#777; font-size:11px;">Processed</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
     </div>
 
     <!-- 5. SUBMITTED PHOTO PROOFS GALLERY -->
