@@ -1,0 +1,6 @@
+latest.zip
+wp-cli.phar
+wordpress/
+*.log
+.DS_Store
+Thumbs.db
