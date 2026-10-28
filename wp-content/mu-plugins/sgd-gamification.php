@@ -391,7 +391,51 @@ function sgd_check_achievements( $user_id ) {
                 if ( $ach->reward_diamonds > 0 ) {
                     sgd_add_diamonds( $user_id, $ach->reward_diamonds );
                 }
+                // Queue gilded achievement unlocked notification for the employee
+                sgd_queue_achievement_alert( $user_id, $ach->id );
             }
+        }
+    }
+}
+
+// Queue and retrieve gilded achievement celebration alerts for employees
+function sgd_queue_achievement_alert( $user_id, $achievement_id ) {
+    $alerts = get_user_meta( $user_id, 'sgd_pending_achievement_alerts', true );
+    if ( ! is_array( $alerts ) ) {
+        $alerts = [];
+    }
+    if ( ! in_array( (int) $achievement_id, $alerts ) ) {
+        $alerts[] = (int) $achievement_id;
+        update_user_meta( $user_id, 'sgd_pending_achievement_alerts', $alerts );
+    }
+}
+
+function sgd_get_pending_achievement_alerts( $user_id ) {
+    $alerts = get_user_meta( $user_id, 'sgd_pending_achievement_alerts', true );
+    if ( empty( $alerts ) || ! is_array( $alerts ) ) {
+        return [];
+    }
+    global $wpdb;
+    $table_ach = $wpdb->prefix . 'sgd_achievements';
+    $placeholders = implode( ',', array_fill( 0, count( $alerts ), '%d' ) );
+    return $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM $table_ach WHERE id IN ($placeholders)",
+        ...$alerts
+    ) );
+}
+
+function sgd_dismiss_achievement_alerts( $user_id, $achievement_id = 0 ) {
+    if ( ! $achievement_id ) {
+        delete_user_meta( $user_id, 'sgd_pending_achievement_alerts' );
+        return;
+    }
+    $alerts = get_user_meta( $user_id, 'sgd_pending_achievement_alerts', true );
+    if ( is_array( $alerts ) ) {
+        $alerts = array_diff( $alerts, [ (int) $achievement_id ] );
+        if ( empty( $alerts ) ) {
+            delete_user_meta( $user_id, 'sgd_pending_achievement_alerts' );
+        } else {
+            update_user_meta( $user_id, 'sgd_pending_achievement_alerts', array_values( $alerts ) );
         }
     }
 }
@@ -434,6 +478,35 @@ function sgd_handle_form_actions() {
             sgd_set_flash( 'success', 'Switched character to: ' . esc_html( $user->display_name ) );
         }
         wp_safe_redirect( sgd_get_portal_url() );
+        exit;
+    }
+
+    // Dismiss Gilded Achievement Alert
+    if ( $action === 'sgd_dismiss_achievement_alert' ) {
+        $ach_id = (int) ( $_POST['achievement_id'] ?? 0 );
+        sgd_dismiss_achievement_alerts( $current_user_id, $ach_id );
+        if ( ! empty( $_POST['is_ajax'] ) ) {
+            wp_send_json_success( [ 'dismissed' => $ach_id ] );
+        }
+        $redirect_to = sanitize_text_field( $_POST['redirect_to'] ?? '' );
+        wp_safe_redirect( sgd_get_portal_url( $redirect_to ) );
+        exit;
+    }
+
+    // Trigger Demo Gilded Achievement Alert (for previewing gilded fanfare)
+    if ( $action === 'sgd_demo_achievement_alert' ) {
+        $demo_ach_id = (int) ( $_POST['achievement_id'] ?? 0 );
+        if ( ! $demo_ach_id ) {
+            $sample_ach = $wpdb->get_row( "SELECT id FROM {$wpdb->prefix}sgd_achievements ORDER BY id ASC LIMIT 1" );
+            if ( $sample_ach ) {
+                $demo_ach_id = $sample_ach->id;
+            }
+        }
+        if ( $demo_ach_id ) {
+            sgd_queue_achievement_alert( $current_user_id, $demo_ach_id );
+        }
+        $redirect_to = sanitize_text_field( $_POST['redirect_to'] ?? 'achievements' );
+        wp_safe_redirect( sgd_get_portal_url( $redirect_to ) );
         exit;
     }
 
@@ -590,6 +663,9 @@ function sgd_handle_form_actions() {
 
         // Award diamonds
         sgd_add_diamonds( $current_user_id, $reward );
+
+        // Check and award automatic achievements (and queue gilded alerts)
+        sgd_check_achievements( $current_user_id );
 
         sgd_set_flash( 'celebration', "🏆 QUEST ACCOMPLISHED! You delivered proof of honor and earned +{$reward} Diamonds! 💎" );
         $redirect_tab = ( $task->type === 'urgent' ) ? 'urgent' : 'daily';
@@ -755,6 +831,8 @@ function sgd_handle_form_actions() {
                         'achievement_id' => $grant_ach,
                         'unlocked_at'    => current_time( 'mysql' ),
                     ] );
+                    // Queue gilded celebration for employee
+                    sgd_queue_achievement_alert( $target_user_id, $grant_ach );
                 }
 
                 sgd_set_flash( 'success', 'Hero record & Treasury balance updated.' );
@@ -835,6 +913,8 @@ function sgd_handle_form_actions() {
                     if ( isset( $_POST['award_bonus'] ) && $_POST['award_bonus'] === 'yes' && $ach && $ach->reward_diamonds > 0 ) {
                         sgd_add_diamonds( $target_user_id, $ach->reward_diamonds );
                     }
+                    // Queue gilded celebration for employee
+                    sgd_queue_achievement_alert( $target_user_id, $ach_id );
                     sgd_set_flash( 'celebration', "🎖️ Granted [{$ach->title}] to {$target_user->display_name}!" );
                 } else {
                     $wpdb->delete( $table_user_ach, [

@@ -147,13 +147,22 @@ $all_users = get_users();
     </div>
 </div>
 
-<!-- QUICK ACCESS TO QUEST REWARD TASKS -->
+<!-- QUICK ACCESS TO QUEST REWARD TASKS & GILDED CELEBRATION DEMO -->
 <div style="background:#0d111d; border:2px solid var(--wow-gold); border-radius:8px; padding:16px 20px; margin-bottom:25px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
     <div>
-        <div style="font-family:var(--font-pixel); font-size:9px; color:var(--wow-gold-light);">QUEST BOARD ACTIONS:</div>
-        <div style="font-size:13px; color:#a8b6cc; margin-top:3px;">Earn more diamonds by conquering Daily Duties (+200 💎) or Urgent Bounties (+1,000 💎)!</div>
+        <div style="font-family:var(--font-pixel); font-size:9px; color:var(--wow-gold-light);">QUEST BOARD ACTIONS & MORALE SUITE:</div>
+        <div style="font-size:13px; color:#a8b6cc; margin-top:3px;">Earn diamonds by conquering Daily Duties (+200 💎) or Urgent Bounties (+1,000 💎)! Unlocking achievements triggers the gilded celebration!</div>
     </div>
-    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <!-- 1-Click Gilded Celebration Fanfare Test / Demo -->
+        <form method="post" style="display:inline;">
+            <input type="hidden" name="sgd_action" value="sgd_demo_achievement_alert">
+            <input type="hidden" name="redirect_to" value="achievements">
+            <button type="submit" class="sgd-btn sgd-btn-gold" style="box-shadow:0 0 14px rgba(255,215,0,0.6);" title="Preview the gilded celebration popup and audio fanfare">
+                ✨ Preview Gilded Celebration
+            </button>
+        </form>
+
         <a href="<?php echo esc_url( sgd_get_portal_url( 'daily' ) ); ?>" class="sgd-btn sgd-btn-blue">
             📜 DAILY TASK (+200 💎)
         </a>

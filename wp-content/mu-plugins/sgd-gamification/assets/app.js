@@ -62,6 +62,19 @@ document.addEventListener('DOMContentLoaded', function() {
             this.playTone(880, 'sawtooth', 0.15, 0);
             this.playTone(440, 'sawtooth', 0.2, 0.15);
             this.playTone(880, 'sawtooth', 0.15, 0.35);
+        },
+
+        playAchievementFanfare: function() {
+            // World of Warcraft grand golden achievement fanfare
+            const notes = [
+                { f: 523.25, type: 'triangle', d: 0.15, t: 0 },       // C5
+                { f: 659.25, type: 'triangle', d: 0.15, t: 0.12 },    // E5
+                { f: 783.99, type: 'triangle', d: 0.18, t: 0.24 },    // G5
+                { f: 1046.50, type: 'square', d: 0.38, t: 0.38 },     // C6 (Triumph Peak)
+                { f: 1318.51, type: 'triangle', d: 0.65, t: 0.48 },   // E6
+                { f: 1567.98, type: 'sine', d: 0.85, t: 0.54 }        // G6 Shimmer
+            ];
+            notes.forEach(n => this.playTone(n.f, n.type || 'square', n.d, n.t));
         }
     };
 
@@ -84,6 +97,31 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.querySelector('.sgd-flash-celebration')) {
         AudioEngine.playVictoryFanfare();
     }
+
+    // Auto-play Gilded Achievement Fanfare if Gilded Overlay is active
+    const gildedCelebration = document.querySelector('.sgd-gilded-celebration-backdrop');
+    if (gildedCelebration) {
+        setTimeout(() => AudioEngine.playAchievementFanfare(), 300);
+
+        // Fallback play if browser requires click
+        document.addEventListener('click', function playOnce() {
+            AudioEngine.playAchievementFanfare();
+            document.removeEventListener('click', playOnce);
+        }, { once: true });
+    }
+
+    // Gilded Claim button smooth transition
+    document.querySelectorAll('.sgd-gilded-dismiss-form').forEach(form => {
+        form.addEventListener('submit', function() {
+            AudioEngine.playAchievementFanfare();
+            const backdrop = this.closest('.sgd-gilded-celebration-backdrop');
+            if (backdrop) {
+                backdrop.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
+                backdrop.style.opacity = '0';
+                backdrop.style.transform = 'scale(1.05)';
+            }
+        });
+    });
 
     // Auto-play SOS alert audio if Admin is viewing page and an active SOS exists
     if (document.querySelector('.sgd-sos-active-alert')) {

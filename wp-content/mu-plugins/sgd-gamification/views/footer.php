@@ -4,6 +4,80 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 </div><!-- .sgd-container -->
 
+<?php
+$current_user_id = get_current_user_id();
+$pending_achievements = $current_user_id ? sgd_get_pending_achievement_alerts( $current_user_id ) : [];
+?>
+
+<?php if ( ! empty( $pending_achievements ) ): ?>
+    <?php foreach ( $pending_achievements as $ach_alert ): ?>
+        <!-- GILDED WORLD OF WARCRAFT ACHIEVEMENT UNLOCKED OVERLAY -->
+        <div class="sgd-gilded-celebration-backdrop" id="sgd-gilded-alert-<?php echo esc_attr( $ach_alert->id ); ?>">
+            <div class="sgd-gilded-sunburst"></div>
+            <div class="sgd-gilded-sparks-container">
+                <span class="sgd-spark spark-1">✨</span>
+                <span class="sgd-spark spark-2">⭐</span>
+                <span class="sgd-spark spark-3">✦</span>
+                <span class="sgd-spark spark-4">🌟</span>
+                <span class="sgd-spark spark-5">✧</span>
+                <span class="sgd-spark spark-6">✨</span>
+            </div>
+
+            <div class="sgd-gilded-achievement-box">
+                <!-- Ornate corner filigrees -->
+                <div class="sgd-gilded-corner corner-tl">⚜️</div>
+                <div class="sgd-gilded-corner corner-tr">⚜️</div>
+                <div class="sgd-gilded-corner corner-bl">⚜️</div>
+                <div class="sgd-gilded-corner corner-br">⚜️</div>
+
+                <!-- Shield Crest Header -->
+                <div class="sgd-gilded-shield-wrap">
+                    <div class="sgd-gilded-crest-shield">
+                        <span class="sgd-gilded-crest-icon"><?php echo esc_html( $ach_alert->icon ?: '🏆' ); ?></span>
+                    </div>
+                </div>
+
+                <div class="sgd-gilded-badge-header">
+                    ★ GUILD FEAT OF STRENGTH ★
+                </div>
+
+                <h2 class="sgd-gilded-main-title">
+                    ✨ ACHIEVEMENT UNLOCKED! ✨
+                </h2>
+
+                <div class="sgd-gilded-divider"></div>
+
+                <div class="sgd-gilded-ach-name">
+                    « <?php echo esc_html( $ach_alert->title ); ?> »
+                </div>
+
+                <p class="sgd-gilded-ach-desc">
+                    <?php echo esc_html( $ach_alert->description ); ?>
+                </p>
+
+                <?php if ( $ach_alert->reward_diamonds > 0 ): ?>
+                    <div class="sgd-gilded-reward-pill">
+                        <span style="font-size:18px;">💎</span>
+                        <span>+<?php echo number_format( $ach_alert->reward_diamonds ); ?> DIAMONDS AWARDED!</span>
+                        <span style="font-size:18px;">💎</span>
+                    </div>
+                <?php endif; ?>
+
+                <div class="sgd-gilded-footer-actions">
+                    <form method="post" class="sgd-gilded-dismiss-form">
+                        <input type="hidden" name="sgd_action" value="sgd_dismiss_achievement_alert">
+                        <input type="hidden" name="achievement_id" value="<?php echo esc_attr( $ach_alert->id ); ?>">
+                        <input type="hidden" name="redirect_to" value="<?php echo esc_attr( sanitize_text_field( $_GET['sgd_page'] ?? '' ) ); ?>">
+                        <button type="submit" class="sgd-gilded-claim-btn">
+                            🏆 CLAIM GLORY & ACCEPT HONOR 🏆
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
+<?php endif; ?>
+
 <!-- PHOTO PROOF UPLOAD MODAL FOR "FINISH JOB" -->
 <div class="sgd-modal-backdrop" id="sgd-finish-modal">
     <div class="sgd-modal-box">

@@ -331,6 +331,9 @@ foreach ( $emp_unlocked_raw as $eu ) {
                     <p style="color:#9cb3c9; font-size:12px; margin-top:2px;">
                         Select an employee to see which achievements they hold, grant new ones, or revoke existing ones.
                     </p>
+                    <div style="margin-top:4px; font-size:11px; color:#ffd700; font-family:var(--font-pixel);">
+                        ✨ MORALE BOOST: Granting an achievement triggers a spectacular Gilded WoW Celebration & Fanfare on their screen!
+                    </div>
                 </div>
                 
                 <!-- Employee Selector Form -->
