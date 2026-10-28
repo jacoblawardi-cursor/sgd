@@ -136,6 +136,16 @@ $sos_requests = $is_admin ? $wpdb->get_results( "SELECT * FROM $table_tasks WHER
                 </div>
                 <span class="sgd-menu-btn-arrow" style="color:#ffd700;">➔</span>
             </a>
+
+            <!-- ADMIN DIRECT SHORTCUT TO SUBMITTED PHOTO PROOFS -->
+            <a href="<?php echo esc_url( add_query_arg(['sgd_page' => 'admin', 'tab' => 'proofs'], home_url('/')) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #172417 0%, #0a140a 100%); border-color:#2ecc71;">
+                <span class="sgd-menu-btn-icon" style="border-color:#2ecc71;">📸</span>
+                <div class="sgd-menu-btn-content">
+                    <span class="sgd-menu-btn-label" style="color:#2ecc71;">REVIEW PHOTO PROOFS</span>
+                    <span class="sgd-menu-btn-desc">Inspect all photos and screenshots submitted by employees for completed jobs</span>
+                </div>
+                <span class="sgd-menu-btn-arrow" style="color:#2ecc71;">➔</span>
+            </a>
         <?php endif; ?>
 
     </div>

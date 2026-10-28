@@ -207,4 +207,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Auto-activate tab from query param e.g. ?tab=proofs
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab')) {
+        const targetTab = document.querySelector(`.sgd-admin-subtab[data-target="admin-sec-${urlParams.get('tab')}"]`);
+        if (targetTab) targetTab.click();
+    }
 });

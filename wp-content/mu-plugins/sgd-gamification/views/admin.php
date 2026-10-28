@@ -19,6 +19,10 @@ $dispatched_requests = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE hel
 // All tasks for CRUD
 $all_tasks = $wpdb->get_results( "SELECT * FROM $table_tasks ORDER BY type DESC, id DESC" );
 
+// Completed photo proofs
+$completed_proofs = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE status = 'completed' AND proof_image_url IS NOT NULL AND proof_image_url != '' ORDER BY completed_time DESC" );
+$admin_tab = sanitize_text_field( $_GET['tab'] ?? '' );
+
 // All achievements
 $achievements = $wpdb->get_results( "SELECT * FROM $table_ach ORDER BY id ASC" );
 
@@ -75,20 +79,20 @@ foreach ( $emp_unlocked_raw as $eu ) {
     
     <!-- SUBTAB NAV -->
     <div class="sgd-admin-tab-nav">
-        <button type="button" class="sgd-admin-subtab <?php echo ( ! $edit_task && ! $edit_ach && ! empty( $sos_requests ) ) ? 'active' : ''; ?>" data-target="admin-sec-sos">
+        <button type="button" class="sgd-admin-subtab <?php echo ( ! $edit_task && ! $edit_ach && $admin_tab !== 'proofs' && ! empty( $sos_requests ) ) ? 'active' : ''; ?>" data-target="admin-sec-sos">
             🚨 SOS Help Dispatch (<?php echo count( $sos_requests ); ?>)
         </button>
         <button type="button" class="sgd-admin-subtab <?php echo ( $edit_task ) ? 'active' : ''; ?>" data-target="admin-sec-tasks">
             📜 Manage Quests (Add / Edit / Delete)
         </button>
-        <button type="button" class="sgd-admin-subtab <?php echo ( $edit_ach || isset($_GET['view_employee']) || ( empty( $sos_requests ) && ! $edit_task ) ) ? 'active' : ''; ?>" data-target="admin-sec-achievements">
+        <button type="button" class="sgd-admin-subtab <?php echo ( $edit_ach || isset($_GET['view_employee']) || ( empty( $sos_requests ) && ! $edit_task && $admin_tab !== 'proofs' ) ) ? 'active' : ''; ?>" data-target="admin-sec-achievements">
             🏆 Employee Achievements Manager
         </button>
         <button type="button" class="sgd-admin-subtab" data-target="admin-sec-users">
             💎 Diamonds Treasury
         </button>
-        <button type="button" class="sgd-admin-subtab" data-target="admin-sec-proofs">
-            📸 Submitted Photo Proofs
+        <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'proofs' ) ? 'active' : ''; ?>" data-target="admin-sec-proofs">
+            📸 Submitted Photo Proofs (<?php echo count( $completed_proofs ); ?>)
         </button>
     </div>
 
@@ -270,6 +274,13 @@ foreach ( $emp_unlocked_raw as $eu ) {
                                 <span class="sgd-status-badge sgd-status-<?php echo esc_attr( $t->status ); ?>">
                                     <?php echo strtoupper( esc_html( $t->status ) ); ?>
                                 </span>
+                                <?php if ( $t->status === 'completed' && ! empty( $t->proof_image_url ) ): ?>
+                                    <div style="margin-top:6px;">
+                                        <a href="<?php echo esc_url( $t->proof_image_url ); ?>" target="_blank" class="sgd-btn sgd-btn-sm sgd-btn-green" style="font-size:7px; padding:3px 8px; text-decoration:none;" title="View uploaded photo proof">
+                                            📷 View Proof
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             <td style="padding:10px 14px;">
                                 <?php if ( $t->help_status === 'requested' ): ?>
@@ -584,40 +595,69 @@ foreach ( $emp_unlocked_raw as $eu ) {
     </div>
 
     <!-- 5. SUBMITTED PHOTO PROOFS GALLERY -->
-    <div id="admin-sec-proofs" class="sgd-admin-section" style="display:none;">
-        <h3 style="font-family:var(--font-title); font-size:18px; color:var(--wow-gold-light); margin-bottom:15px;">
-            📸 Verified Photo Proof Gallery
-        </h3>
-
-        <?php
-        $completed_proofs = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE status = 'completed' AND proof_image_url IS NOT NULL AND proof_image_url != '' ORDER BY completed_time DESC" );
-        ?>
+    <div id="admin-sec-proofs" class="sgd-admin-section" style="<?php echo ( $admin_tab === 'proofs' ) ? 'display:block;' : 'display:none;'; ?>">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+            <div>
+                <h3 style="font-family:var(--font-title); font-size:18px; color:var(--wow-gold-light);">
+                    📸 Verified Photo Proof Gallery (Completed Jobs)
+                </h3>
+                <p style="color:#8fa0bd; font-size:12px; margin-top:2px;">
+                    Review photos and screenshots submitted by employees as proof of finished daily and urgent tasks.
+                </p>
+            </div>
+            <span style="background:#111522; border:1px solid var(--wow-gold); padding:4px 10px; border-radius:4px; font-family:var(--font-pixel); font-size:9px; color:#ffd700;">
+                TOTAL PROOFS: <?php echo count( $completed_proofs ); ?>
+            </span>
+        </div>
 
         <?php if ( empty( $completed_proofs ) ): ?>
-            <div style="background:#161c28; border:1px solid #2f3c55; padding:20px; text-align:center; border-radius:6px; color:#8fa0bd;">
-                No photo proofs uploaded yet. Complete a task and attach a screenshot to test!
+            <div style="background:#161c28; border:1px solid #2f3c55; padding:35px; text-align:center; border-radius:6px; color:#8fa0bd;">
+                📷 No photo proofs uploaded yet. When an employee completes a job and uploads their photo proof, it will appear here for verification!
             </div>
         <?php else: ?>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
                 <?php foreach ( $completed_proofs as $cp ): 
                     $cp_user = get_user_by( 'id', $cp->completed_by );
                 ?>
-                    <div style="background:#151824; border:2px solid var(--wow-gold-border); border-radius:6px; padding:12px; display:flex; flex-direction:column; gap:8px;">
-                        <a href="<?php echo esc_url( $cp->proof_image_url ); ?>" target="_blank" title="Click to view full image">
-                            <img src="<?php echo esc_url( $cp->proof_image_url ); ?>" alt="Proof" style="width:100%; height:160px; object-fit:cover; border-radius:4px; border:1px solid #444;">
-                        </a>
-                        <div style="font-family:var(--font-title); font-weight:bold; color:#fff; font-size:14px;">
-                            <?php echo esc_html( $cp->title ); ?>
-                        </div>
-                        <div style="font-size:12px; color:#8fa0bd;">
-                            Hero: <strong><?php echo $cp_user ? esc_html( $cp_user->display_name ) : 'Employee'; ?></strong><br>
-                            Time: <?php echo esc_html( $cp->completed_time ); ?>
-                        </div>
-                        <?php if ( ! empty( $cp->proof_notes ) ): ?>
-                            <div style="font-style:italic; font-size:12px; color:#aaa; background:#0c0e14; padding:6px; border-radius:4px;">
-                                "<?php echo esc_html( $cp->proof_notes ); ?>"
+                    <div style="background:#151824; border:2px solid var(--wow-gold-border); border-radius:8px; padding:15px; display:flex; flex-direction:column; justify-content:space-between; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.7);">
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span class="sgd-quest-type-tag <?php echo $cp->type === 'urgent' ? 'sgd-tag-urgent' : 'sgd-tag-daily'; ?>" style="font-size:7px;">
+                                    <?php echo strtoupper( esc_html( $cp->type ) ); ?> TASK
+                                </span>
+                                <span style="font-family:var(--font-pixel); font-size:9px; color:#00e5ff;">
+                                    +<?php echo (int) $cp->reward_diamonds; ?> 💎
+                                </span>
                             </div>
-                        <?php endif; ?>
+
+                            <a href="<?php echo esc_url( $cp->proof_image_url ); ?>" target="_blank" title="Click to view full image in new tab">
+                                <img src="<?php echo esc_url( $cp->proof_image_url ); ?>" alt="Proof" style="width:100%; height:180px; object-fit:cover; border-radius:6px; border:2px solid var(--wow-gold-border); box-shadow:0 4px 10px rgba(0,0,0,0.8); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                            </a>
+
+                            <div style="font-family:var(--font-title); font-weight:bold; color:#fff; font-size:15px; margin-top:8px;">
+                                <?php echo esc_html( $cp->title ); ?>
+                            </div>
+
+                            <div style="font-size:12px; color:#8fa0bd; margin-top:4px;">
+                                Completed by: <strong style="color:#ffd700;"><?php echo $cp_user ? esc_html( $cp_user->display_name ) : 'Employee'; ?></strong><br>
+                                Submitted: <span style="color:#ddd;"><?php echo esc_html( $cp->completed_time ); ?></span>
+                            </div>
+
+                            <?php if ( ! empty( $cp->proof_notes ) ): ?>
+                                <div style="font-style:italic; font-size:12px; color:#eee; background:#0c0e14; border:1px solid #222; padding:8px; border-radius:4px; margin-top:8px;">
+                                    "<?php echo esc_html( $cp->proof_notes ); ?>"
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <div style="margin-top:10px; border-top:1px solid #222a3d; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                            <span class="sgd-status-badge sgd-status-completed" style="font-size:7px;">
+                                ✅ VERIFIED COMPLETE
+                            </span>
+                            <a href="<?php echo esc_url( $cp->proof_image_url ); ?>" target="_blank" class="sgd-btn sgd-btn-sm sgd-btn-gold">
+                                🔍 Open Full Size
+                            </a>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
