@@ -90,11 +90,9 @@ $active_ai_provider = get_option( 'sgd_ai_provider', 'smart_nlp' );
             </p>
         </div>
         <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
-            <?php if ( $is_admin ): ?>
-                <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="sgd-open-ai-settings-btn" style="border-color:#00e5ff;">
-                    🤖 Pengaturan AI (Gemini/OpenAI)
-                </button>
-            <?php endif; ?>
+            <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue sgd-open-ai-settings-btn" id="sgd-open-ai-settings-btn" style="border-color:#00e5ff; display:inline-flex; align-items:center; gap:6px;">
+                <span>🤖</span> Pengaturan AI (Gemini / OpenAI)
+            </button>
             <div style="background:#111522; border:2px solid var(--wow-gold); padding:6px 14px; border-radius:6px; text-align:right;">
                 <span style="font-family:var(--font-pixel); font-size:8px; color:#c69b3a;">ENGINE STATUS:</span>
                 <strong style="color:#00e5ff; font-family:var(--font-pixel); font-size:10px; margin-left:4px; display:block;">
@@ -162,61 +160,101 @@ $active_ai_provider = get_option( 'sgd_ai_provider', 'smart_nlp' );
         </div>
     </div>
 
-    <!-- ADMIN AI CONFIGURATION MODAL -->
-    <?php if ( $is_admin ): ?>
-        <div class="sgd-modal-backdrop" id="sgd-ai-settings-modal">
-            <div class="sgd-modal-box" style="max-width:620px;">
-                <div class="sgd-modal-header" style="border-bottom:2px solid #00e5ff;">
-                    <h3 class="sgd-modal-title" style="color:#00e5ff;">🤖 Konfigurasi AI Decipher Engine</h3>
-                    <button type="button" class="sgd-modal-close" id="sgd-ai-settings-close">&times;</button>
-                </div>
-                <form method="post">
-                    <input type="hidden" name="sgd_action" value="sgd_save_ai_settings">
-                    <input type="hidden" name="redirect_to" value="laporan-harian">
-                    <div class="sgd-modal-body">
-                        <p style="font-size:13px; color:#c8d1e0; line-height:1.6; margin-bottom:16px;">
-                            Sistem secara default menggunakan <strong>Smart Heuristic Construction NLP</strong> yang bekerja 100% cepat, offline, dan tanpa biaya. Anda juga dapat menambahkan <strong>Google Gemini API Key</strong> (Gratis di Google AI Studio) atau <strong>OpenAI API Key</strong> untuk analisis kecerdasan buatan tingkat lanjut!
-                        </p>
-
-                        <div class="sgd-form-group">
-                            <label class="sgd-form-label" style="color:#ffd700;">Mesin Decipher Utama:</label>
-                            <select name="ai_provider" class="sgd-form-select">
-                                <option value="smart_nlp" <?php selected( $active_ai_provider, 'smart_nlp' ); ?>>⚡ Smart Heuristic NLP (Bawaan - Cepat, Offline & Tanpa Kuota)</option>
-                                <option value="gemini" <?php selected( $active_ai_provider, 'gemini' ); ?>>✨ Google Gemini 1.5 Flash (Sangat Pintar & Gratis)</option>
-                                <option value="openai" <?php selected( $active_ai_provider, 'openai' ); ?>>✨ OpenAI GPT-4o Mini (Berbayar)</option>
-                            </select>
-                        </div>
-
-                        <div class="sgd-form-group">
-                            <label class="sgd-form-label" style="color:#00e5ff;">Google Gemini API Key (Rekomendasi):</label>
-                            <input type="text" name="gemini_api_key" value="<?php echo esc_attr( $gemini_key ); ?>" class="sgd-form-input" placeholder="AIzaSy...">
-                            <small style="color:#8fa0bd; font-size:11px; margin-top:4px; display:block;">
-                                Dapatkan kunci API Gemini gratis di: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#00e5ff; text-decoration:underline;">Google AI Studio</a>.
-                            </small>
-                        </div>
-
-                        <div class="sgd-form-group">
-                            <label class="sgd-form-label" style="color:#a29bfe;">OpenAI API Key (Opsional):</label>
-                            <input type="password" name="openai_api_key" value="<?php echo esc_attr( $openai_key ); ?>" class="sgd-form-input" placeholder="sk-proj-...">
-                        </div>
-
-                        <div style="background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); border-radius:6px; padding:12px; margin-top:12px;">
-                            <strong style="color:#00e5ff; font-size:12px;">💡 Cara Kerja AI Decipher:</strong>
-                            <p style="color:#b2bec3; font-size:11px; margin:4px 0 0 0; line-height:1.5;">
-                                Saat karyawan mengirimkan laporan singkat (misal: <em>"hujan jam 10-4 sore. butuh tukang batu 10, masuk pasir 100kg, pake hammer drill. kita bikin taman. pompa air rusak."</em>), mesin AI / NLP akan membedahnya secara otomatis menjadi data tabel per jam, kuantitas material, jumlah pekerja, dan K3.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="sgd-modal-footer">
-                        <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="sgd-ai-settings-cancel">Batal</button>
-                        <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-gold">💾 Simpan Konfigurasi AI</button>
-                    </div>
-                </form>
+    <!-- AI CONFIGURATION MODAL (ACCESSIBLE TO ADMIN & MANAGERS) -->
+    <div class="sgd-modal-backdrop" id="sgd-ai-settings-modal">
+        <div class="sgd-modal-box" style="max-width:620px;">
+            <div class="sgd-modal-header" style="border-bottom:2px solid #00e5ff;">
+                <h3 class="sgd-modal-title" style="color:#00e5ff; display:flex; align-items:center; gap:8px;">
+                    <span>🤖</span> Konfigurasi AI Decipher Engine
+                </h3>
+                <button type="button" class="sgd-modal-close" id="sgd-ai-settings-close">&times;</button>
             </div>
+            <form method="post" action="<?php echo esc_url( home_url( '/' ) ); ?>">
+                <input type="hidden" name="sgd_page" value="laporan-harian">
+                <input type="hidden" name="sgd_action" value="sgd_save_ai_settings">
+                <input type="hidden" name="redirect_to" value="laporan-harian">
+                <div class="sgd-modal-body">
+                    <p style="font-size:13px; color:#c8d1e0; line-height:1.6; margin-bottom:16px;">
+                        Gunakan <strong>Google Gemini API Key</strong> (100% Gratis di Google AI Studio hingga 1.500 permintaan/hari) atau <strong>OpenAI API Key</strong> untuk dechipering laporan proyek otomatis dengan tingkat kecerdasan dan akurasi tertinggi!
+                    </p>
+
+                    <div class="sgd-form-group">
+                        <label class="sgd-form-label" style="color:#ffd700;">Pilih Mesin Decipher:</label>
+                        <select name="ai_provider" class="sgd-form-select">
+                            <option value="gemini" <?php selected( $active_ai_provider, 'gemini' ); ?>>✨ Google Gemini AI (Rekomendasi - Cerdas & Gratis 1.500 req/hari)</option>
+                            <option value="openai" <?php selected( $active_ai_provider, 'openai' ); ?>>✨ OpenAI GPT-4o Mini (Berbayar via token OpenAI)</option>
+                            <option value="smart_nlp" <?php selected( $active_ai_provider, 'smart_nlp' ); ?>>⚡ Smart Heuristic NLP (Bawaan - Cepat, Offline & Tanpa Kuota)</option>
+                        </select>
+                    </div>
+
+                    <div class="sgd-form-group">
+                        <label class="sgd-form-label" style="color:#00e5ff;">Google Gemini API Key (Sangat Direkomendasikan):</label>
+                        <input type="text" name="gemini_api_key" value="<?php echo esc_attr( $gemini_key ); ?>" class="sgd-form-input" placeholder="AIzaSy..." autocomplete="off">
+                        <small style="color:#8fa0bd; font-size:11px; margin-top:4px; display:block;">
+                            🔗 Dapatkan kunci API Gemini gratis hanya dalam 30 detik di: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#00e5ff; text-decoration:underline;">https://aistudio.google.com/app/apikey</a>.
+                        </small>
+                    </div>
+
+                    <div class="sgd-form-group">
+                        <label class="sgd-form-label" style="color:#a29bfe;">OpenAI API Key (Alternatif):</label>
+                        <input type="password" name="openai_api_key" value="<?php echo esc_attr( $openai_key ); ?>" class="sgd-form-input" placeholder="sk-proj-..." autocomplete="off">
+                    </div>
+
+                    <div style="background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); border-radius:6px; padding:12px; margin-top:12px;">
+                        <strong style="color:#00e5ff; font-size:12px;">💡 Keunggulan Decipher Melalui AI:</strong>
+                        <p style="color:#b2bec3; font-size:11px; margin:4px 0 0 0; line-height:1.5;">
+                            AI memahami bahasa sehari-hari dan istilah tukang di lapangan (misal: <em>"hujan jam 10-4 sore. butuh tukang batu 10, masuk pasir 100kg, pake hammer drill. kita bikin taman. pompa air rusak."</em>). AI otomatis memisahkan alat yang aktif digunakan dengan alat yang rusak sebagai kendala, membagi cuaca 07.00-17.00 secara presisi, serta memverifikasi status K3.
+                        </p>
+                    </div>
+                </div>
+                <div class="sgd-modal-footer">
+                    <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="sgd-ai-settings-cancel">Batal</button>
+                    <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-gold">💾 Simpan Konfigurasi AI</button>
+                </div>
+            </form>
         </div>
-    <?php endif; ?>
+    </div>
 
     <?php if ( $show_new_form ): ?>
+        <!-- AI STATUS & QUICK CONFIGURATION BANNER -->
+        <div style="margin-bottom:16px; background:linear-gradient(135deg, rgba(0, 229, 255, 0.12), rgba(16, 24, 39, 0.95)); border:2px solid #00e5ff; border-radius:8px; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; box-shadow:0 0 15px rgba(0, 229, 255, 0.15);">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-size:26px;">🤖</span>
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <strong style="font-family:var(--font-pixel); font-size:10px; color:#00e5ff; letter-spacing:1px;">
+                            <?php if ( ! empty( $gemini_key ) ): ?>
+                                ✨ AI ENGINE READY: GOOGLE GEMINI AKTIF
+                            <?php elseif ( ! empty( $openai_key ) ): ?>
+                                ✨ AI ENGINE READY: OPENAI GPT-4O MINI AKTIF
+                            <?php else: ?>
+                                ⚡ MODE DECIPHER: SMART CONSTRUCTION NLP (OFFLINE)
+                            <?php endif; ?>
+                        </strong>
+                        <?php if ( ! empty( $gemini_key ) || ! empty( $openai_key ) ): ?>
+                            <span style="background:#00b894; color:#fff; font-size:9px; font-weight:bold; padding:2px 8px; border-radius:10px;">AI ONLINE</span>
+                        <?php else: ?>
+                            <span style="background:#f39c12; color:#111; font-size:9px; font-weight:bold; padding:2px 8px; border-radius:10px;">STANDBY</span>
+                        <?php endif; ?>
+                    </div>
+                    <div style="font-size:12px; color:#c8d1e0; margin-top:3px; line-height:1.4;">
+                        <?php if ( ! empty( $gemini_key ) ): ?>
+                            Laporan suara/teks Anda akan diuraikan secara otomatis dengan <strong>Google Gemini AI</strong> untuk ekstraksi cuaca per jam, pekerja, material, dan K3 paling presisi.
+                        <?php elseif ( ! empty( $openai_key ) ): ?>
+                            Laporan suara/teks Anda akan diuraikan secara otomatis dengan <strong>OpenAI GPT</strong>.
+                        <?php else: ?>
+                            Sistem saat ini memakai <em>Smart NLP</em> bawaan. Untuk ekstraksi bahasa alami yang jauh lebih akurat & terstruktur, Anda dapat memasang <strong>Google Gemini API Key (100% Gratis di Google AI Studio)</strong>.
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <button type="button" class="sgd-btn sgd-btn-sm <?php echo ( ! empty( $gemini_key ) || ! empty( $openai_key ) ) ? 'sgd-btn-blue' : 'sgd-btn-gold'; ?> sgd-open-ai-settings-btn" id="sgd-trigger-ai-settings-btn" style="white-space:nowrap;">
+                    <?php echo ( ! empty( $gemini_key ) || ! empty( $openai_key ) ) ? '⚙️ Kelola Kunci AI' : '🚀 Masukkan Kunci AI Gemini'; ?>
+                </button>
+            </div>
+        </div>
+
         <!-- ======================================================== -->
         <!-- INPUT FORM: SUBMIT DAILY REPORT (VOICE / TEXT + 3 PHOTOS)-->
         <!-- ======================================================== -->
@@ -511,15 +549,15 @@ $active_ai_provider = get_option( 'sgd_ai_provider', 'smart_nlp' );
                     <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-gold" onclick="window.print();">
                         🖨️ Cetak / Print Laporan
                     </button>
+                    <form method="post" action="<?php echo esc_url( home_url( '/' ) ); ?>" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menganalisis ulang (re-parse) teks laporan ini dengan AI/NLP?');">
+                        <input type="hidden" name="sgd_page" value="laporan-harian">
+                        <input type="hidden" name="sgd_action" value="sgd_reparse_daily_report">
+                        <input type="hidden" name="report_id" value="<?php echo $active_report->id; ?>">
+                        <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-blue" title="Analisis ulang teks menggunakan AI / NLP">
+                            🤖 Re-Parse AI
+                        </button>
+                    </form>
                     <?php if ( $is_admin ): ?>
-                        <form method="post" action="<?php echo esc_url( home_url( '/' ) ); ?>" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menganalisis ulang (re-parse) laporan ini dengan AI/NLP?');">
-                            <input type="hidden" name="sgd_page" value="laporan-harian">
-                            <input type="hidden" name="sgd_action" value="sgd_reparse_daily_report">
-                            <input type="hidden" name="report_id" value="<?php echo $active_report->id; ?>">
-                            <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-blue" title="Analisis ulang teks menggunakan AI/NLP">
-                                🤖 Re-Parse AI
-                            </button>
-                        </form>
                         <form method="post" action="<?php echo esc_url( home_url( '/' ) ); ?>" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus laporan ini secara permanen?');">
                             <input type="hidden" name="sgd_page" value="laporan-harian">
                             <input type="hidden" name="sgd_action" value="sgd_delete_daily_report">

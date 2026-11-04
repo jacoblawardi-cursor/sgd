@@ -2417,21 +2417,29 @@ function sgd_handle_form_actions() {
 
         // 4. Save AI API Configuration
         if ( $action === 'sgd_save_ai_settings' ) {
-            if ( ! current_user_can( 'administrator' ) ) {
-                sgd_set_flash( 'error', '⛔ Hanya Administrator yang dapat mengubah pengaturan AI.' );
-                wp_safe_redirect( add_query_arg( 'sgd_page', 'laporan-harian', home_url( '/' ) ) );
-                exit;
-            }
-
             $gemini_key = sanitize_text_field( $_POST['gemini_api_key'] ?? '' );
             $openai_key = sanitize_text_field( $_POST['openai_api_key'] ?? '' );
-            $provider = sanitize_text_field( $_POST['ai_provider'] ?? 'smart_nlp' );
+            $provider   = sanitize_text_field( $_POST['ai_provider'] ?? 'gemini' );
+
+            // Auto-select AI provider based on entered keys if not specified
+            if ( ! empty( $gemini_key ) && ( empty( $provider ) || $provider === 'smart_nlp' ) ) {
+                $provider = 'gemini';
+            } elseif ( ! empty( $openai_key ) && empty( $gemini_key ) ) {
+                $provider = 'openai';
+            }
 
             update_option( 'sgd_gemini_api_key', $gemini_key );
             update_option( 'sgd_openai_api_key', $openai_key );
             update_option( 'sgd_ai_provider', $provider );
 
-            sgd_set_flash( 'celebration', '⚙️ PENGATURAN AI BERHASIL DISIMPAN! Mesin decipher siap memproses laporan kerja harian.' );
+            $engine_name = 'Smart Construction NLP ⚡';
+            if ( $provider === 'gemini' ) {
+                $engine_name = 'Google Gemini AI (Gratis & Cerdas) ✨';
+            } elseif ( $provider === 'openai' ) {
+                $engine_name = 'OpenAI GPT-4o Mini ✨';
+            }
+
+            sgd_set_flash( 'celebration', '🤖 KONFIGURASI AI BERHASIL DISIMPAN! Laporan harian kini di-decipher menggunakan ' . $engine_name . '.' );
             $redirect = sanitize_text_field( $_POST['redirect_to'] ?? 'laporan-harian' );
             wp_safe_redirect( add_query_arg( 'sgd_page', $redirect, home_url( '/' ) ) );
             exit;
@@ -2945,22 +2953,93 @@ function sgd_smart_nlp_decipher( $raw_text ) {
 }
 
 /**
+ * Clean & Extract JSON from AI Response (strips markdown code blocks and excess text)
+ */
+function sgd_extract_json_from_ai_response( $raw_text ) {
+    if ( ! is_string( $raw_text ) ) {
+        return null;
+    }
+    $clean = trim( $raw_text );
+
+    // 1. Strip markdown code fence e.g. ```json ... ``` or ``` ... ```
+    if ( preg_match( '/```(?:json)?\s*([\s\S]*?)\s*```/i', $clean, $matches ) ) {
+        $clean = trim( $matches[1] );
+    }
+
+    // 2. Direct JSON decode
+    $decoded = json_decode( $clean, true );
+    if ( is_array( $decoded ) && ! empty( $decoded ) ) {
+        return $decoded;
+    }
+
+    // 3. Fallback: Search for outer curly braces { ... }
+    $start = strpos( $clean, '{' );
+    $end   = strrpos( $clean, '}' );
+    if ( $start !== false && $end !== false && $end > $start ) {
+        $sub = substr( $clean, $start, $end - $start + 1 );
+        $decoded = json_decode( $sub, true );
+        if ( is_array( $decoded ) && ! empty( $decoded ) ) {
+            return $decoded;
+        }
+    }
+
+    return null;
+}
+
+/**
  * AI-powered Decipher (Google Gemini / OpenAI)
+ * Specialized for Indonesian Civil/Architectural Construction Daily Site Reports
  */
 function sgd_ai_decipher_report( $raw_text ) {
+    $raw_text = trim( (string) $raw_text );
+    if ( empty( $raw_text ) ) {
+        return null;
+    }
+
     $gemini_key = trim( get_option( 'sgd_gemini_api_key', '' ) );
     $openai_key = trim( get_option( 'sgd_openai_api_key', '' ) );
+    $provider   = get_option( 'sgd_ai_provider', 'gemini' );
 
-    // Try Google Gemini 1.5 Flash if key is configured
-    if ( ! empty( $gemini_key ) ) {
-        $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . urlencode( $gemini_key );
-        $prompt = "Anda adalah AI asisten proyek konstruksi profesional di Indonesia. Tugas Anda adalah menguraikan laporan harian proyek menjadi data JSON terstruktur.
-Output WAJIB berupa JSON murni dengan format persis seperti ini:
+    $construction_system_prompt = "Anda adalah AI asisten insinyur proyek konstruksi sipil & arsitektur profesional di Indonesia.
+Tugas Anda: Menguraikan (decipher) catatan lapangan harian (baik dari rekaman suara pekerja atau teks singkat informal yang mungkin terdapat singkatan/typo) menjadi data JSON terstruktur untuk Laporan Harian Proyek (Daily Site Report).
+
+Aturan Penguraian:
+1. Cuaca Per Jam (weather_hourly):
+   - Wajib memuat tepat 11 jam operasional kerja: \"07.00\", \"08.00\", \"09.00\", \"10.00\", \"11.00\", \"12.00\", \"13.00\", \"14.00\", \"15.00\", \"16.00\", \"17.00\".
+   - Nilai cuaca yang valid: \"cerah\", \"berawan\", \"hujan\", \"hujan lebat\".
+   - Jika teks menyebutkan rentang waktu, cth: \"hujan jam 10-4 sore\" atau \"hujan 10 sampai 16\", maka jam 10.00, 11.00, 12.00, 13.00, 14.00, 15.00, 16.00 bernilai \"hujan\", dan jam lainnya tetap \"cerah\" kecuali disebutkan berbeda.
+2. Tenaga Kerja (manpower):
+   - Array of objects: [{\"role\": \"nama posisi/keahlian (misal: tukang batu, mandor, pekerja, tukang las)\", \"count\": jumlah_pekerja_angka}].
+3. Material Masuk (materials):
+   - Array of objects: [{\"name\": \"nama material\", \"quantity\": \"angka kuantitas\", \"unit\": \"satuan (cth: kg, sak, m3, truck, batang, lembar)\"}].
+4. Peralatan (equipment):
+   - Array of string nama alat/mesin yang AKTIF digunakan bekerja (cth: [\"hammer drill\", \"molen\"]).
+   - PENTING: Alat yang rusak atau bermasalah BUKAN dimasukkan ke equipment, melainkan dimasukkan ke kendala (issues)!
+5. Pekerjaan Yang Dilaksanakan (work_executed):
+   - Array of string tugas/progress pekerjaan yang dikerjakan hari ini (cth: [\"bikin taman\", \"pengecoran plat lantai\"]).
+6. Kendala (issues):
+   - Array of string kendala, kerusakan alat, hambatan material, atau cuaca ekstrem yang menghambat (cth: [\"pompa air rusak\"]).
+7. Keselamatan Kerja / K3 (safety_k3):
+   - String ringkasan kondisi K3.
+   - Jika aman / tidak ada kecelakaan, tulis persis: \"Nihil kecelakaan kerja\".
+   - Jika ada insiden kecelakaan kerja atau nyaris celaka (near miss), sebutkan secara jelas dan singkat.
+8. Catatan Lain (additional_notes):
+   - String catatan tambahan lain bila ada.
+
+Output WAJIB berupa JSON murni tanpa markdown fence dan tanpa teks penjelasan di luar JSON:
 {
   \"weather_hourly\": {
-    \"07.00\": \"cerah\", \"08.00\": \"cerah\", \"09.00\": \"cerah\", \"10.00\": \"hujan\",
-    \"11.00\": \"hujan\", \"12.00\": \"hujan\", \"13.00\": \"hujan\", \"14.00\": \"hujan\",
-    \"15.00\": \"hujan\", \"16.00\": \"hujan\", \"17.00\": \"cerah\"
+    \"07.00\": \"cerah\",
+    \"08.00\": \"cerah\",
+    \"09.00\": \"cerah\",
+    \"10.00\": \"hujan\",
+    \"11.00\": \"hujan\",
+    \"12.00\": \"hujan\",
+    \"13.00\": \"hujan\",
+    \"14.00\": \"hujan\",
+    \"15.00\": \"hujan\",
+    \"16.00\": \"hujan\",
+    \"17.00\": \"cerah\"
   },
   \"manpower\": [
     {\"role\": \"tukang batu\", \"count\": 10}
@@ -2975,65 +3054,75 @@ Output WAJIB berupa JSON murni dengan format persis seperti ini:
   \"additional_notes\": \"\"
 }
 
-Laporan input:
+Laporan Lapangan Mentah:
 " . $raw_text;
 
-        $body = wp_json_encode( [
-            'contents' => [
-                [
-                    'parts' => [
-                        [ 'text' => $prompt ]
+    // 1. Prioritize Google Gemini (Gratis di Google AI Studio & Sangat Cepat)
+    if ( ! empty( $gemini_key ) && ( $provider === 'gemini' || empty( $openai_key ) ) ) {
+        // Try Gemini models with automatic fallback (1.5-flash, 2.0-flash, 1.5-pro)
+        $models_to_try = [ 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro' ];
+
+        foreach ( $models_to_try as $model_id ) {
+            $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model_id . ':generateContent?key=' . urlencode( $gemini_key );
+
+            $payload = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            [ 'text' => $construction_system_prompt ]
+                        ]
                     ]
+                ],
+                'generationConfig' => [
+                    'response_mime_type' => 'application/json',
+                    'temperature'        => 0.1,
                 ]
-            ],
-            'generationConfig' => [
-                'response_mime_type' => 'application/json',
-                'temperature'        => 0.1,
-            ]
-        ] );
+            ];
 
-        $response = wp_remote_post( $endpoint, [
-            'body'    => $body,
-            'headers' => [ 'Content-Type' => 'application/json' ],
-            'timeout' => 8,
-        ] );
+            $response = wp_remote_post( $endpoint, [
+                'body'      => wp_json_encode( $payload ),
+                'headers'   => [ 'Content-Type' => 'application/json' ],
+                'timeout'   => 15,
+                'sslverify' => false, // Ensure local MAMP / Windows environments work smoothly
+            ] );
 
-        if ( ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) === 200 ) {
-            $resp_body = wp_remote_retrieve_body( $response );
-            $json_res = json_decode( $resp_body, true );
-            $raw_json = $json_res['candidates'][0]['content']['parts'][0]['text'] ?? '';
-            if ( $raw_json ) {
-                $parsed = json_decode( $raw_json, true );
-                if ( ! empty( $parsed ) && is_array( $parsed ) ) {
-                    $parsed['parsed_with'] = 'gemini';
-                    return $parsed;
+            if ( ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) === 200 ) {
+                $resp_body = wp_remote_retrieve_body( $response );
+                $json_res = json_decode( $resp_body, true );
+                $raw_json = $json_res['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                if ( $raw_json ) {
+                    $parsed = sgd_extract_json_from_ai_response( $raw_json );
+                    if ( ! empty( $parsed ) && is_array( $parsed ) ) {
+                        $parsed['parsed_with'] = 'gemini';
+                        return $parsed;
+                    }
                 }
             }
         }
     }
 
-    // Try OpenAI if key is configured
-    if ( ! empty( $openai_key ) ) {
+    // 2. Try OpenAI GPT-4o Mini if key is configured
+    if ( ! empty( $openai_key ) && ( $provider === 'openai' || empty( $gemini_key ) ) ) {
         $endpoint = 'https://api.openai.com/v1/chat/completions';
-        $prompt = "You are a construction site daily report parser in Indonesian. Parse the raw input into structured JSON with keys: weather_hourly (07.00 to 17.00 values like 'cerah' or 'hujan'), manpower ([{\"role\":\"...\",\"count\":0}]), materials ([{\"name\":\"...\",\"quantity\":\"...\",\"unit\":\"...\"}]), equipment (array of string), work_executed (array of string), issues (array of string), safety_k3 (string, default 'Nihil kecelakaan kerja'), additional_notes. Input: " . $raw_text;
 
-        $body = wp_json_encode( [
+        $payload = [
             'model' => 'gpt-4o-mini',
             'messages' => [
-                [ 'role' => 'system', 'content' => 'Output JSON only.' ],
-                [ 'role' => 'user', 'content' => $prompt ]
+                [ 'role' => 'system', 'content' => 'Output raw JSON only matching the schema exactly.' ],
+                [ 'role' => 'user', 'content' => $construction_system_prompt ]
             ],
             'response_format' => [ 'type' => 'json_object' ],
             'temperature' => 0.1,
-        ] );
+        ];
 
         $response = wp_remote_post( $endpoint, [
-            'body'    => $body,
-            'headers' => [
+            'body'      => wp_json_encode( $payload ),
+            'headers'   => [
                 'Content-Type'  => 'application/json',
                 'Authorization' => 'Bearer ' . $openai_key,
             ],
-            'timeout' => 8,
+            'timeout'   => 15,
+            'sslverify' => false,
         ] );
 
         if ( ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) === 200 ) {
@@ -3041,7 +3130,7 @@ Laporan input:
             $json_res = json_decode( $resp_body, true );
             $raw_json = $json_res['choices'][0]['message']['content'] ?? '';
             if ( $raw_json ) {
-                $parsed = json_decode( $raw_json, true );
+                $parsed = sgd_extract_json_from_ai_response( $raw_json );
                 if ( ! empty( $parsed ) && is_array( $parsed ) ) {
                     $parsed['parsed_with'] = 'openai';
                     return $parsed;
@@ -3057,22 +3146,45 @@ Laporan input:
  * Main Decipher Router (AI with automatic fallback to Smart Heuristic NLP)
  */
 function sgd_decipher_daily_report( $raw_text ) {
+    $hours = [ '07.00', '08.00', '09.00', '10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00' ];
+
+    // 1. Attempt AI deciphering first (Google Gemini / OpenAI)
     $ai_res = sgd_ai_decipher_report( $raw_text );
     if ( ! empty( $ai_res ) && is_array( $ai_res ) ) {
-        $hours = [ '07.00', '08.00', '09.00', '10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00' ];
         $wh = $ai_res['weather_hourly'] ?? [];
+        $clean_wh = [];
         foreach ( $hours as $h ) {
-            if ( ! isset( $wh[ $h ] ) ) {
-                $wh[ $h ] = 'cerah';
-            }
+            $clean_wh[ $h ] = ! empty( $wh[ $h ] ) ? strtolower( trim( (string) $wh[ $h ] ) ) : 'cerah';
         }
-        $ai_res['weather_hourly'] = $wh;
+        $ai_res['weather_hourly'] = $clean_wh;
+
+        // Ensure array structures
+        if ( ! isset( $ai_res['manpower'] ) || ! is_array( $ai_res['manpower'] ) ) {
+            $ai_res['manpower'] = [];
+        }
+        if ( ! isset( $ai_res['materials'] ) || ! is_array( $ai_res['materials'] ) ) {
+            $ai_res['materials'] = [];
+        }
+        if ( ! isset( $ai_res['equipment'] ) || ! is_array( $ai_res['equipment'] ) ) {
+            $ai_res['equipment'] = [];
+        }
+        if ( ! isset( $ai_res['work_executed'] ) || ! is_array( $ai_res['work_executed'] ) ) {
+            $ai_res['work_executed'] = ! empty( $ai_res['work_executed'] ) ? [ (string) $ai_res['work_executed'] ] : [];
+        }
+        if ( ! isset( $ai_res['issues'] ) || ! is_array( $ai_res['issues'] ) ) {
+            $ai_res['issues'] = ! empty( $ai_res['issues'] ) ? [ (string) $ai_res['issues'] ] : [];
+        }
         if ( empty( $ai_res['safety_k3'] ) ) {
             $ai_res['safety_k3'] = 'Nihil kecelakaan kerja';
         }
+        if ( ! isset( $ai_res['additional_notes'] ) ) {
+            $ai_res['additional_notes'] = '';
+        }
+
         return $ai_res;
     }
 
+    // 2. Fallback to Smart Offline Heuristic Construction NLP
     $parsed = sgd_smart_nlp_decipher( $raw_text );
     $parsed['parsed_with'] = 'smart_nlp';
     return $parsed;

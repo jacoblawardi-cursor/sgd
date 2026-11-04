@@ -906,16 +906,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // I. Admin AI Settings Modal
+    // I. AI Settings Modal
     const aiModal = document.getElementById('sgd-ai-settings-modal');
-    const openAiBtn = document.getElementById('sgd-open-ai-settings-btn');
+    const openAiBtns = document.querySelectorAll('#sgd-open-ai-settings-btn, #sgd-trigger-ai-settings-btn, .sgd-open-ai-settings-btn');
     const closeAiBtn = document.getElementById('sgd-ai-settings-close');
     const cancelAiBtn = document.getElementById('sgd-ai-settings-cancel');
 
-    if (openAiBtn && aiModal) {
-        openAiBtn.addEventListener('click', function() {
-            aiModal.classList.add('open');
-            AudioEngine.playClick();
+    if (openAiBtns && aiModal) {
+        openAiBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                aiModal.classList.add('open');
+                if (typeof AudioEngine !== 'undefined') {
+                    AudioEngine.playClick();
+                }
+            });
         });
     }
     if (closeAiBtn && aiModal) {
