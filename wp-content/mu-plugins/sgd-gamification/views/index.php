@@ -9,11 +9,23 @@ switch ( $page ) {
     case 'daily':
         require_once __DIR__ . '/daily-tasks.php';
         break;
+    case 'laporan-harian':
+        require_once __DIR__ . '/laporan-harian.php';
+        break;
     case 'urgent':
         require_once __DIR__ . '/urgent-tasks.php';
         break;
     case 'achievements':
         require_once __DIR__ . '/achievements.php';
+        break;
+    case 'leaderboard':
+        require_once __DIR__ . '/leaderboard.php';
+        break;
+    case 'wheel':
+        require_once __DIR__ . '/wheel.php';
+        break;
+    case 'bounties':
+        require_once __DIR__ . '/bounties.php';
         break;
     case 'shop':
         require_once __DIR__ . '/cash-shop.php';

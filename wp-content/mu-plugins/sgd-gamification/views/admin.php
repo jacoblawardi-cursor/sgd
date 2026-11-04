@@ -19,8 +19,17 @@ $dispatched_requests = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE hel
 // All tasks for CRUD
 $all_tasks = $wpdb->get_results( "SELECT * FROM $table_tasks ORDER BY type DESC, id DESC" );
 
-// Completed photo proofs
-$completed_proofs = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE status = 'completed' AND proof_image_url IS NOT NULL AND proof_image_url != '' ORDER BY completed_time DESC" );
+// Completed photo proofs (loaded from persistent completion log)
+$table_task_logs = $wpdb->prefix . 'sgd_task_logs';
+$completed_proofs = $wpdb->get_results(
+    "SELECT id, task_id, task_title as title, user_id as completed_by, diamonds_awarded as reward_diamonds, streak_count, streak_bonus, proof_image_url, proof_notes, completed_time 
+     FROM $table_task_logs 
+     WHERE proof_image_url IS NOT NULL AND proof_image_url != '' 
+     ORDER BY completed_time DESC"
+);
+if ( empty( $completed_proofs ) ) {
+    $completed_proofs = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE status = 'completed' AND proof_image_url IS NOT NULL AND proof_image_url != '' ORDER BY completed_time DESC" );
+}
 $admin_tab = sanitize_text_field( $_GET['tab'] ?? '' );
 
 // Cash Shop Redemptions
@@ -101,6 +110,15 @@ foreach ( $emp_unlocked_raw as $eu ) {
         <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'proofs' ) ? 'active' : ''; ?>" data-target="admin-sec-proofs">
             📸 Submitted Photo Proofs (<?php echo count( $completed_proofs ); ?>)
         </button>
+        <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'cron' ) ? 'active' : ''; ?>" data-target="admin-sec-cron">
+            🔄 Daily Reset & WP-Cron
+        </button>
+        <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'api' ) ? 'active' : ''; ?>" data-target="admin-sec-api" style="color:#00e5ff; border-color:#00e5ff;">
+            🤖 AI & Cicle Automation
+        </button>
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'laporan-harian' ) ); ?>" class="sgd-admin-subtab" style="color:#00e5ff; border-color:#00e5ff; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+            📋 Laporan Harian Proyek (AI Site Reports) ➔
+        </a>
     </div>
 
     <!-- 1. SOS HELP DISPATCH BOARD -->
@@ -223,6 +241,13 @@ foreach ( $emp_unlocked_raw as $eu ) {
                     <textarea name="description" rows="3" class="sgd-form-textarea" placeholder="Detail the exact steps and requirements for this task..." required><?php echo esc_textarea( $edit_task ? $edit_task->description : '' ); ?></textarea>
                 </div>
 
+                <div class="sgd-form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" name="is_recurring" id="admin_is_recurring" value="1" <?php echo ( ! $edit_task || ! empty( $edit_task->is_recurring ) ) ? 'checked' : ''; ?> style="width:18px; height:18px; cursor:pointer;">
+                    <label for="admin_is_recurring" style="color:#ffd700; font-size:12px; cursor:pointer; font-weight:bold;">
+                        🔄 Recurring Daily Quest (Auto-resets every morning at 00:00 via WP-Cron)
+                    </label>
+                </div>
+
                 <div style="display:flex; gap:10px;">
                     <button type="submit" class="sgd-btn sgd-btn-gold">
                         <?php echo $edit_task ? '💾 Save Changes' : '📜 Post to Quest Board'; ?>
@@ -261,6 +286,11 @@ foreach ( $emp_unlocked_raw as $eu ) {
                                 <span class="sgd-quest-type-tag <?php echo $t->type === 'urgent' ? 'sgd-tag-urgent' : 'sgd-tag-daily'; ?>" style="font-size:7px;">
                                     <?php echo strtoupper( esc_html( $t->type ) ); ?>
                                 </span>
+                                <?php if ( $t->type === 'daily' && ! empty( $t->is_recurring ) ): ?>
+                                    <div style="margin-top:3px;">
+                                        <span class="sgd-status-badge" style="background:#1b3a24; border:1px solid #2ecc71; color:#2ecc71; font-size:6px; padding:2px 5px;">🔄 Recurring</span>
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             <td style="padding:10px 14px; color:#fff; font-weight:bold;">
                                 <?php echo esc_html( $t->title ); ?>
@@ -783,6 +813,278 @@ foreach ( $emp_unlocked_raw as $eu ) {
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+    </div>
+
+    <!-- 7. DAILY RESET & WP-CRON AUTOMATION SECTION -->
+    <div id="admin-sec-cron" class="sgd-admin-section" style="<?php echo ( $admin_tab === 'cron' ) ? 'display:block;' : 'display:none;'; ?>">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+            <div>
+                <h3 style="font-family:var(--font-title); font-size:18px; color:var(--wow-gold-light); margin:0;">
+                    🔄 Daily Recurring Quest Automation & WP-Cron Scheduler
+                </h3>
+                <p style="color:#9cb3c9; font-size:13px; margin:4px 0 0 0;">
+                    Automated maintenance engine that resets daily quests every midnight while keeping streak history and photo submissions intact.
+                </p>
+            </div>
+            <form method="post" onsubmit="return confirm('Execute immediate Daily Quest Reset? This will reopen all recurring daily quests for today.');">
+                <input type="hidden" name="sgd_action" value="sgd_admin_manual_daily_reset">
+                <button type="submit" class="sgd-btn sgd-btn-gold">
+                    🔄 Run Daily Reset Now (Reopen Tasks)
+                </button>
+            </form>
+        </div>
+
+        <?php 
+        $next_cron = wp_next_scheduled( 'sgd_daily_quest_reset_cron' );
+        $last_reset = get_option( 'sgd_last_daily_reset', 'Not yet executed today' );
+        $recurring_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_tasks WHERE type = 'daily' AND is_recurring = 1" );
+        ?>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:15px; margin-bottom:25px;">
+            <div style="background:#111522; border:2px solid var(--wow-gold-border); border-radius:8px; padding:16px;">
+                <div style="font-family:var(--font-pixel); font-size:8px; color:#c69b3a;">AUTOMATION ENGINE</div>
+                <div style="font-family:var(--font-title); font-size:16px; color:#2ecc71; margin-top:4px; font-weight:bold;">
+                    🟢 WP-Cron Active
+                </div>
+                <div style="font-size:12px; color:#8fa0bd; margin-top:4px;">
+                    Hook: <code>sgd_daily_quest_reset_cron</code> (Daily)
+                </div>
+            </div>
+
+            <div style="background:#111522; border:2px solid var(--wow-gold-border); border-radius:8px; padding:16px;">
+                <div style="font-family:var(--font-pixel); font-size:8px; color:#c69b3a;">NEXT SCHEDULED RUN</div>
+                <div style="font-family:var(--font-title); font-size:16px; color:#00e5ff; margin-top:4px; font-weight:bold;">
+                    <?php echo $next_cron ? date( 'Y-m-d H:i:s T', $next_cron ) : 'Scheduled on Next Request'; ?>
+                </div>
+                <div style="font-size:12px; color:#8fa0bd; margin-top:4px;">
+                    Target: Midnight (00:00:00)
+                </div>
+            </div>
+
+            <div style="background:#111522; border:2px solid var(--wow-gold-border); border-radius:8px; padding:16px;">
+                <div style="font-family:var(--font-pixel); font-size:8px; color:#c69b3a;">LAST DAILY RESET</div>
+                <div style="font-family:var(--font-title); font-size:15px; color:#fff; margin-top:4px;">
+                    <?php echo esc_html( $last_reset ); ?>
+                </div>
+                <div style="font-size:12px; color:#8fa0bd; margin-top:4px;">
+                    Refreshes all completed recurring daily quests
+                </div>
+            </div>
+
+            <div style="background:#111522; border:2px solid var(--wow-gold-border); border-radius:8px; padding:16px;">
+                <div style="font-family:var(--font-pixel); font-size:8px; color:#c69b3a;">RECURRING QUESTS</div>
+                <div style="font-family:var(--font-title); font-size:16px; color:#ffd700; margin-top:4px; font-weight:bold;">
+                    <?php echo $recurring_count; ?> Daily Tasks
+                </div>
+                <div style="font-size:12px; color:#8fa0bd; margin-top:4px;">
+                    Marked with <code>is_recurring = 1</code>
+                </div>
+            </div>
+        </div>
+
+        <div style="background:#151824; border:1px solid #2e3b55; border-radius:8px; padding:18px; color:#c8d6e5; font-size:13px; line-height:1.6;">
+            <div style="font-family:var(--font-pixel); font-size:9px; color:#ffd700; margin-bottom:8px;">
+                📜 HOW DAILY QUEST AUTOMATION & STREAKS WORK:
+            </div>
+            <ul style="margin:0; padding-left:20px;">
+                <li><strong>Nightly Reset:</strong> At midnight, WP-Cron automatically resets all recurring daily tasks back to <code>open</code> status so heroes find fresh work every morning.</li>
+                <li><strong>Photo Proof Preservation:</strong> All submitted employee photo proofs and completed timestamps are archived permanently in the <code>sgd_task_logs</code> audit ledger, so past approvals and photos are never deleted during resets.</li>
+                <li><strong>Consistency Streaks:</strong> When an employee finishes a daily task on consecutive days, their streak advances (Day 1 ➔ Day 2 (+10%) ➔ Day 3 (+20%) ➔ Day 4 (+30%) ➔ Day 5+ (+50% 🔥 MAX BONUS)). Missing a calendar day safely resets the streak back to Day 1.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 8. AI & CICLE REST API & WEBHOOK AUTOMATION -->
+    <?php
+    $api_key = sgd_get_api_key();
+    $rest_base_pretty = home_url( '/wp-json/sgd/v1' );
+    $rest_base_plain  = home_url( '/?rest_route=/sgd/v1' );
+    $cicle_webhook    = home_url( '/wp-json/sgd/v1/webhook/cicle?api_key=' . $api_key );
+    ?>
+    <div id="admin-sec-api" class="sgd-admin-section" style="<?php echo ( $admin_tab === 'api' ) ? 'display:block;' : 'display:none;'; ?>">
+        <h3 style="font-family:var(--font-title); font-size:18px; color:#00e5ff; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
+            <span>🤖</span> AI Assistant & Cicle External Automation Engine
+        </h3>
+        <p style="color:#c8d6e5; font-size:13px; line-height:1.5; margin-bottom:20px;">
+            Connect your manager's <strong>Cicle project management boards</strong> or an <strong>AI automation agent (OpenAI, Claude, DeepSeek, or Python script)</strong>. The AI can automatically read daily tasks from Cicle, break them down into gamified daily quests, and assign them directly to each employee in this portal with custom diamond rewards!
+        </p>
+
+        <!-- API CREDENTIALS & ENDPOINTS -->
+        <div style="background:#111522; border:2px solid var(--wow-gold-border); border-radius:10px; padding:20px; margin-bottom:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                <div>
+                    <span style="font-family:var(--font-pixel); font-size:9px; color:#c69b3a;">SECRET API AUTHENTICATION KEY:</span>
+                    <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+                        <code id="sgd-api-key-val" style="background:#090c14; border:1px solid #3c4866; border-radius:4px; padding:6px 14px; color:#00e5ff; font-family:var(--font-pixel); font-size:11px; letter-spacing:1px;">
+                            <?php echo esc_html( $api_key ); ?>
+                        </code>
+                        <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" onclick="navigator.clipboard.writeText('<?php echo esc_js($api_key); ?>'); alert('📋 API Key copied to clipboard!');" style="font-size:8px;">
+                            📋 Copy Key
+                        </button>
+                    </div>
+                </div>
+
+                <form method="post" onsubmit="return confirm('Regenerate API Secret Key? Any existing AI script or Cicle webhook will need to be updated with the new key!');">
+                    <input type="hidden" name="sgd_action" value="sgd_regenerate_api_key">
+                    <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-red" style="font-size:8px;">
+                        ⚡ Regenerate API Key
+                    </button>
+                </form>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:15px; margin-top:15px; border-top:1px dashed #28334a; padding-top:15px;">
+                <div style="background:#090c14; border:1px solid #1f273b; border-radius:6px; padding:12px;">
+                    <div style="font-family:var(--font-pixel); font-size:8px; color:#2ecc71; margin-bottom:4px;">📥 1. CREATE QUEST ENDPOINT (POST):</div>
+                    <code style="color:#fff; font-size:11px; word-break:break-all;"><?php echo esc_html( $rest_base_pretty . '/tasks' ); ?></code>
+                    <div style="font-size:10px; color:#8fa0bd; margin-top:4px;">Fallback: <code><?php echo esc_html( $rest_base_plain . '/tasks' ); ?></code></div>
+                </div>
+
+                <div style="background:#090c14; border:1px solid #1f273b; border-radius:6px; padding:12px;">
+                    <div style="font-family:var(--font-pixel); font-size:8px; color:#be2edd; margin-bottom:4px;">👥 2. EMPLOYEE DISCOVERY ENDPOINT (GET):</div>
+                    <code style="color:#fff; font-size:11px; word-break:break-all;"><?php echo esc_html( $rest_base_pretty . '/employees' ); ?></code>
+                    <div style="font-size:10px; color:#8fa0bd; margin-top:4px;">AI calls this to get team members, user IDs, and levels</div>
+                </div>
+
+                <div style="background:#090c14; border:1px solid #1f273b; border-radius:6px; padding:12px; grid-column:span 1;">
+                    <div style="font-family:var(--font-pixel); font-size:8px; color:#ff9f43; margin-bottom:4px;">⚡ 3. CICLE DIRECT WEBHOOK URL (POST):</div>
+                    <code style="color:#fff; font-size:11px; word-break:break-all;"><?php echo esc_html( $cicle_webhook ); ?></code>
+                    <div style="font-size:10px; color:#8fa0bd; margin-top:4px;">Paste this URL in Cicle webhooks to trigger quest creation automatically on card events</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIVE TEST DISPATCHER -->
+        <div style="background:#141724; border:2px solid var(--wow-gold-border); border-radius:10px; padding:20px; margin-bottom:24px;">
+            <div style="font-family:var(--font-pixel); font-size:9px; color:#ffd700; margin-bottom:6px;">
+                🚀 TEST DISPATCHER (SIMULATE AI / CICLE TASK CREATION)
+            </div>
+            <p style="color:#aaa; font-size:12px; margin-bottom:15px;">
+                Test creating an assigned daily task right now to see it appear on the employee's quest board:
+            </p>
+
+            <form method="post">
+                <input type="hidden" name="sgd_action" value="sgd_admin_test_dispatch_task">
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:15px;">
+                    <div class="sgd-form-group">
+                        <label class="sgd-form-label">🎯 Assign to Hero *</label>
+                        <select name="assigned_to" class="sgd-form-select">
+                            <option value="0">🌐 Open to All Employees</option>
+                            <?php foreach ( $users as $u ): ?>
+                                <option value="<?php echo $u->ID; ?>" <?php echo ($u->user_login === 'employee') ? 'selected' : ''; ?>>
+                                    👤 <?php echo esc_html( $u->display_name ); ?> (<?php echo esc_html( $u->user_login ); ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="sgd-form-group">
+                        <label class="sgd-form-label">Category / Sprint</label>
+                        <input type="text" name="task_category" class="sgd-form-input" value="Cicle Sprint Alpha" required>
+                    </div>
+
+                    <div class="sgd-form-group">
+                        <label class="sgd-form-label">Reward (Diamonds)</label>
+                        <input type="number" name="reward_diamonds" class="sgd-form-input" value="200" required>
+                    </div>
+                </div>
+
+                <div class="sgd-form-group">
+                    <label class="sgd-form-label">Quest Title *</label>
+                    <input type="text" name="task_title" class="sgd-form-input" placeholder="e.g. Implement Cicle Card #412: Safari Mobile Checkout" required>
+                </div>
+
+                <div class="sgd-form-group">
+                    <label class="sgd-form-label">Quest Description & Deliverables</label>
+                    <textarea name="task_desc" rows="2" class="sgd-form-textarea" placeholder="Instructions from Cicle card or AI sprint breakdown..."></textarea>
+                </div>
+
+                <div class="sgd-form-group">
+                    <label class="sgd-form-label">Cicle Card URL (Optional Link)</label>
+                    <input type="url" name="external_url" class="sgd-form-input" placeholder="https://cicle.app/your-company/companies/1/teams/2/boards/cards/1234">
+                </div>
+
+                <button type="submit" class="sgd-btn sgd-btn-gold">
+                    🤖 Dispatch Test Quest to Employee
+                </button>
+            </form>
+        </div>
+
+        <!-- AI AGENT TRAINING GUIDE & CODE SNIPPETS -->
+        <div style="background:#090c14; border:1px solid #28334a; border-radius:10px; padding:20px;">
+            <div style="font-family:var(--font-pixel); font-size:10px; color:#00e5ff; margin-bottom:10px;">
+                🧠 HOW TO TRAIN YOUR AI AGENT WITH CICLE
+            </div>
+            <p style="color:#c8d6e5; font-size:13px; line-height:1.6; margin-bottom:15px;">
+                Give the prompt below to your AI assistant (e.g., ChatGPT GPT-4o, Claude 3.5 Sonnet, DeepSeek, or a local Python LLM runner) along with your Cicle board export or Cicle API token:
+            </p>
+
+            <!-- PROMPT BOX -->
+            <div style="background:#141724; border:1px solid #3c4866; border-radius:6px; padding:15px; margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-family:var(--font-pixel); font-size:8px; color:#ffd700;">📋 COPYABLE SYSTEM PROMPT FOR YOUR AI AGENT:</span>
+                    <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-purple" onclick="navigator.clipboard.writeText(document.getElementById('sgd-ai-prompt-code').innerText); alert('📋 AI System Prompt copied!');" style="font-size:7px; padding:3px 8px;">
+                        Copy Prompt
+                    </button>
+                </div>
+                <pre id="sgd-ai-prompt-code" style="color:#7bed9f; font-family:monospace; font-size:11px; white-space:pre-wrap; background:#080a10; padding:12px; border-radius:4px; max-height:180px; overflow-y:auto;">You are an Autonomous Project Management AI Agent for our company.
+Our team uses Cicle (cicle.app) for sprint planning and a 16-Bit Gamification portal for daily employee motivation.
+
+YOUR WORKFLOW:
+1. Every morning, check the active sprint cards and assignments in Cicle.
+2. Query the employee roster at GET <?php echo esc_html( $rest_base_pretty ); ?>/employees with header "X-SGD-API-KEY: <?php echo esc_html( $api_key ); ?>" to match Cicle user names with local gamification IDs.
+3. For each active task, formulate a clear daily quest and dispatch it via:
+   POST <?php echo esc_html( $rest_base_pretty ); ?>/tasks
+   Headers:
+     Content-Type: application/json
+     X-SGD-API-KEY: <?php echo esc_html( $api_key ); ?>
+   JSON Body:
+   {
+     "title": "[Cicle Task Title]",
+     "description": "[Summary of acceptance criteria]",
+     "category": "Cicle Sprint",
+     "type": "daily",
+     "reward_diamonds": 200,
+     "assign_to": "employee_username_or_id",
+     "external_url": "[Link to Cicle card]"
+   }
+4. When employees complete the quest and submit screenshot proof in the gamification portal, query GET <?php echo esc_html( $rest_base_pretty ); ?>/tasks?status=completed to mark the task completed in Cicle.</pre>
+            </div>
+
+            <!-- PYTHON SCRIPT CODE SNIPPET -->
+            <div style="background:#141724; border:1px solid #3c4866; border-radius:6px; padding:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-family:var(--font-pixel); font-size:8px; color:#ffd700;">🐍 PYTHON AI SCRIPT EXAMPLE (requests):</span>
+                    <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-purple" onclick="navigator.clipboard.writeText(document.getElementById('sgd-python-code').innerText); alert('📋 Python code copied!');" style="font-size:7px; padding:3px 8px;">
+                        Copy Python Code
+                    </button>
+                </div>
+                <pre id="sgd-python-code" style="color:#70a1ff; font-family:monospace; font-size:11px; white-space:pre-wrap; background:#080a10; padding:12px; border-radius:4px; max-height:200px; overflow-y:auto;">import requests
+
+API_URL = "<?php echo esc_html( $rest_base_pretty ); ?>/tasks"
+API_KEY = "<?php echo esc_html( $api_key ); ?>"
+
+headers = {
+    "Content-Type": "application/json",
+    "X-SGD-API-KEY": API_KEY
+}
+
+# Example: AI creating a daily task from Cicle
+payload = {
+    "title": "Fix Cicle Sprint Bug: Mobile Navigation Bar",
+    "description": "Ensure the hamburger menu closes on link click on iOS Safari.",
+    "category": "Frontend Team",
+    "type": "daily",
+    "reward_diamonds": 200,
+    "assign_to": "employee",  # Can be username, email, or user_id
+    "is_recurring": 1,
+    "external_url": "https://cicle.app/teams/1/boards/1/cards/42"
+}
+
+response = requests.post(API_URL, json=payload, headers=headers)
+print(response.json())</pre>
+            </div>
+        </div>
     </div>
 
 </div>

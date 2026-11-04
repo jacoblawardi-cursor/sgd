@@ -79,13 +79,23 @@ $is_logged_in = is_user_logged_in();
                     </button>
                 </form>
 
-                <!-- Switch to Employee -->
+                <!-- Switch to Employee 1: Arthas -->
                 <form method="post">
                     <input type="hidden" name="sgd_action" value="sgd_switch_user">
                     <input type="hidden" name="target_user" value="employee">
                     <button type="submit" class="sgd-btn sgd-btn-blue" style="width:100%; justify-content:space-between;">
-                        <span>⚔️ Play as Champion (Employee)</span>
+                        <span>⚔️ Play as Arthas (Employee 1)</span>
                         <span style="font-size:8px; opacity:0.8;">[employee / Emp123!]</span>
+                    </button>
+                </form>
+
+                <!-- Switch to Employee 2: Jaina -->
+                <form method="post">
+                    <input type="hidden" name="sgd_action" value="sgd_switch_user">
+                    <input type="hidden" name="target_user" value="employee2">
+                    <button type="submit" class="sgd-btn sgd-btn-purple" style="width:100%; justify-content:space-between; background:#8e44ad; border-color:#be2edd; color:#fff;">
+                        <span>🧙‍♀️ Play as Jaina (Employee 2)</span>
+                        <span style="font-size:8px; opacity:0.8;">[employee2 / Emp123!]</span>
                     </button>
                 </form>
             </div>

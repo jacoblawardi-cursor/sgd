@@ -83,6 +83,13 @@ if ( $filter === 'mine' && ! $is_admin ) {
                     <textarea name="description" rows="2" class="sgd-form-textarea" placeholder="Detail the exact job this employee must execute. Remember: they will need to upload a photo proof upon finishing!" required></textarea>
                 </div>
 
+                <div class="sgd-form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" name="is_recurring" id="daily_is_recurring" value="1" checked style="width:18px; height:18px; cursor:pointer;">
+                    <label for="daily_is_recurring" style="color:#ffd700; font-size:12px; cursor:pointer; font-weight:bold;">
+                        🔄 Recurring Daily Quest (Auto-resets every midnight via WP-Cron)
+                    </label>
+                </div>
+
                 <button type="submit" class="sgd-btn sgd-btn-gold">
                     🎯 Assign Custom Daily Task (+200 💎)
                 </button>
@@ -119,6 +126,57 @@ if ( $filter === 'mine' && ! $is_admin ) {
     </div>
 </div>
 
+<!-- 16-BIT FIERY STREAK & CONSISTENCY MULTIPLIER TRACKER -->
+<?php 
+$page_streak = sgd_get_user_streak( $current_user_id );
+?>
+<div class="sgd-streak-tracker-board">
+    <div class="sgd-streak-tracker-header">
+        <div class="sgd-streak-tracker-left">
+            <span class="sgd-streak-tracker-flame">🔥</span>
+            <div>
+                <div class="sgd-streak-tracker-sub">DAILY QUEST CONSISTENCY MULTIPLIER</div>
+                <h3 class="sgd-streak-tracker-title">
+                    <?php if ( $page_streak['current'] > 0 ): ?>
+                        🔥 <?php echo $page_streak['current']; ?>-Day Quest Streak Active! (+<?php echo $page_streak['bonus_percent']; ?>% Bonus)
+                    <?php else: ?>
+                        🔥 Start Your Daily Streak Today!
+                    <?php endif; ?>
+                </h3>
+            </div>
+        </div>
+        <div class="sgd-streak-tracker-right">
+            <?php if ( $page_streak['is_active_today'] ): ?>
+                <span class="sgd-streak-status-pill status-secured">✅ Today's Quest Done! Streak Secured.</span>
+            <?php else: ?>
+                <span class="sgd-streak-status-pill status-pending">⏳ Complete a daily task today to extend streak!</span>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- 5-STEP STREAK MILESTONES -->
+    <div class="sgd-streak-milestones">
+        <?php 
+        $milestones = [
+            1 => [ 'label' => 'Day 1', 'bonus' => 'Base (+200 💎)', 'desc' => 'Ignite Flame' ],
+            2 => [ 'label' => 'Day 2', 'bonus' => '+10% Bonus (+220 💎)', 'desc' => 'Kindle' ],
+            3 => [ 'label' => 'Day 3', 'bonus' => '+20% Bonus (+240 💎)', 'desc' => 'Blaze' ],
+            4 => [ 'label' => 'Day 4', 'bonus' => '+30% Bonus (+260 💎)', 'desc' => 'Inferno' ],
+            5 => [ 'label' => 'Day 5+', 'bonus' => '+50% Bonus (+300 💎)', 'desc' => '🔥 MAX FIRE' ],
+        ];
+        foreach ( $milestones as $step => $m ): 
+            $is_active_step = ( $page_streak['current'] >= $step );
+            $is_current_step = ( $page_streak['current'] == $step || ( $step == 5 && $page_streak['current'] >= 5 ) );
+        ?>
+            <div class="sgd-milestone-step <?php echo $is_active_step ? 'step-active' : ''; ?> <?php echo $is_current_step ? 'step-current' : ''; ?>">
+                <div class="sgd-step-badge"><?php echo ( $step == 5 ) ? '🔥' : ( $is_active_step ? '★' : '☆' ); ?></div>
+                <div class="sgd-step-label"><?php echo esc_html( $m['label'] ); ?></div>
+                <div class="sgd-step-bonus"><?php echo esc_html( $m['bonus'] ); ?></div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
 <div class="sgd-task-grid">
     <?php if ( empty( $daily_tasks ) ): ?>
         <div style="background:#141724; border:2px dashed #444; padding:35px; text-align:center; border-radius:8px;">
@@ -140,6 +198,9 @@ if ( $filter === 'mine' && ! $is_admin ) {
                         <div>
                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
                                 <span class="sgd-quest-type-tag sgd-tag-daily">📜 Daily Duty</span>
+                                <?php if ( ! empty( $task->is_recurring ) ): ?>
+                                    <span class="sgd-status-badge" style="background:#1b3a24; border:1px solid #2ecc71; color:#2ecc71; font-size:7px;">🔄 Recurring Daily</span>
+                                <?php endif; ?>
                                 
                                 <!-- ASSIGNMENT BADGE -->
                                 <?php if ( $is_assigned ): ?>
@@ -173,6 +234,13 @@ if ( $filter === 'mine' && ! $is_admin ) {
 
                 <div class="sgd-quest-desc">
                     <?php echo nl2br( esc_html( $task->description ) ); ?>
+                    <?php if ( ! empty( $task->external_url ) ): ?>
+                        <div style="margin-top:10px;">
+                            <a href="<?php echo esc_url( $task->external_url ); ?>" target="_blank" class="sgd-btn sgd-btn-sm sgd-btn-purple" style="font-size:8px; padding:3px 10px; display:inline-flex; align-items:center; gap:5px; text-decoration:none;">
+                                🔗 Open Card in Cicle ↗
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- SOS / Help Request Notification -->

@@ -29,9 +29,14 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
         <div class="sgd-realm-badge">⚔️ 16-BIT GAMIFICATION REALM • WORLD OF WARCRAFT ⚔️</div>
         <h1 class="sgd-game-title">EMPLOYEE QUEST & CASH SHOP</h1>
         <div class="sgd-player-summary-bar">
+            <?php 
+            $home_xp = sgd_get_user_xp_data( $user_id ); 
+            $home_streak = sgd_get_user_streak( $user_id );
+            ?>
             <span>PLAYER: <strong style="color:#fff;"><?php echo $is_logged_in ? esc_html($current_user->display_name) : 'GUEST'; ?></strong></span>
-            <span style="color:#ffd700;">★ LEVEL 60</span>
+            <span style="color:#ffd700;">★ LEVEL <?php echo $home_xp['level']; ?> (<?php echo esc_html($home_xp['faction']); ?>)</span>
             <span style="color:#00e5ff;">💎 TOTAL DIAMONDS: <strong style="color:#fff;"><?php echo number_format($diamonds); ?></strong></span>
+            <span style="color:#ff9f43;">🔥 STREAK: <strong style="color:#fff;"><?php echo $home_streak['current']; ?> DAYS</strong><?php if ( $home_streak['bonus_percent'] > 0 ) echo ' <span style="background:rgba(255,159,67,0.25); border:1px solid #ff9f43; padding:1px 6px; border-radius:3px; font-size:9px; color:#ffc048;">+' . $home_streak['bonus_percent'] . '% BONUS</span>'; ?></span>
         </div>
     </div>
 
@@ -88,6 +93,20 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
             <span class="sgd-menu-btn-arrow">➔</span>
         </a>
 
+        <!-- 2.5 LAPORAN HARIAN (DAILY WORK REPORT) BUTTON -->
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'laporan-harian' ) ); ?>" class="sgd-wow-menu-btn" style="border-color:#00e5ff; background:radial-gradient(ellipse at 10% 50%, rgba(0, 229, 255, 0.15) 0%, rgba(13, 20, 38, 0.95) 75%);">
+            <span class="sgd-menu-btn-icon" style="filter:drop-shadow(0 0 10px #00e5ff);">📋</span>
+            <div class="sgd-menu-btn-content">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span class="sgd-menu-btn-label" style="color:#00e5ff;">LAPORAN HARIAN (DAILY REPORT)</span>
+                    <span class="sgd-pill-reward" style="background:rgba(0,229,255,0.2); border-color:#00e5ff; color:#00e5ff;">+150 💎 REWARD</span>
+                    <span style="font-family:var(--font-pixel); font-size:8px; background:#70a1ff; color:#0b1933; padding:2px 6px; border-radius:3px;">🎙️ VOICE & AI DECIPHER</span>
+                </div>
+                <span class="sgd-menu-btn-desc">Input via teks / suara • Smart AI decipher: cuaca per jam, tenaga kerja, material masuk, alat, K3 & 3 foto progress</span>
+            </div>
+            <span class="sgd-menu-btn-arrow" style="color:#00e5ff;">➔</span>
+        </a>
+
         <!-- 3. URGENT TASK BUTTON -->
         <a href="<?php echo esc_url( sgd_get_portal_url( 'urgent' ) ); ?>" class="sgd-wow-menu-btn btn-urgent">
             <span class="sgd-menu-btn-icon" style="animation: pulse-urgent 1.2s infinite;">⚡</span>
@@ -117,7 +136,46 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
             <span class="sgd-menu-btn-arrow">➔</span>
         </a>
 
-        <!-- 5. LOG IN BUTTON -->
+        <!-- 5. HALL OF LEGENDS & GUILDS BUTTON -->
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'leaderboard' ) ); ?>" class="sgd-wow-menu-btn btn-leaderboard" style="background:linear-gradient(180deg, #2b134d 0%, #0f071f 100%); border-color:#9b59b6;">
+            <span class="sgd-menu-btn-icon" style="border-color:#9b59b6;">👑</span>
+            <div class="sgd-menu-btn-content">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="sgd-menu-btn-label" style="color:#e056fd;">HALL OF LEGENDS & GUILDS</span>
+                    <span class="sgd-pill-reward" style="background:#8e44ad; border-color:#be2edd;">RANKINGS & SQUADS</span>
+                </div>
+                <span class="sgd-menu-btn-desc">Guild Standings • Department Squad Vaults • Peer Mana & Kudos (50 💎)</span>
+            </div>
+            <span class="sgd-menu-btn-arrow" style="color:#e056fd;">➔</span>
+        </a>
+
+        <!-- 6. GOBLIN DAILY FORTUNE WHEEL -->
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'wheel' ) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #3d2c07 0%, #171003 100%); border-color:#ffd700;">
+            <span class="sgd-menu-btn-icon" style="border-color:#ffd700;">🎰</span>
+            <div class="sgd-menu-btn-content">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="sgd-menu-btn-label" style="color:#ffd700;">GOBLIN FORTUNE WHEEL</span>
+                    <span class="sgd-pill-reward" style="background:#d49a00; color:#000; font-weight:bold;">1 FREE DAILY SPIN</span>
+                </div>
+                <span class="sgd-menu-btn-desc">Spin for +500 💎 Jackpots, Streak Shields, Coffee Tokens & Arcane XP</span>
+            </div>
+            <span class="sgd-menu-btn-arrow" style="color:#ffd700;">➔</span>
+        </a>
+
+        <!-- 7. PEER BOUNTY BOARD -->
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'bounties' ) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #351c08 0%, #140b03 100%); border-color:#ff9f43;">
+            <span class="sgd-menu-btn-icon" style="border-color:#ff9f43;">🤝</span>
+            <div class="sgd-menu-btn-content">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="sgd-menu-btn-label" style="color:#ff9f43;">PEER BOUNTY BOARD</span>
+                    <span class="sgd-pill-reward" style="background:#e67e22; border-color:#f39c12;">COMMISSIONS</span>
+                </div>
+                <span class="sgd-menu-btn-desc">Post a bounty from your own wallet to hire a teammate, or complete favors for bonus diamonds</span>
+            </div>
+            <span class="sgd-menu-btn-arrow" style="color:#ff9f43;">➔</span>
+        </a>
+
+        <!-- 8. LOG IN BUTTON -->
         <a href="<?php echo esc_url( sgd_get_portal_url( 'login' ) ); ?>" class="sgd-wow-menu-btn btn-login">
             <span class="sgd-menu-btn-icon">🔑</span>
             <div class="sgd-menu-btn-content">
@@ -172,7 +230,12 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
         <form method="post" style="display:inline;">
             <input type="hidden" name="sgd_action" value="sgd_switch_user">
             <input type="hidden" name="target_user" value="employee">
-            <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-blue">⚔️ Play as Employee (Emp123!)</button>
+            <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-blue">⚔️ Play as Arthas (Emp 1)</button>
+        </form>
+        <form method="post" style="display:inline;">
+            <input type="hidden" name="sgd_action" value="sgd_switch_user">
+            <input type="hidden" name="target_user" value="employee2">
+            <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-purple" style="background:#8e44ad; border-color:#be2edd; color:#fff;">🧙‍♀️ Play as Jaina (Emp 2)</button>
         </form>
         <form method="post" style="display:inline;">
             <input type="hidden" name="sgd_action" value="sgd_switch_user">

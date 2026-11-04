@@ -56,6 +56,13 @@ $urgent_tasks = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE type = 'ur
 
                 <div class="sgd-quest-desc">
                     <?php echo nl2br( esc_html( $task->description ) ); ?>
+                    <?php if ( ! empty( $task->external_url ) ): ?>
+                        <div style="margin-top:10px;">
+                            <a href="<?php echo esc_url( $task->external_url ); ?>" target="_blank" class="sgd-btn sgd-btn-sm sgd-btn-purple" style="font-size:8px; padding:3px 10px; display:inline-flex; align-items:center; gap:5px; text-decoration:none;">
+                                🔗 Open Card in Cicle ↗
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Claim Status Banner -->

@@ -41,35 +41,43 @@ $flash = sgd_get_flash();
         <div class="sgd-hud-inner">
             
             <!-- Character Unit Frame -->
+            <?php 
+            $xp_data = sgd_get_user_xp_data( $user_id );
+            $user_login = $current_user ? $current_user->user_login : '';
+            if ( $is_admin ) {
+                $portrait_icon = '👑';
+            } elseif ( $user_login === 'employee2' ) {
+                $portrait_icon = '🧙‍♀️';
+            } elseif ( $is_logged_in ) {
+                $portrait_icon = '⚔️';
+            } else {
+                $portrait_icon = '👤';
+            }
+            ?>
             <div class="sgd-unit-frame">
                 <div class="sgd-portrait">
-                    <?php if ( $is_admin ): ?>
-                        👑
-                    <?php elseif ( $is_logged_in ): ?>
-                        🧙‍♂️
-                    <?php else: ?>
-                        👤
-                    <?php endif; ?>
-                    <span class="sgd-unit-level">60</span>
+                    <?php echo $portrait_icon; ?>
+                    <span class="sgd-unit-level" title="Hero Level: <?php echo $xp_data['level']; ?>"><?php echo $xp_data['level']; ?></span>
                 </div>
                 <div class="sgd-unit-info">
                     <span class="sgd-unit-name">
                         <?php echo $is_logged_in ? esc_html( $current_user->display_name ) : 'Guest Wanderer'; ?>
                     </span>
-                    <span class="sgd-unit-role">
-                        <?php 
-                        if ( $is_admin ) {
-                            echo '⚔️ Grand Marshal (Admin)';
-                        } elseif ( $is_logged_in ) {
-                            echo '🛡️ Level 60 Employee Hero';
-                        } else {
-                            echo 'Adventurer (Unlogged)';
-                        }
-                        ?>
+                    <span class="sgd-unit-role" title="Squad: <?php echo esc_attr( $xp_data['faction'] ); ?>">
+                        <?php if ( $is_logged_in ): ?>
+                            <button type="button" class="sgd-title-badge-btn sgd-title-modal-trigger" title="Click to equip or customize your Hero Title">
+                                👑 <?php echo esc_html( $xp_data['title'] ); ?> <span class="sgd-title-arrow">▾</span>
+                            </button>
+                        <?php else: ?>
+                            <?php echo esc_html( $xp_data['title'] ); ?>
+                        <?php endif; ?>
+                        • <span style="color:#c69b3a;"><?php echo esc_html( $xp_data['faction'] ); ?></span>
                     </span>
                     <div class="sgd-bars">
                         <div class="sgd-bar" title="Health: 100%"><div class="sgd-bar-hp"></div></div>
-                        <div class="sgd-bar" title="Mana: 85%"><div class="sgd-bar-mp"></div></div>
+                        <div class="sgd-bar" title="XP Progress: <?php echo number_format($xp_data['xp_in_level']); ?> / <?php echo number_format($xp_data['xp_needed']); ?> XP (<?php echo $xp_data['percent']; ?>%) to Level <?php echo min(60, $xp_data['level'] + 1); ?>">
+                            <div class="sgd-bar-mp" style="width:<?php echo $xp_data['percent']; ?>%; background:linear-gradient(90deg, #9b59b6, #be2edd);"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -82,6 +90,25 @@ $flash = sgd_get_flash();
                     <span class="sgd-diamond-count"><?php echo number_format( $user_diamonds ); ?> 💎</span>
                 </div>
             </div>
+
+            <!-- Daily Quest Streak HUD Badge -->
+            <?php 
+            $streak_info = sgd_get_user_streak( $user_id );
+            ?>
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'daily' ) ); ?>" style="text-decoration:none;" title="Daily Streak: <?php echo $streak_info['current']; ?> Days. <?php echo $streak_info['is_active_today'] ? '✅ Completed for today!' : '⏳ Complete a daily task today to extend streak!'; ?>">
+                <div class="sgd-streak-hud-badge <?php echo ( $streak_info['current'] >= 5 ) ? 'sgd-streak-on-fire' : ''; ?>">
+                    <span class="sgd-streak-flame-icon">🔥</span>
+                    <div class="sgd-streak-hud-details">
+                        <span class="sgd-streak-hud-label">Daily Streak</span>
+                        <span class="sgd-streak-hud-val">
+                            <?php echo $streak_info['current']; ?> <?php echo $streak_info['current'] === 1 ? 'Day' : 'Days'; ?>
+                            <?php if ( $streak_info['bonus_percent'] > 0 ): ?>
+                                <span class="sgd-streak-bonus-pill">+<?php echo $streak_info['bonus_percent']; ?>% 💎</span>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                </div>
+            </a>
 
             <!-- ADMIN LIVE SOS HELP BEACON ALERT (If any employee needs help) -->
             <?php if ( $is_admin && $sos_count > 0 ): ?>
@@ -111,7 +138,24 @@ $flash = sgd_get_flash();
 
             <!-- Quick Character Switcher & Tools -->
             <div class="sgd-hud-actions">
-                <button type="button" class="sgd-sfx-btn" id="sgd-sfx-toggle">🔊 SFX: ON</button>
+                <div class="sgd-sound-ctrl-wrap">
+                    <button type="button" class="sgd-sfx-btn" id="sgd-sfx-toggle" title="Click to mute/unmute, or adjust volume">
+                        <span id="sgd-sfx-icon">🔊</span>
+                        <span id="sgd-sfx-text">SFX: 70%</span>
+                    </button>
+                    <div class="sgd-sound-popover" id="sgd-sound-popover">
+                        <div class="sgd-sound-popover-title">
+                            <span>VOLUME CONTROL</span>
+                            <span id="sgd-vol-display" style="color:var(--wow-gold-light);">70%</span>
+                        </div>
+                        <input type="range" id="sgd-volume-slider" min="0" max="100" value="70" class="sgd-range-input">
+                        <div class="sgd-sound-presets">
+                            <button type="button" class="sgd-sound-preset-btn" data-vol="0">🔇 Mute</button>
+                            <button type="button" class="sgd-sound-preset-btn" data-vol="50">🔉 50%</button>
+                            <button type="button" class="sgd-sound-preset-btn" data-vol="100">🔊 100%</button>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="sgd-switch-pill" title="Quick 1-Click Role Switch for Demo Testing">
                     <span>DEMO:</span>
@@ -123,7 +167,12 @@ $flash = sgd_get_flash();
                     <form method="post" style="display:inline;">
                         <input type="hidden" name="sgd_action" value="sgd_switch_user">
                         <input type="hidden" name="target_user" value="employee">
-                        <button type="submit" class="sgd-switch-btn <?php echo ( $is_logged_in && ! $is_admin ) ? 'active' : ''; ?>">⚔️ Employee</button>
+                        <button type="submit" class="sgd-switch-btn <?php echo ( $is_logged_in && ! $is_admin && $user_login === 'employee' ) ? 'active' : ''; ?>">⚔️ Arthas</button>
+                    </form>
+                    <form method="post" style="display:inline;">
+                        <input type="hidden" name="sgd_action" value="sgd_switch_user">
+                        <input type="hidden" name="target_user" value="employee2">
+                        <button type="submit" class="sgd-switch-btn <?php echo ( $is_logged_in && $user_login === 'employee2' ) ? 'active' : ''; ?>">🧙‍♀️ Jaina</button>
                     </form>
                 </div>
 
@@ -164,11 +213,17 @@ $flash = sgd_get_flash();
             <a href="<?php echo esc_url( sgd_get_portal_url( 'achievements' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'achievements' ) ? 'active' : ''; ?>">
                 🏆 ACHIEVEMENT
             </a>
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'leaderboard' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'leaderboard' ) ? 'active' : ''; ?>" style="color:#e056fd; border-color:#be2edd;">
+                👑 HALL OF LEGENDS
+            </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'daily' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'daily' ) ? 'active' : ''; ?>">
                 📜 DAILY TASK (+200 💎)
                 <?php if ( $daily_count > 0 ): ?>
                     <span class="sgd-badge-count"><?php echo $daily_count; ?></span>
                 <?php endif; ?>
+            </a>
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'laporan-harian' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'laporan-harian' ) ? 'active' : ''; ?>" style="color:#00e5ff; border-color:#00e5ff;">
+                📋 LAPORAN HARIAN (+150 💎)
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'urgent' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'urgent' ) ? 'active' : ''; ?>">
                 ⚡ URGENT TASK (+1,000 💎)
@@ -178,6 +233,12 @@ $flash = sgd_get_flash();
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'shop' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'shop' ) ? 'active' : ''; ?>">
                 💎 CASH SHOP
+            </a>
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'wheel' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'wheel' ) ? 'active' : ''; ?>" style="color:#ffd700; border-color:#ffd700;">
+                🎰 FORTUNE WHEEL
+            </a>
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'bounties' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'bounties' ) ? 'active' : ''; ?>" style="color:#ff9f43; border-color:#ff9f43;">
+                🤝 BOUNTIES
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'login' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'login' ) ? 'active' : ''; ?>">
                 🔑 <?php echo $is_logged_in ? 'MY ACCOUNT' : 'LOG IN'; ?>
@@ -191,4 +252,53 @@ $flash = sgd_get_flash();
                 </a>
             <?php endif; ?>
         </nav>
+    <?php endif; ?>
+
+    <!-- HERO TITLE ARMORY MODAL -->
+    <?php if ( $is_logged_in ): ?>
+        <div class="sgd-modal-backdrop" id="sgd-title-modal">
+            <div class="sgd-modal-box" style="max-width:480px;">
+                <div class="sgd-modal-header">
+                    <h3 class="sgd-modal-title">👑 Hero Title Armory</h3>
+                    <button type="button" class="sgd-modal-close" id="sgd-title-modal-close">&times;</button>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="sgd_action" value="sgd_change_title">
+                    <div class="sgd-modal-body">
+                        <p style="font-size:13px; color:#c8d1e0; line-height:1.5; margin-bottom:14px;">
+                            Equip any title earned through leveling, daily wheel spins, streak feats, or type an approved custom role title!
+                        </p>
+
+                        <div class="sgd-form-group">
+                            <label class="sgd-form-label">Select from Your Earned Titles:</label>
+                            <select name="hero_title" id="sgd-title-select" class="sgd-form-select">
+                                <?php 
+                                $unlocked_titles = sgd_get_user_unlocked_titles( $user_id );
+                                $current_title = $xp_data['title'];
+                                foreach ( $unlocked_titles as $ut ): 
+                                ?>
+                                    <option value="<?php echo esc_attr($ut); ?>" <?php selected( $current_title, $ut ); ?>>
+                                        👑 <?php echo esc_html($ut); ?> <?php echo ($current_title === $ut) ? '★ (Currently Equipped)' : ''; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div style="text-align:center; font-family:var(--font-pixel); font-size:8px; color:#ffd700; margin:14px 0 10px 0; letter-spacing:1px;">
+                            — OR FORGE CUSTOM ROLE TITLE —
+                        </div>
+
+                        <div class="sgd-form-group">
+                            <label class="sgd-form-label">Custom Title (Max 40 chars):</label>
+                            <input type="text" name="custom_title" id="sgd-custom-title-input" class="sgd-form-input" placeholder="e.g. Master of Code, Bug Slayer, Sprint Paladin" maxlength="40">
+                            <small style="color:#8fa0bd; font-size:10px; margin-top:4px; display:block;">Leave blank to use the selected title above.</small>
+                        </div>
+                    </div>
+                    <div class="sgd-modal-footer">
+                        <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="sgd-title-modal-cancel">Cancel</button>
+                        <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-gold">👑 Equip Hero Title</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     <?php endif; ?>
