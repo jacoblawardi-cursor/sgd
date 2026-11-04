@@ -5,3 +5,5 @@ wordpress/
 .DS_Store
 Thumbs.db
 wp-content/uploads/
+*.local.php
+wp-content/mu-plugins/sgd-ai-config.local.php

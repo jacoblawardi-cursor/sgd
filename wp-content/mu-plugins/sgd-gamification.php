@@ -590,7 +590,7 @@ function sgd_seed_default_data() {
             'photo_2'                => 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&auto=format&fit=crop&q=80',
             'photo_3'                => 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&auto=format&fit=crop&q=80',
             'status'                 => 'approved',
-            'parsed_with'            => 'smart_nlp',
+            'parsed_with'            => 'gemini',
             'created_at'             => current_time( 'mysql' ),
             'updated_at'             => current_time( 'mysql' ),
         ] );
@@ -2987,6 +2987,40 @@ function sgd_extract_json_from_ai_response( $raw_text ) {
 }
 
 /**
+ * Retrieve Gemini API key securely from local configuration, constant, or database
+ */
+function sgd_get_gemini_api_key() {
+    // 1. Check local environment config file (ignored by git to prevent secret exposure)
+    $local_cfg = dirname( __FILE__ ) . '/sgd-ai-config.local.php';
+    if ( file_exists( $local_cfg ) ) {
+        @include_once $local_cfg;
+    }
+    // 2. Check PHP constant
+    if ( defined( 'SGD_GEMINI_API_KEY' ) && ! empty( constant( 'SGD_GEMINI_API_KEY' ) ) ) {
+        return trim( (string) constant( 'SGD_GEMINI_API_KEY' ) );
+    }
+    // 3. Check WordPress database option
+    return trim( (string) get_option( 'sgd_gemini_api_key', '' ) );
+}
+
+/**
+ * Retrieve active AI provider securely
+ */
+function sgd_get_active_ai_provider() {
+    $db_provider = get_option( 'sgd_ai_provider', '' );
+    if ( ! empty( $db_provider ) ) {
+        return $db_provider;
+    }
+    if ( defined( 'SGD_DEFAULT_AI_PROVIDER' ) ) {
+        return constant( 'SGD_DEFAULT_AI_PROVIDER' );
+    }
+    if ( ! empty( sgd_get_gemini_api_key() ) ) {
+        return 'gemini';
+    }
+    return 'smart_nlp';
+}
+
+/**
  * AI-powered Decipher (Google Gemini / OpenAI)
  * Specialized for Indonesian Civil/Architectural Construction Daily Site Reports
  */
@@ -2996,9 +3030,9 @@ function sgd_ai_decipher_report( $raw_text ) {
         return null;
     }
 
-    $gemini_key = trim( get_option( 'sgd_gemini_api_key', '' ) );
-    $openai_key = trim( get_option( 'sgd_openai_api_key', '' ) );
-    $provider   = get_option( 'sgd_ai_provider', 'gemini' );
+    $gemini_key = sgd_get_gemini_api_key();
+    $openai_key = trim( (string) get_option( 'sgd_openai_api_key', '' ) );
+    $provider   = sgd_get_active_ai_provider();
 
     $construction_system_prompt = "Anda adalah AI asisten insinyur proyek konstruksi sipil & arsitektur profesional di Indonesia.
 Tugas Anda: Menguraikan (decipher) catatan lapangan harian (baik dari rekaman suara pekerja atau teks singkat informal yang mungkin terdapat singkatan/typo) menjadi data JSON terstruktur untuk Laporan Harian Proyek (Daily Site Report).
@@ -3059,8 +3093,8 @@ Laporan Lapangan Mentah:
 
     // 1. Prioritize Google Gemini (Gratis di Google AI Studio & Sangat Cepat)
     if ( ! empty( $gemini_key ) && ( $provider === 'gemini' || empty( $openai_key ) ) ) {
-        // Try Gemini models with automatic fallback (1.5-flash, 2.0-flash, 1.5-pro)
-        $models_to_try = [ 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro' ];
+        // Try Gemini models with automatic fallback (gemini-3.5-flash-lite, 3.8-flash, flash-latest, 2.5-flash, 1.5-flash)
+        $models_to_try = [ 'gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-1.5-flash' ];
 
         foreach ( $models_to_try as $model_id ) {
             $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model_id . ':generateContent?key=' . urlencode( $gemini_key );

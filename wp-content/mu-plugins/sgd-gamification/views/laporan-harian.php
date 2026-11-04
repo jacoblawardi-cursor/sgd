@@ -62,9 +62,9 @@ $year_part = date( 'Y', $timestamp );
 $formatted_date_id = "{$day_id}, {$date_part} {$month_part} {$year_part}";
 
 // AI settings
-$gemini_key = get_option( 'sgd_gemini_api_key', '' );
+$gemini_key = function_exists( 'sgd_get_gemini_api_key' ) ? sgd_get_gemini_api_key() : get_option( 'sgd_gemini_api_key', '' );
 $openai_key = get_option( 'sgd_openai_api_key', '' );
-$active_ai_provider = get_option( 'sgd_ai_provider', 'smart_nlp' );
+$active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_active_ai_provider() : get_option( 'sgd_ai_provider', 'gemini' );
 ?>
 
 <div class="sgd-laporan-wrapper">
