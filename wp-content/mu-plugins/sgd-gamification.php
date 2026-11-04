@@ -195,11 +195,16 @@ function sgd_install_database() {
         parsed_with VARCHAR(50) NOT NULL DEFAULT 'smart_nlp',
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
+        PRIMARY KEY  (id),
         KEY report_date (report_date),
         KEY user_id (user_id)
     ) $charset_collate;";
     dbDelta( $sql_daily_reports );
+
+    // Ensure table exists via direct query if dbDelta was bypassed or failed
+    if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_daily_reports'" ) != $table_daily_reports ) {
+        $wpdb->query( $sql_daily_reports );
+    }
 
     // Ensure employee role exists
     if ( ! get_role( 'employee' ) ) {
@@ -2138,87 +2143,102 @@ function sgd_handle_form_actions() {
             wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'admin', 'tab' => 'api' ], home_url( '/' ) ) );
             exit;
         }
+    } // End of Administrator-Only Action handlers
 
-        // ==========================================
-        // LAPORAN HARIAN (DAILY WORK REPORT) HANDLERS
-        // ==========================================
+    // ==========================================
+    // LAPORAN HARIAN (DAILY WORK REPORT) HANDLERS
+    // Accessible by all users (Employees & Admin)
+    // ==========================================
 
-        // 1. Submit Daily Report (Text / Voice + up to 3 Photos + AI/NLP Decipher)
-        if ( $action === 'sgd_submit_daily_report' ) {
-            $raw_input = sanitize_textarea_field( $_POST['raw_input'] ?? '' );
-            if ( empty( trim( $raw_input ) ) ) {
-                sgd_set_flash( 'error', '⚠️ Laporan kerja tidak boleh kosong. Silakan ketik atau gunakan rekaman suara.' );
-                wp_safe_redirect( add_query_arg( 'sgd_page', 'laporan-harian', home_url( '/' ) ) );
-                exit;
-            }
+    // 1. Submit Daily Report (Text / Voice + up to 3 Photos + AI/NLP Decipher)
+    if ( $action === 'sgd_submit_daily_report' ) {
+        // Ensure table exists
+        $table_daily_reports = $wpdb->prefix . 'sgd_daily_reports';
+        if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_daily_reports'" ) != $table_daily_reports ) {
+            sgd_install_database();
+        }
 
-            $report_date = sanitize_text_field( $_POST['report_date'] ?? current_time( 'Y-m-d' ) );
-            if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $report_date ) ) {
-                $report_date = current_time( 'Y-m-d' );
-            }
-
-            // Handle up to 3 photo uploads
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            require_once ABSPATH . 'wp-admin/includes/image.php';
-            require_once ABSPATH . 'wp-admin/includes/media.php';
-
-            $photos = [ '', '', '' ];
-            for ( $i = 1; $i <= 3; $i++ ) {
-                $fkey = 'progress_photo_' . $i;
-                if ( ! empty( $_FILES[ $fkey ]['name'] ) ) {
-                    $upload = wp_handle_upload( $_FILES[ $fkey ], [ 'test_form' => false ] );
-                    if ( $upload && ! isset( $upload['error'] ) ) {
-                        $photos[ $i - 1 ] = $upload['url'];
-                    }
-                }
-            }
-
-            // Decipher the raw input using AI or smart NLP heuristic parser
-            $parsed = sgd_decipher_daily_report( $raw_input );
-            $parsed_engine = $parsed['parsed_with'] ?? 'smart_nlp';
-
-            $table_daily_reports = $wpdb->prefix . 'sgd_daily_reports';
-            $wpdb->insert( $table_daily_reports, [
-                'report_date'            => $report_date,
-                'user_id'                => $current_user_id ?: 1,
-                'raw_input'              => $raw_input,
-                'weather_hourly'         => wp_json_encode( $parsed['weather_hourly'] ?? [] ),
-                'manpower'               => wp_json_encode( $parsed['manpower'] ?? [] ),
-                'materials'              => wp_json_encode( $parsed['materials'] ?? [] ),
-                'equipment'              => wp_json_encode( $parsed['equipment'] ?? [] ),
-                'work_executed'          => wp_json_encode( $parsed['work_executed'] ?? [] ),
-                'issues'                 => wp_json_encode( $parsed['issues'] ?? [] ),
-                'supervisor_instruction' => sanitize_textarea_field( $_POST['supervisor_instruction'] ?? '' ),
-                'next_day_plan'          => sanitize_textarea_field( $_POST['next_day_plan'] ?? '' ),
-                'safety_k3'              => sanitize_text_field( $parsed['safety_k3'] ?? 'Nihil kecelakaan kerja' ),
-                'additional_notes'       => sanitize_textarea_field( $_POST['additional_notes'] ?? '' ),
-                'photo_1'                => $photos[0],
-                'photo_2'                => $photos[1],
-                'photo_3'                => $photos[2],
-                'status'                 => 'submitted',
-                'parsed_with'            => $parsed_engine,
-                'created_at'             => current_time( 'mysql' ),
-                'updated_at'             => current_time( 'mysql' ),
-            ] );
-
-            $report_id = $wpdb->insert_id;
-
-            // Award daily report completion diamonds
-            $reward = 150;
-            if ( $current_user_id ) {
-                sgd_add_diamonds( $current_user_id, $reward );
-            }
-
-            $engine_label = ( $parsed_engine === 'gemini' ) ? 'Google Gemini AI ✨' : ( ( $parsed_engine === 'openai' ) ? 'OpenAI GPT ✨' : 'Smart Construction NLP ⚡' );
-            sgd_set_flash( 'celebration', "📋 LAPORAN HARIAN BERHASIL DIKIRIM! Berhasil di-decipher oleh {$engine_label} dan Anda memperoleh +{$reward} 💎!" );
-
-            wp_safe_redirect( add_query_arg( [
-                'sgd_page'    => 'laporan-harian',
-                'report_date' => $report_date,
-                'report_id'   => $report_id,
-            ], home_url( '/' ) ) );
+        $raw_input = sanitize_textarea_field( $_POST['raw_input'] ?? '' );
+        if ( empty( trim( $raw_input ) ) ) {
+            sgd_set_flash( 'error', '⚠️ Laporan kerja tidak boleh kosong. Silakan ketik atau gunakan rekaman suara.' );
+            wp_safe_redirect( add_query_arg( 'sgd_page', 'laporan-harian', home_url( '/' ) ) );
             exit;
         }
+
+        $report_date = sanitize_text_field( $_POST['report_date'] ?? current_time( 'Y-m-d' ) );
+        if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $report_date ) ) {
+            $report_date = current_time( 'Y-m-d' );
+        }
+
+        // Handle up to 3 photo uploads
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+
+        $photos = [ '', '', '' ];
+        for ( $i = 1; $i <= 3; $i++ ) {
+            $fkey = 'progress_photo_' . $i;
+            if ( ! empty( $_FILES[ $fkey ]['name'] ) ) {
+                $upload = wp_handle_upload( $_FILES[ $fkey ], [ 'test_form' => false ] );
+                if ( $upload && ! isset( $upload['error'] ) ) {
+                    $photos[ $i - 1 ] = $upload['url'];
+                }
+            }
+        }
+
+        // Decipher the raw input using AI or smart NLP heuristic parser
+        $parsed = sgd_decipher_daily_report( $raw_input );
+        $parsed_engine = $parsed['parsed_with'] ?? 'smart_nlp';
+
+        $insert_data = [
+            'report_date'            => $report_date,
+            'user_id'                => $current_user_id ?: 1,
+            'raw_input'              => $raw_input,
+            'weather_hourly'         => wp_json_encode( $parsed['weather_hourly'] ?? [] ),
+            'manpower'               => wp_json_encode( $parsed['manpower'] ?? [] ),
+            'materials'              => wp_json_encode( $parsed['materials'] ?? [] ),
+            'equipment'              => wp_json_encode( $parsed['equipment'] ?? [] ),
+            'work_executed'          => wp_json_encode( $parsed['work_executed'] ?? [] ),
+            'issues'                 => wp_json_encode( $parsed['issues'] ?? [] ),
+            'supervisor_instruction' => sanitize_textarea_field( $_POST['supervisor_instruction'] ?? '' ),
+            'next_day_plan'          => sanitize_textarea_field( $_POST['next_day_plan'] ?? '' ),
+            'safety_k3'              => sanitize_text_field( $parsed['safety_k3'] ?? 'Nihil kecelakaan kerja' ),
+            'additional_notes'       => sanitize_textarea_field( $_POST['additional_notes'] ?? '' ),
+            'photo_1'                => $photos[0],
+            'photo_2'                => $photos[1],
+            'photo_3'                => $photos[2],
+            'status'                 => 'submitted',
+            'parsed_with'            => $parsed_engine,
+            'created_at'             => current_time( 'mysql' ),
+            'updated_at'             => current_time( 'mysql' ),
+        ];
+
+        $inserted = $wpdb->insert( $table_daily_reports, $insert_data );
+        $report_id = $wpdb->insert_id;
+
+        if ( ! $inserted ) {
+            $last_error = $wpdb->last_error ? ': ' . $wpdb->last_error : '';
+            sgd_set_flash( 'error', '⚠️ Gagal menyimpan laporan ke database' . $last_error );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'laporan-harian', 'report_date' => $report_date ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // Award daily report completion diamonds
+        $reward = 150;
+        if ( $current_user_id ) {
+            sgd_add_diamonds( $current_user_id, $reward );
+        }
+
+        $engine_label = ( $parsed_engine === 'gemini' ) ? 'Google Gemini AI ✨' : ( ( $parsed_engine === 'openai' ) ? 'OpenAI GPT ✨' : 'Smart Construction NLP ⚡' );
+        sgd_set_flash( 'celebration', "📋 LAPORAN HARIAN BERHASIL DIKIRIM! Berhasil di-decipher oleh {$engine_label} dan Anda memperoleh +{$reward} 💎!" );
+
+        wp_safe_redirect( add_query_arg( [
+            'sgd_page'    => 'laporan-harian',
+            'report_date' => $report_date,
+            'report_id'   => $report_id,
+        ], home_url( '/' ) ) );
+        exit;
+    }
 
         // 2. Update Daily Report (Admin or Employee editing fields, weather, manpower, materials, supervisor instructions)
         if ( $action === 'sgd_update_daily_report' ) {
@@ -2438,7 +2458,6 @@ function sgd_handle_form_actions() {
             wp_safe_redirect( add_query_arg( 'sgd_page', 'laporan-harian', home_url( '/' ) ) );
             exit;
         }
-    }
 }
 
 // Cash Shop Rewards Catalog

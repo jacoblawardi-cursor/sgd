@@ -935,4 +935,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // J. Daily Report Submit Feedback
+    const dailyForm = document.getElementById('sgd-daily-report-form');
+    const submitBtn = document.getElementById('sgd-submit-report-btn');
+    if (dailyForm && submitBtn) {
+        dailyForm.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.7';
+            submitBtn.innerHTML = '⏳ Sedang Memproses & Mengurai Laporan...';
+            try { AudioEngine.playQuestAccept(); } catch(e) {}
+        });
+    }
 });

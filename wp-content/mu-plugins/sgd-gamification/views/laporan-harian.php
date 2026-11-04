@@ -238,7 +238,8 @@ $active_ai_provider = get_option( 'sgd_ai_provider', 'smart_nlp' );
                 </div>
             </div>
 
-            <form method="post" enctype="multipart/form-data" id="sgd-daily-report-form">
+            <form method="post" action="<?php echo esc_url( home_url( '/' ) ); ?>" enctype="multipart/form-data" id="sgd-daily-report-form">
+                <input type="hidden" name="sgd_page" value="laporan-harian">
                 <input type="hidden" name="sgd_action" value="sgd_submit_daily_report">
                 <input type="hidden" name="report_date" value="<?php echo esc_attr( $selected_date ); ?>">
 
@@ -435,7 +436,7 @@ $active_ai_provider = get_option( 'sgd_ai_provider', 'smart_nlp' );
                     <div style="font-size:12px; color:#8fa0bd;">
                         ⚡ Sistem akan memproses dan mengurai laporan secara otomatis setelah tombol diklik.
                     </div>
-                    <button type="submit" class="sgd-btn sgd-btn-gold" style="font-size:14px; padding:12px 28px;">
+                    <button type="submit" id="sgd-submit-report-btn" class="sgd-btn sgd-btn-gold" style="font-size:14px; padding:12px 28px;">
                         🚀 PROSES & KIRIM LAPORAN HARIAN (+150 💎)
                     </button>
                 </div>
@@ -511,14 +512,16 @@ $active_ai_provider = get_option( 'sgd_ai_provider', 'smart_nlp' );
                         🖨️ Cetak / Print Laporan
                     </button>
                     <?php if ( $is_admin ): ?>
-                        <form method="post" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menganalisis ulang (re-parse) laporan ini dengan AI/NLP?');">
+                        <form method="post" action="<?php echo esc_url( home_url( '/' ) ); ?>" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menganalisis ulang (re-parse) laporan ini dengan AI/NLP?');">
+                            <input type="hidden" name="sgd_page" value="laporan-harian">
                             <input type="hidden" name="sgd_action" value="sgd_reparse_daily_report">
                             <input type="hidden" name="report_id" value="<?php echo $active_report->id; ?>">
                             <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-blue" title="Analisis ulang teks menggunakan AI/NLP">
                                 🤖 Re-Parse AI
                             </button>
                         </form>
-                        <form method="post" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus laporan ini secara permanen?');">
+                        <form method="post" action="<?php echo esc_url( home_url( '/' ) ); ?>" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus laporan ini secara permanen?');">
+                            <input type="hidden" name="sgd_page" value="laporan-harian">
                             <input type="hidden" name="sgd_action" value="sgd_delete_daily_report">
                             <input type="hidden" name="report_id" value="<?php echo $active_report->id; ?>">
                             <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-red" title="Hapus laporan">
@@ -577,7 +580,8 @@ $active_ai_provider = get_option( 'sgd_ai_provider', 'smart_nlp' );
             <!-- ============================================== -->
             <div id="view-mode-editor" class="sgd-mode-section" style="display:none;">
                 <?php if ( $can_edit ): ?>
-                    <form method="post" enctype="multipart/form-data" id="sgd-admin-edit-report-form">
+                    <form method="post" action="<?php echo esc_url( home_url( '/' ) ); ?>" enctype="multipart/form-data" id="sgd-admin-edit-report-form">
+                        <input type="hidden" name="sgd_page" value="laporan-harian">
                         <input type="hidden" name="sgd_action" value="sgd_update_daily_report">
                         <input type="hidden" name="report_id" value="<?php echo $active_report->id; ?>">
                         <input type="hidden" name="report_date" value="<?php echo esc_attr( $selected_date ); ?>">
