@@ -597,19 +597,289 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
             <!-- TAB 1: FORMAT TEKS STANDAR (EXACT USER SPEC)    -->
             <!-- ============================================== -->
             <div id="view-mode-standard-text" class="sgd-mode-section" style="display:block;">
-                <div class="sgd-terminal-display-box">
-                    <div class="sgd-terminal-top">
-                        <div class="sgd-term-dots">
-                            <span class="dot red"></span>
-                            <span class="dot yellow"></span>
-                            <span class="dot green"></span>
+                <div class="sgd-spec-sheet-container">
+                    
+                    <!-- TOP HEADER: TITLE & QUICK ACTIONS -->
+                    <div class="sgd-spec-sheet-header">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span style="font-size:26px;">📋</span>
+                            <div>
+                                <h3 style="font-family:var(--font-title); font-size:16px; color:#ffd700; margin:0; letter-spacing:0.5px;">
+                                    Format Teks Standar Laporan Harian (User Specification)
+                                </h3>
+                                <span style="font-size:11px; color:#8fa0bd;">
+                                    Hasil penguraian cerdas AI / NLP terstruktur rapi: cuaca per jam (pills), material masuk (distinct), tenaga kerja, dan K3.
+                                </span>
+                            </div>
                         </div>
-                        <span class="sgd-term-title">HASIL DECHIPIER TERSTRUKTUR (STANDARD LOG VIEW)</span>
-                        <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-gold" id="sgd-copy-term-btn" data-text="<?php echo esc_attr( $formatted_text_output ); ?>">
-                            📋 Salin Format
-                        </button>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-gold" id="sgd-copy-term-btn" data-text="<?php echo esc_attr( $formatted_text_output ); ?>">
+                                📋 Salin Teks Format
+                            </button>
+                            <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="sgd-toggle-raw-ascii-btn">
+                                💻 Toggle Monospace Raw
+                            </button>
+                        </div>
                     </div>
-                    <pre class="sgd-terminal-pre"><?php echo esc_html( $formatted_text_output ); ?></pre>
+
+                    <!-- VISUAL SPECIFICATION CARDS -->
+                    <div class="sgd-spec-cards-wrapper">
+
+                        <!-- 1. CUACA PER JAM (PILLS STYLE) -->
+                        <div class="sgd-spec-card sgd-spec-weather-card">
+                            <div class="sgd-spec-title-bar weather">
+                                <div class="sgd-spec-title-left">
+                                    <span class="sgd-spec-title-icon">🌤️</span>
+                                    <span class="sgd-spec-title-text">cuaca per jam</span>
+                                </div>
+                                <span class="sgd-spec-divider">=============</span>
+                            </div>
+                            <div class="sgd-weather-pills-container">
+                                <?php 
+                                $hours = [ '07.00', '08.00', '09.00', '10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00' ];
+                                foreach ( $hours as $h ): 
+                                    $status_w = strtolower( trim( $weather_data[ $h ] ?? 'cerah' ) );
+                                    $is_rain = ( strpos( $status_w, 'hujan' ) !== false );
+                                    $is_cloudy = ( strpos( $status_w, 'berawan' ) !== false || strpos( $status_w, 'mendung' ) !== false );
+                                    
+                                    $pill_class = 'is-sunny';
+                                    $icon = '☀️';
+                                    if ( $is_rain ) {
+                                        $pill_class = 'is-rain';
+                                        $icon = '🌧️';
+                                    } elseif ( $is_cloudy ) {
+                                        $pill_class = 'is-cloudy';
+                                        $icon = '⛅';
+                                    }
+                                ?>
+                                    <div class="sgd-weather-pill <?php echo $pill_class; ?>" title="Jam <?php echo esc_attr( $h ); ?>: <?php echo esc_attr( $status_w ); ?>">
+                                        <span class="sgd-pill-hour">-<?php echo esc_html( $h ); ?></span>
+                                        <span class="sgd-pill-icon"><?php echo $icon; ?></span>
+                                        <span class="sgd-pill-weather"><?php echo esc_html( $status_w ); ?></span>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <!-- 2. TENAGA KERJA -->
+                        <div class="sgd-spec-card sgd-spec-manpower-card">
+                            <div class="sgd-spec-title-bar manpower">
+                                <div class="sgd-spec-title-left">
+                                    <span class="sgd-spec-title-icon">👷</span>
+                                    <span class="sgd-spec-title-text">tenaga kerja</span>
+                                </div>
+                                <span class="sgd-spec-divider">============</span>
+                            </div>
+                            <div class="sgd-spec-items-grid">
+                                <?php if ( ! empty( $manpower_data ) ): ?>
+                                    <?php foreach ( $manpower_data as $mp ): 
+                                        $role = is_array( $mp ) ? ( $mp['role'] ?? '' ) : (string) $mp;
+                                        $count = is_array( $mp ) ? ( $mp['count'] ?? '' ) : '';
+                                    ?>
+                                        <div class="sgd-spec-item-badge manpower-badge">
+                                            <span class="sgd-bullet">-</span>
+                                            <span class="sgd-item-label"><?php echo esc_html( $role ); ?></span>
+                                            <?php if ( $count !== '' ): ?>
+                                                <span class="sgd-item-count"><?php echo esc_html( $count ); ?> orang</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="sgd-spec-empty">- (Tidak ada catatan tenaga kerja)</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- 3. MATERIAL MASUK (HIGHLY DISTINCT SECTION) -->
+                        <div class="sgd-spec-card sgd-spec-material-card">
+                            <div class="sgd-spec-title-bar material">
+                                <div class="sgd-spec-title-left">
+                                    <span class="sgd-spec-title-icon">🧱</span>
+                                    <span class="sgd-spec-title-text">material masuk</span>
+                                    <span class="sgd-spec-highlight-tag">📦 LOGISTIK / MATERIAL ON-SITE</span>
+                                </div>
+                                <span class="sgd-spec-divider">==============</span>
+                            </div>
+                            <div class="sgd-spec-items-grid material-grid">
+                                <?php if ( ! empty( $materials_data ) ): ?>
+                                    <?php foreach ( $materials_data as $m ): 
+                                        $name = is_array( $m ) ? ( $m['name'] ?? '' ) : (string) $m;
+                                        $qty = is_array( $m ) ? ( $m['quantity'] ?? '' ) : '';
+                                        $unit = is_array( $m ) ? ( $m['unit'] ?? '' ) : '';
+                                    ?>
+                                        <div class="sgd-spec-material-pill">
+                                            <span class="sgd-bullet">-</span>
+                                            <span class="sgd-material-name"><?php echo esc_html( $name ); ?></span>
+                                            <?php if ( $qty !== '' || $unit !== '' ): ?>
+                                                <span class="sgd-material-qty-tag"><?php echo esc_html( trim( "{$qty} {$unit}" ) ); ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="sgd-spec-empty">- (Tidak ada material masuk)</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- 4. PERALATAN -->
+                        <div class="sgd-spec-card sgd-spec-equipment-card">
+                            <div class="sgd-spec-title-bar equipment">
+                                <div class="sgd-spec-title-left">
+                                    <span class="sgd-spec-title-icon">🔨</span>
+                                    <span class="sgd-spec-title-text">peralatan</span>
+                                </div>
+                                <span class="sgd-spec-divider">=========</span>
+                            </div>
+                            <div class="sgd-spec-items-grid">
+                                <?php if ( ! empty( $equipment_data ) ): ?>
+                                    <?php foreach ( $equipment_data as $eq ): ?>
+                                        <div class="sgd-spec-item-badge equipment-badge">
+                                            <span class="sgd-bullet">-</span>
+                                            <span class="sgd-item-label"><?php echo esc_html( is_array( $eq ) ? json_encode( $eq ) : $eq ); ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="sgd-spec-empty">- (Tidak ada catatan peralatan)</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- 5. PEKERJAAN YANG DILAKSANAKAN -->
+                        <div class="sgd-spec-card sgd-spec-work-card">
+                            <div class="sgd-spec-title-bar work">
+                                <div class="sgd-spec-title-left">
+                                    <span class="sgd-spec-title-icon">🏗️</span>
+                                    <span class="sgd-spec-title-text">pekerjaan yang dilaksanakan</span>
+                                </div>
+                                <span class="sgd-spec-divider">==============================</span>
+                            </div>
+                            <div class="sgd-spec-list-container">
+                                <?php if ( ! empty( $work_data ) ): ?>
+                                    <?php 
+                                    $work_items = is_array( $work_data ) ? $work_data : [ $work_data ];
+                                    foreach ( $work_items as $w ): 
+                                    ?>
+                                        <div class="sgd-spec-list-item work-item">
+                                            <span class="sgd-bullet">-</span>
+                                            <span class="sgd-item-desc"><?php echo esc_html( is_array( $w ) ? json_encode( $w ) : $w ); ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="sgd-spec-empty">- (Tidak ada catatan pekerjaan)</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- 6. KENDALA -->
+                        <div class="sgd-spec-card sgd-spec-issue-card">
+                            <div class="sgd-spec-title-bar issue">
+                                <div class="sgd-spec-title-left">
+                                    <span class="sgd-spec-title-icon">⚠️</span>
+                                    <span class="sgd-spec-title-text">kendala</span>
+                                </div>
+                                <span class="sgd-spec-divider">=======</span>
+                            </div>
+                            <div class="sgd-spec-list-container">
+                                <?php if ( ! empty( $issues_data ) ): ?>
+                                    <?php 
+                                    $issue_items = is_array( $issues_data ) ? $issues_data : [ $issues_data ];
+                                    foreach ( $issue_items as $is ): 
+                                    ?>
+                                        <div class="sgd-spec-list-item issue-item">
+                                            <span class="sgd-bullet">-</span>
+                                            <span class="sgd-item-desc"><?php echo esc_html( is_array( $is ) ? json_encode( $is ) : $is ); ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="sgd-spec-list-item safe-item">
+                                        <span class="sgd-bullet">-</span>
+                                        <span class="sgd-item-desc">Tidak ada kendala</span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- 7. KESELAMATAN KERJA (K3) -->
+                        <div class="sgd-spec-card sgd-spec-safety-card">
+                            <div class="sgd-spec-title-bar safety">
+                                <div class="sgd-spec-title-left">
+                                    <span class="sgd-spec-title-icon">🛡️</span>
+                                    <span class="sgd-spec-title-text">- keselamatan kerja(k3)</span>
+                                </div>
+                                <span class="sgd-spec-divider">=======================</span>
+                            </div>
+                            <div class="sgd-spec-safety-box">
+                                <span class="sgd-safety-shield-icon">🔰</span>
+                                <strong class="sgd-safety-val">
+                                    <?php echo esc_html( ! empty( $active_report->safety_k3 ) ? $active_report->safety_k3 : 'Nihil kecelakaan kerja' ); ?>
+                                </strong>
+                            </div>
+                        </div>
+
+                        <!-- OPTIONAL SECTIONS IF POPULATED -->
+                        <?php if ( ! empty( $active_report->supervisor_instruction ) ): ?>
+                            <div class="sgd-spec-card sgd-spec-admin-card">
+                                <div class="sgd-spec-title-bar admin">
+                                    <div class="sgd-spec-title-left">
+                                        <span class="sgd-spec-title-icon">👨‍💼</span>
+                                        <span class="sgd-spec-title-text">instruksi pengawas</span>
+                                    </div>
+                                    <span class="sgd-spec-divider">==================</span>
+                                </div>
+                                <div class="sgd-spec-notes-box">
+                                    <?php echo nl2br( esc_html( $active_report->supervisor_instruction ) ); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ( ! empty( $active_report->next_day_plan ) ): ?>
+                            <div class="sgd-spec-card sgd-spec-plan-card">
+                                <div class="sgd-spec-title-bar plan">
+                                    <div class="sgd-spec-title-left">
+                                        <span class="sgd-spec-title-icon">📅</span>
+                                        <span class="sgd-spec-title-text">rencana kerja besok</span>
+                                    </div>
+                                    <span class="sgd-spec-divider">===================</span>
+                                </div>
+                                <div class="sgd-spec-notes-box">
+                                    <?php echo nl2br( esc_html( $active_report->next_day_plan ) ); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ( ! empty( $active_report->additional_notes ) ): ?>
+                            <div class="sgd-spec-card sgd-spec-notes-card">
+                                <div class="sgd-spec-title-bar notes">
+                                    <div class="sgd-spec-title-left">
+                                        <span class="sgd-spec-title-icon">📝</span>
+                                        <span class="sgd-spec-title-text">catatan lain</span>
+                                    </div>
+                                    <span class="sgd-spec-divider">============</span>
+                                </div>
+                                <div class="sgd-spec-notes-box">
+                                    <?php echo nl2br( esc_html( $active_report->additional_notes ) ); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                    </div>
+
+                    <!-- COLLAPSIBLE MONOSPACE RAW ASCII TERMINAL VIEW -->
+                    <div class="sgd-terminal-display-box" id="sgd-raw-ascii-box" style="margin-top:20px; display:none;">
+                        <div class="sgd-terminal-top">
+                            <div class="sgd-term-dots">
+                                <span class="dot red"></span>
+                                <span class="dot yellow"></span>
+                                <span class="dot green"></span>
+                            </div>
+                            <span class="sgd-term-title">ASCII MONOSPACE RAW LOG (EXACT USER SPEC)</span>
+                            <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-gold" id="sgd-copy-raw-box-btn" data-text="<?php echo esc_attr( $formatted_text_output ); ?>">
+                                📋 Salin Teks Asli
+                            </button>
+                        </div>
+                        <pre class="sgd-terminal-pre"><?php echo esc_html( $formatted_text_output ); ?></pre>
+                    </div>
+
                 </div>
             </div>
 

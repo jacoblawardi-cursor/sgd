@@ -832,10 +832,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // E. Copy Formatted Text to Clipboard
+    // E. Copy Formatted Text to Clipboard & Toggle Raw ASCII
     const copyBtns = [
         document.getElementById('sgd-copy-formatted-text-btn'),
-        document.getElementById('sgd-copy-term-btn')
+        document.getElementById('sgd-copy-term-btn'),
+        document.getElementById('sgd-copy-raw-box-btn')
     ];
     copyBtns.forEach(btn => {
         if (!btn) return;
@@ -846,7 +847,9 @@ document.addEventListener('DOMContentLoaded', function() {
             navigator.clipboard.writeText(text).then(() => {
                 const orig = this.innerHTML;
                 this.innerHTML = '✅ Berhasil Disalin!';
-                AudioEngine.playStreakFanfare();
+                if (typeof AudioEngine !== 'undefined') {
+                    AudioEngine.playStreakFanfare();
+                }
                 setTimeout(() => {
                     this.innerHTML = orig;
                 }, 2000);
@@ -855,6 +858,23 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    const toggleRawBtn = document.getElementById('sgd-toggle-raw-ascii-btn');
+    const rawBox = document.getElementById('sgd-raw-ascii-box');
+    if (toggleRawBtn && rawBox) {
+        toggleRawBtn.addEventListener('click', function() {
+            if (rawBox.style.display === 'none' || rawBox.style.display === '') {
+                rawBox.style.display = 'block';
+                this.innerHTML = '💻 Sembunyikan Raw Monospace';
+            } else {
+                rawBox.style.display = 'none';
+                this.innerHTML = '💻 Toggle Monospace Raw';
+            }
+            if (typeof AudioEngine !== 'undefined') {
+                AudioEngine.playClick();
+            }
+        });
+    }
 
     // F. Dynamic Rows for Manpower
     const addManpowerBtn = document.getElementById('sgd-add-manpower-btn');

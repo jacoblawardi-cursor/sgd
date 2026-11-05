@@ -3482,6 +3482,380 @@ body.sgd-wow-body {
 }
 
 /* ========================================================
+   ENHANCED USER SPECIFICATION FORMAT VIEW (TAB 1)
+   ======================================================== */
+.sgd-spec-sheet-container {
+  background: #080d17;
+  border: 2px solid #1c2b45;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+}
+
+.sgd-spec-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #1c2b45;
+}
+
+.sgd-spec-cards-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sgd-spec-card {
+  background: #0e1524;
+  border: 1px solid #1f2f4c;
+  border-radius: 8px;
+  padding: 16px 20px;
+  transition: all 0.2s ease;
+}
+
+.sgd-spec-card:hover {
+  border-color: #2e446d;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Distinct Section Title Bar */
+.sgd-spec-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.sgd-spec-title-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sgd-spec-title-icon {
+  font-size: 20px;
+}
+
+.sgd-spec-title-text {
+  font-family: var(--font-title);
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+}
+
+.sgd-spec-divider {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  color: #3b4d6e;
+  letter-spacing: -1px;
+}
+
+/* Distinct theme accents */
+.sgd-spec-weather-card {
+  border-left: 5px solid #f39c12;
+  background: linear-gradient(135deg, rgba(243, 156, 18, 0.05), #0e1524);
+}
+.sgd-spec-title-bar.weather .sgd-spec-title-text {
+  color: #ffd700;
+}
+
+.sgd-spec-manpower-card {
+  border-left: 5px solid #00b894;
+}
+.sgd-spec-title-bar.manpower .sgd-spec-title-text {
+  color: #55efc4;
+}
+
+/* 3. MATERIAL MASUK (HIGHLY DISTINCT!) */
+.sgd-spec-material-card {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.08), #0c1422 70%);
+  border: 2px solid #00e5ff;
+  border-left: 6px solid #00e5ff;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.18);
+}
+.sgd-spec-title-bar.material {
+  border-bottom: 1.5px solid rgba(0, 229, 255, 0.3);
+}
+.sgd-spec-title-bar.material .sgd-spec-title-text {
+  color: #00e5ff;
+  font-size: 16px;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+}
+.sgd-spec-highlight-tag {
+  background: #00e5ff;
+  color: #080d17;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.sgd-spec-equipment-card {
+  border-left: 5px solid #a29bfe;
+}
+.sgd-spec-title-bar.equipment .sgd-spec-title-text {
+  color: #a29bfe;
+}
+
+.sgd-spec-work-card {
+  border-left: 5px solid #74b9ff;
+}
+.sgd-spec-title-bar.work .sgd-spec-title-text {
+  color: #74b9ff;
+}
+
+.sgd-spec-issue-card {
+  border: 2px solid rgba(255, 118, 117, 0.4);
+  border-left: 6px solid #ff7675;
+  background: linear-gradient(135deg, rgba(214, 48, 49, 0.08), #0e1524 80%);
+}
+.sgd-spec-title-bar.issue .sgd-spec-title-text {
+  color: #ff7675;
+}
+
+.sgd-spec-safety-card {
+  border-left: 5px solid #00b894;
+  background: linear-gradient(135deg, rgba(0, 184, 148, 0.08), #0e1524);
+}
+.sgd-spec-title-bar.safety .sgd-spec-title-text {
+  color: #00b894;
+}
+
+/* Hourly Weather Pills Grid */
+.sgd-weather-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.sgd-weather-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 15px;
+  border-radius: 26px;
+  font-size: 13px;
+  font-family: var(--font-title);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.sgd-weather-pill:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.15);
+}
+
+.sgd-weather-pill.is-sunny {
+  background: linear-gradient(135deg, rgba(243, 156, 18, 0.22), rgba(241, 196, 15, 0.08));
+  border: 1.5px solid #f39c12;
+  color: #ffd32a;
+  box-shadow: 0 2px 8px rgba(243, 156, 18, 0.25);
+}
+
+.sgd-weather-pill.is-rain {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(9, 132, 227, 0.2));
+  border: 1.5px solid #00e5ff;
+  color: #00e5ff;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+}
+
+.sgd-weather-pill.is-cloudy {
+  background: linear-gradient(135deg, rgba(149, 165, 166, 0.2), rgba(99, 110, 114, 0.15));
+  border: 1.5px solid #b2bec3;
+  color: #dfe6e9;
+}
+
+.sgd-pill-hour {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-weight: 700;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.sgd-pill-icon {
+  font-size: 16px;
+}
+
+.sgd-pill-weather {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+/* Material Pills & Item Badges */
+.sgd-spec-items-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sgd-spec-material-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 229, 255, 0.12);
+  border: 1.5px solid #00e5ff;
+  border-radius: 6px;
+  padding: 8px 16px;
+  box-shadow: 0 2px 10px rgba(0, 229, 255, 0.15);
+}
+
+.sgd-spec-material-pill .sgd-bullet {
+  font-family: monospace;
+  font-size: 14px;
+  color: #00e5ff;
+  font-weight: bold;
+}
+
+.sgd-material-name {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.sgd-material-qty-tag {
+  background: #00e5ff;
+  color: #060a12;
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* Manpower / Equipment Item Badge */
+.sgd-spec-item-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #141c2c;
+  border: 1px solid #233454;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.sgd-spec-item-badge .sgd-bullet {
+  font-family: monospace;
+  color: #8fa0bd;
+  font-weight: bold;
+}
+
+.sgd-spec-item-badge.manpower-badge {
+  border-color: rgba(0, 184, 148, 0.5);
+  background: rgba(0, 184, 148, 0.08);
+}
+
+.sgd-spec-item-badge.manpower-badge .sgd-item-label {
+  color: #fff;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.sgd-spec-item-badge.manpower-badge .sgd-item-count {
+  background: #00b894;
+  color: #fff;
+  font-family: 'Consolas', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.sgd-spec-item-badge.equipment-badge {
+  border-color: rgba(162, 155, 254, 0.5);
+  background: rgba(162, 155, 254, 0.08);
+  color: #dfe6e9;
+  font-weight: 600;
+}
+
+/* List container for work & issues */
+.sgd-spec-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sgd-spec-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #141c2c;
+  border: 1px solid #233454;
+  border-radius: 6px;
+  padding: 9px 14px;
+  font-size: 13px;
+}
+
+.sgd-spec-list-item.work-item {
+  border-left: 4px solid #74b9ff;
+  color: #f1f2f6;
+}
+
+.sgd-spec-list-item.issue-item {
+  border: 1px solid #ff7675;
+  border-left: 4px solid #ff7675;
+  background: rgba(214, 48, 49, 0.12);
+  color: #ff7675;
+  font-weight: 600;
+}
+
+.sgd-spec-list-item.safe-item {
+  border-left: 4px solid #00b894;
+  color: #55efc4;
+}
+
+.sgd-spec-safety-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(0, 184, 148, 0.12);
+  border: 1px solid #00b894;
+  border-radius: 6px;
+}
+
+.sgd-safety-shield-icon {
+  font-size: 20px;
+}
+
+.sgd-safety-val {
+  color: #55efc4;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sgd-spec-notes-box {
+  padding: 10px 16px;
+  background: #121824;
+  border: 1px solid #233454;
+  border-radius: 6px;
+  color: #dfe6e9;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sgd-spec-empty {
+  color: #636e72;
+  font-style: italic;
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+/* ========================================================
    PRINT MEDIA RULES (OFFICIAL CONSTRUCTION LOG SHEET)
    ======================================================== */
 @media print {
