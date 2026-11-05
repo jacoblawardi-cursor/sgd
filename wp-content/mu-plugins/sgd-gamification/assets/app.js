@@ -876,6 +876,99 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // E2. Weather Toggle Pills in Admin Edit Form
+    const weatherPillBtns = document.querySelectorAll('.sgd-weather-edit-pill');
+    const weatherStates = [
+        { value: 'cerah', label: 'cerah', icon: '☀️', className: 'is-sunny' },
+        { value: 'hujan', label: 'hujan', icon: '🌧️', className: 'is-rain' },
+        { value: 'berawan', label: 'berawan', icon: '⛅', className: 'is-cloudy' }
+    ];
+
+    function applyWeatherToPill(btn, stateVal) {
+        const targetId = btn.getAttribute('data-target-input');
+        const hiddenInput = document.getElementById(targetId);
+        if (!hiddenInput) return;
+
+        const stateObj = weatherStates.find(s => s.value === stateVal) || weatherStates[0];
+        hiddenInput.value = stateObj.value;
+
+        btn.classList.remove('is-sunny', 'is-rain', 'is-cloudy');
+        btn.classList.add(stateObj.className);
+
+        const iconSpan = btn.querySelector('.sgd-pill-icon');
+        if (iconSpan) iconSpan.textContent = stateObj.icon;
+
+        const labelSpan = btn.querySelector('.sgd-pill-label');
+        if (labelSpan) labelSpan.textContent = stateObj.label;
+    }
+
+    function setAllWeather(stateVal) {
+        weatherPillBtns.forEach(btn => {
+            applyWeatherToPill(btn, stateVal);
+        });
+        if (typeof AudioEngine !== 'undefined') {
+            AudioEngine.playStreakFanfare();
+        }
+    }
+
+    weatherPillBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('data-target-input');
+            const hiddenInput = document.getElementById(targetId);
+            if (!hiddenInput) return;
+
+            let currentVal = (hiddenInput.value || 'cerah').toLowerCase().trim();
+            let currentIdx = weatherStates.findIndex(s => s.value === currentVal);
+            if (currentIdx === -1) {
+                currentIdx = 0;
+            }
+            let nextIdx = (currentIdx + 1) % weatherStates.length;
+            let nextState = weatherStates[nextIdx];
+
+            applyWeatherToPill(this, nextState.value);
+
+            if (typeof AudioEngine !== 'undefined') {
+                AudioEngine.playClick();
+            }
+            this.classList.add('sgd-pill-popping');
+            setTimeout(() => {
+                this.classList.remove('sgd-pill-popping');
+            }, 180);
+        });
+    });
+
+    const presetSunnyBtn = document.getElementById('sgd-preset-sunny-btn');
+    const presetRainBtn = document.getElementById('sgd-preset-rain-btn');
+    const presetNoonRainBtn = document.getElementById('sgd-preset-noon-rain-btn');
+
+    if (presetSunnyBtn) {
+        presetSunnyBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            setAllWeather('cerah');
+        });
+    }
+    if (presetRainBtn) {
+        presetRainBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            setAllWeather('hujan');
+        });
+    }
+    if (presetNoonRainBtn) {
+        presetNoonRainBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const noonHours = ['10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00'];
+            weatherPillBtns.forEach(btn => {
+                const hour = btn.getAttribute('data-hour');
+                const targetState = noonHours.includes(hour) ? 'hujan' : 'cerah';
+                applyWeatherToPill(btn, targetState);
+            });
+            if (typeof AudioEngine !== 'undefined') {
+                AudioEngine.playStreakFanfare();
+            }
+        });
+    }
+
     // F. Dynamic Rows for Manpower
     const addManpowerBtn = document.getElementById('sgd-add-manpower-btn');
     const manpowerTbody = document.getElementById('sgd-manpower-tbody');

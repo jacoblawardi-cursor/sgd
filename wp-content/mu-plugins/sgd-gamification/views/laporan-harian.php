@@ -894,42 +894,101 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                         <input type="hidden" name="report_id" value="<?php echo $active_report->id; ?>">
                         <input type="hidden" name="report_date" value="<?php echo esc_attr( $selected_date ); ?>">
 
-                        <!-- CUACA PER JAM (07.00 - 17.00) -->
-                        <div class="sgd-editor-block">
-                            <div class="sgd-editor-block-header">
-                                <span style="font-size:20px;">🌦️</span>
+                        <!-- TOP ADMIN BANNER -->
+                        <div class="sgd-spec-sheet-header" style="margin-bottom:16px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="font-size:26px;">✏️</span>
                                 <div>
-                                    <h3 style="font-family:var(--font-title); font-size:15px; color:#ffd700; margin:0;">
-                                        CUACA PER JAM (07.00 - 17.00)
+                                    <h3 style="font-family:var(--font-title); font-size:16px; color:#ffd700; margin:0; letter-spacing:0.5px;">
+                                        Editor Interaktif Laporan Harian (Admin Edit)
                                     </h3>
-                                    <span style="font-size:11px; color:#8fa0bd;">Admin dapat mengubah status cuaca untuk masing-masing jam kerja:</span>
+                                    <span style="font-size:11px; color:#8fa0bd;">
+                                        Sesuaikan cuaca jam-per-jam (klik pill untuk toggle), daftar tenaga kerja, material masuk, peralatan, dan arahan pengawas.
+                                    </span>
                                 </div>
                             </div>
-                            <div class="sgd-hourly-weather-grid">
-                                <?php 
-                                $hours = [ '07.00', '08.00', '09.00', '10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00' ];
-                                foreach ( $hours as $h ): 
-                                    $curr_w = $weather_data[ $h ] ?? 'cerah';
-                                ?>
-                                    <div class="sgd-weather-hour-cell <?php echo ( $curr_w === 'hujan' ) ? 'is-rain' : ''; ?>">
-                                        <div class="sgd-hour-label"><?php echo $h; ?></div>
-                                        <select name="weather[<?php echo $h; ?>]" class="sgd-weather-select" onchange="this.parentElement.classList.toggle('is-rain', this.value === 'hujan');">
-                                            <option value="cerah" <?php selected( $curr_w, 'cerah' ); ?>>☀️ Cerah</option>
-                                            <option value="hujan" <?php selected( $curr_w, 'hujan' ); ?>>🌧️ Hujan</option>
-                                            <option value="gerimis" <?php selected( $curr_w, 'gerimis' ); ?>>🌦️ Gerimis</option>
-                                            <option value="mendung" <?php selected( $curr_w, 'mendung' ); ?>>☁️ Mendung</option>
-                                        </select>
-                                    </div>
-                                <?php endforeach; ?>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-gold" style="padding:8px 20px;">
+                                    💾 Simpan Perubahan
+                                </button>
                             </div>
                         </div>
 
-                        <!-- TENAGA KERJA -->
-                        <div class="sgd-editor-block">
+                        <!-- 1. CUACA PER JAM (INTERACTIVE CLICKABLE PILLS) -->
+                        <div class="sgd-editor-block sgd-editor-weather-block">
                             <div class="sgd-editor-block-header">
-                                <span style="font-size:20px;">👷</span>
+                                <span style="font-size:22px;">🌤️</span>
                                 <div>
-                                    <h3 style="font-family:var(--font-title); font-size:15px; color:#ffd700; margin:0;">
+                                    <h3 style="font-family:var(--font-title); font-size:15px; color:#ffd700; margin:0; text-transform:uppercase; letter-spacing:0.5px;">
+                                        CUACA PER JAM (07.00 - 17.00)
+                                    </h3>
+                                    <span style="font-size:11px; color:#8fa0bd;">
+                                        Klik pada setiap pill untuk toggle status cuaca (Cerah ☀️ ➔ Hujan 🌧️ ➔ Berawan ⛅).
+                                    </span>
+                                </div>
+                                <div class="sgd-weather-presets" style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">
+                                    <button type="button" class="sgd-btn sgd-btn-xs sgd-btn-gold" id="sgd-preset-sunny-btn" title="Ubah semua jam menjadi Cerah">
+                                        ☀️ Semua Cerah
+                                    </button>
+                                    <button type="button" class="sgd-btn sgd-btn-xs sgd-btn-blue" id="sgd-preset-rain-btn" title="Ubah semua jam menjadi Hujan">
+                                        🌧️ Hujan Seharian
+                                    </button>
+                                    <button type="button" class="sgd-btn sgd-btn-xs sgd-btn-blue" id="sgd-preset-noon-rain-btn" title="Set Hujan Jam 10-16 Sore">
+                                        ⛈️ Hujan Siang (10-16)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="sgd-weather-edit-pills-container">
+                                <?php 
+                                $hours = [ '07.00', '08.00', '09.00', '10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00' ];
+                                foreach ( $hours as $h ): 
+                                    $curr_w = strtolower( trim( $weather_data[ $h ] ?? 'cerah' ) );
+                                    $is_rain = ( strpos( $curr_w, 'hujan' ) !== false );
+                                    $is_cloudy = ( strpos( $curr_w, 'berawan' ) !== false || strpos( $curr_w, 'mendung' ) !== false || strpos( $curr_w, 'gerimis' ) !== false );
+                                    
+                                    $pill_class = 'is-sunny';
+                                    $icon = '☀️';
+                                    if ( $is_rain ) {
+                                        $pill_class = 'is-rain';
+                                        $icon = '🌧️';
+                                    } elseif ( $is_cloudy ) {
+                                        $pill_class = 'is-cloudy';
+                                        $icon = '⛅';
+                                    }
+                                    $input_id = 'weather-input-' . preg_replace( '/[^a-zA-Z0-9]/', '', $h );
+                                ?>
+                                    <div class="sgd-weather-edit-pill-wrap">
+                                        <button type="button" 
+                                                class="sgd-weather-edit-pill <?php echo $pill_class; ?>" 
+                                                data-hour="<?php echo esc_attr( $h ); ?>" 
+                                                data-target-input="<?php echo esc_attr( $input_id ); ?>" 
+                                                title="Klik untuk toggle: Cerah ➔ Hujan ➔ Berawan">
+                                            <span class="sgd-pill-hour">-<?php echo esc_html( $h ); ?></span>
+                                            <span class="sgd-pill-icon"><?php echo $icon; ?></span>
+                                            <span class="sgd-pill-label"><?php echo esc_html( $curr_w ); ?></span>
+                                            <span class="sgd-pill-tap-hint">↻</span>
+                                        </button>
+                                        <input type="hidden" 
+                                               name="weather[<?php echo esc_attr( $h ); ?>]" 
+                                               id="<?php echo esc_attr( $input_id ); ?>" 
+                                               value="<?php echo esc_attr( $curr_w ); ?>" 
+                                               class="sgd-weather-hidden-val">
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <div style="font-size:11px; color:#8fa0bd; margin-top:10px; display:flex; align-items:center; gap:6px;">
+                                <span>💡</span>
+                                <span>Klik pill jam di atas untuk beralih status langsung: <strong>Cerah ☀️</strong> ➔ <strong>Hujan 🌧️</strong> ➔ <strong>Berawan ⛅</strong> (tersimpan otomatis saat submit).</span>
+                            </div>
+                        </div>
+
+                        <!-- 2. TENAGA KERJA -->
+                        <div class="sgd-editor-block sgd-editor-manpower-block">
+                            <div class="sgd-editor-block-header">
+                                <span style="font-size:22px;">👷</span>
+                                <div>
+                                    <h3 style="font-family:var(--font-title); font-size:15px; color:#55efc4; margin:0; text-transform:uppercase; letter-spacing:0.5px;">
                                         TENAGA KERJA (MANPOWER)
                                     </h3>
                                     <span style="font-size:11px; color:#8fa0bd;">Daftar tukang, mandor, kenek, dan teknisi yang bekerja:</span>
@@ -983,20 +1042,23 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                             </div>
                         </div>
 
-                        <!-- MATERIAL MASUK -->
-                        <div class="sgd-editor-block">
+                        <!-- 3. MATERIAL MASUK (HIGHLY DISTINCT & CYAN HIGHLIGHTED) -->
+                        <div class="sgd-editor-block sgd-editor-material-block">
                             <div class="sgd-editor-block-header">
-                                <span style="font-size:20px;">🧱</span>
-                                <div>
-                                    <h3 style="font-family:var(--font-title); font-size:15px; color:#ffd700; margin:0;">
+                                <span style="font-size:22px;">🧱</span>
+                                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                    <h3 style="font-family:var(--font-title); font-size:15px; color:#00e5ff; margin:0; text-transform:uppercase; letter-spacing:0.5px; text-shadow:0 0 10px rgba(0,229,255,0.4);">
                                         MATERIAL MASUK (MATERIALS DELIVERED)
                                     </h3>
-                                    <span style="font-size:11px; color:#8fa0bd;">Nama bahan, volume/kuantitas, dan satuan material yang diterima:</span>
+                                    <span class="sgd-spec-highlight-tag">📦 LOGISTIK SITE</span>
                                 </div>
-                                <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="sgd-add-material-btn" style="margin-left:auto;">
+                                <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="sgd-add-material-btn" style="margin-left:auto; border-color:#00e5ff; color:#00e5ff;">
                                     ➕ Tambah Material
                                 </button>
                             </div>
+                            <span style="font-size:11px; color:#8fa0bd; display:block; margin-bottom:10px;">
+                                Nama bahan material, kuantitas volume yang masuk, dan satuan (kg, sak, m3, truck, lembar, btg):
+                            </span>
                             <div class="sgd-dynamic-rows-table-wrap">
                                 <table class="sgd-dynamic-table" id="sgd-materials-table">
                                     <thead>
@@ -1050,12 +1112,12 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                             </div>
                         </div>
 
-                        <!-- PERALATAN -->
-                        <div class="sgd-editor-block">
+                        <!-- 4. PERALATAN -->
+                        <div class="sgd-editor-block sgd-editor-equipment-block">
                             <div class="sgd-editor-block-header">
-                                <span style="font-size:20px;">🔨</span>
+                                <span style="font-size:22px;">🔨</span>
                                 <div>
-                                    <h3 style="font-family:var(--font-title); font-size:15px; color:#ffd700; margin:0;">
+                                    <h3 style="font-family:var(--font-title); font-size:15px; color:#a29bfe; margin:0; text-transform:uppercase; letter-spacing:0.5px;">
                                         PERALATAN (TOOLS & EQUIPMENT)
                                     </h3>
                                     <span style="font-size:11px; color:#8fa0bd;">Daftar alat berat, mesin, atau peralatan kerja yang digunakan:</span>
@@ -1083,10 +1145,10 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                             </div>
                         </div>
 
-                        <!-- PEKERJAAN & KENDALA -->
+                        <!-- 5. PEKERJAAN & KENDALA -->
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                            <div class="sgd-editor-block" style="margin-bottom:0;">
-                                <label class="sgd-form-label" style="color:#00e5ff;">🌿 Pekerjaan yang Dilaksanakan:</label>
+                            <div class="sgd-editor-block sgd-editor-work-block" style="margin-bottom:0;">
+                                <label class="sgd-form-label" style="color:#74b9ff; font-weight:700;">🌿 Pekerjaan yang Dilaksanakan:</label>
                                 <textarea name="work_executed" class="sgd-form-textarea" rows="4"><?php 
                                     if ( is_array( $work_data ) ) {
                                         echo esc_textarea( implode( "\n", $work_data ) );
@@ -1095,8 +1157,8 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                                     }
                                 ?></textarea>
                             </div>
-                            <div class="sgd-editor-block" style="margin-bottom:0;">
-                                <label class="sgd-form-label" style="color:#ff7675;">⚠️ Kendala / Hambatan:</label>
+                            <div class="sgd-editor-block sgd-editor-issue-block" style="margin-bottom:0;">
+                                <label class="sgd-form-label" style="color:#ff7675; font-weight:700;">⚠️ Kendala / Hambatan:</label>
                                 <textarea name="issues" class="sgd-form-textarea" rows="4"><?php 
                                     if ( is_array( $issues_data ) ) {
                                         echo esc_textarea( implode( "\n", $issues_data ) );
@@ -1107,11 +1169,11 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                             </div>
                         </div>
 
-                        <!-- ADMIN SUPERVISOR INPUTS & K3 -->
+                        <!-- 6. ADMIN SUPERVISOR INPUTS & K3 -->
                         <div style="background:#131a29; border:2px solid var(--wow-gold); border-radius:8px; padding:18px; margin-top:16px;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
                                 <span style="font-size:20px;">👑</span>
-                                <h4 style="font-family:var(--font-title); font-size:14px; color:#ffd700; margin:0;">
+                                <h4 style="font-family:var(--font-title); font-size:14px; color:#ffd700; margin:0; letter-spacing:0.5px;">
                                     ARAHAN PENGAWAS, RENCANA BESOK & KESELAMATAN KERJA (K3)
                                 </h4>
                             </div>
@@ -1139,7 +1201,7 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                             </div>
                         </div>
 
-                        <!-- PHOTO REPLACEMENT -->
+                        <!-- 7. PHOTO REPLACEMENT -->
                         <div class="sgd-photos-upload-container" style="margin-top:16px;">
                             <div class="sgd-photos-header">
                                 <span style="font-size:18px;">📸</span>
@@ -1182,9 +1244,9 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                             </div>
                         </div>
 
-                        <!-- SAVE BUTTON -->
-                        <div style="margin-top:20px; text-align:right;">
-                            <button type="submit" class="sgd-btn sgd-btn-gold" style="font-size:14px; padding:12px 32px;">
+                        <!-- 8. SAVE BUTTON -->
+                        <div style="margin-top:24px; text-align:right;">
+                            <button type="submit" class="sgd-btn sgd-btn-gold" style="font-size:14px; padding:12px 36px; box-shadow:0 0 16px rgba(255,215,0,0.35);">
                                 💾 SIMPAN PERUBAHAN LAPORAN (SAVE CHANGES)
                             </button>
                         </div>
@@ -1194,6 +1256,7 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                         🔒 Mode baca saja. Hanya administrator atau pembuat laporan yang dapat mengubah data ini.
                     </div>
                 <?php endif; ?>
+            </div>
             </div>
 
             <!-- ============================================== -->

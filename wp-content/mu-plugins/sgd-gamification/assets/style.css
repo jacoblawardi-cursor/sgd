@@ -3856,6 +3856,133 @@ body.sgd-wow-body {
 }
 
 /* ========================================================
+   ADMIN EDIT: WEATHER PILLS & BLOCKS RESTYLING
+   ======================================================== */
+.sgd-weather-edit-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sgd-weather-edit-pill-wrap {
+  display: inline-block;
+}
+
+.sgd-weather-edit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 28px;
+  cursor: pointer;
+  background: #141c2c;
+  border: 1.5px solid #233454;
+  color: #dfe6e9;
+  font-family: var(--font-title);
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.sgd-weather-edit-pill:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.2);
+}
+
+.sgd-weather-edit-pill:active,
+.sgd-weather-edit-pill.sgd-pill-popping {
+  transform: scale(0.94);
+}
+
+.sgd-weather-edit-pill.is-sunny {
+  background: linear-gradient(135deg, rgba(243, 156, 18, 0.25), rgba(241, 196, 15, 0.1));
+  border-color: #f39c12;
+  color: #ffd32a;
+  box-shadow: 0 2px 10px rgba(243, 156, 18, 0.3);
+}
+
+.sgd-weather-edit-pill.is-rain {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.3), rgba(9, 132, 227, 0.25));
+  border-color: #00e5ff;
+  color: #00e5ff;
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.45);
+}
+
+.sgd-weather-edit-pill.is-cloudy {
+  background: linear-gradient(135deg, rgba(149, 165, 166, 0.25), rgba(99, 110, 114, 0.2));
+  border-color: #b2bec3;
+  color: #dfe6e9;
+  box-shadow: 0 2px 8px rgba(178, 190, 195, 0.2);
+}
+
+.sgd-pill-tap-hint {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-left: 2px;
+  transition: transform 0.25s ease;
+}
+
+.sgd-weather-edit-pill:hover .sgd-pill-tap-hint {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+/* Preset weather buttons */
+.sgd-weather-presets .sgd-btn-xs {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* Admin Editor Blocks Restyling */
+.sgd-editor-block {
+  background: #0d131f;
+  border: 1px solid #1f2f4c;
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s;
+}
+
+.sgd-editor-block:hover {
+  border-color: #2b3d61;
+}
+
+.sgd-editor-weather-block {
+  border-left: 5px solid #ffd700;
+  background: linear-gradient(135deg, rgba(243, 156, 18, 0.05), #0d131f 70%);
+}
+
+.sgd-editor-manpower-block {
+  border-left: 5px solid #00b894;
+}
+
+.sgd-editor-material-block {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.08), #0c1422 75%);
+  border: 2px solid #00e5ff;
+  border-left: 6px solid #00e5ff;
+  box-shadow: 0 0 22px rgba(0, 229, 255, 0.2);
+}
+
+.sgd-editor-equipment-block {
+  border-left: 5px solid #a29bfe;
+}
+
+.sgd-editor-work-block {
+  border-left: 5px solid #74b9ff;
+}
+
+.sgd-editor-issue-block {
+  border: 2px solid rgba(255, 118, 117, 0.45);
+  border-left: 6px solid #ff7675;
+  background: linear-gradient(135deg, rgba(214, 48, 49, 0.08), #0e1524 80%);
+}
+
+/* ========================================================
    PRINT MEDIA RULES (OFFICIAL CONSTRUCTION LOG SHEET)
    ======================================================== */
 @media print {
