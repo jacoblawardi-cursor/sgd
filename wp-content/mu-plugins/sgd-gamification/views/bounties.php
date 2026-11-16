@@ -28,14 +28,17 @@ if ( $filter === 'open' ) {
     <div style="font-family:var(--font-pixel); font-size:9px; color:#ff9f43; letter-spacing:2px; margin-bottom:6px;">
         <span class="sgd-theme-text-wow">📜 GUILD CONTRACTS & PEER COMMISSIONS 📜</span>
         <span class="sgd-theme-text-genshin">✦ CITY REPUTATION & TEYVAT COMMISSIONS ✦</span>
+        <span class="sgd-theme-text-hearthstone">🎴 MERCENARY CONTRACTS & TAVERN NOTICES 🎴</span>
     </div>
     <h1 style="font-family:var(--font-title); font-size:26px; color:#fff; text-shadow:0 0 15px rgba(255,159,67,0.5); margin:0;">
         <span class="sgd-theme-text-wow">🤝 Hero-to-Hero Peer Bounty Board</span>
         <span class="sgd-theme-text-genshin">✦ Teyvat Peer Reputation Bounty Board</span>
+        <span class="sgd-theme-text-hearthstone">🎴 Tavern Mercenary & Contract Board</span>
     </h1>
     <p style="color:#dcdde1; max-width:700px; margin:8px auto 0 auto; font-size:14px;">
         <span class="sgd-theme-text-wow">Overloaded with sprint work or need a quick favor? Put your diamonds to work! Post a bounty from your own wallet to hire a teammate, or accept open contracts to earn bonus bounty gold.</span>
         <span class="sgd-theme-text-genshin">Overloaded with tasks or need a quick hand in Teyvat? Post a bounty from your Primogem wallet to hire a teammate, or accept open contracts for bonus Primogems!</span>
+        <span class="sgd-theme-text-hearthstone">Need a mercenary or looking to earn extra mana? Post a bounty from your Mana Crystals to hire a fellow challenger, or accept open tavern contracts!</span>
     </p>
 </div>
 

@@ -30,7 +30,15 @@ $flash = sgd_get_flash();
 <head>
     <meta charset="<?php bloginfo( 'charset' ); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo ( $active_theme === 'genshin' ) ? 'SGD Guild - Teyvat Adventurers\' Guild & Primogem Treasury' : 'SGD Guild - 16-Bit Gamification Portal & Goblin Treasury'; ?></title>
+    <?php
+    $page_titles = [
+        'hearthstone' => 'SGD Guild - Hearthstone Tavern & Mana Treasury',
+        'genshin'     => 'SGD Guild - Teyvat Adventurers\' Guild & Primogem Treasury',
+        'wow'         => 'SGD Guild - 16-Bit Gamification Portal & Goblin Treasury',
+    ];
+    $title_display = $page_titles[ $active_theme ] ?? $page_titles['wow'];
+    ?>
+    <title><?php echo esc_html( $title_display ); ?></title>
     <script>
     (function(){
         try {
@@ -38,7 +46,7 @@ $flash = sgd_get_flash();
             var cTheme = m ? decodeURIComponent(m[2]) : null;
             var lTheme = localStorage.getItem('sgd_active_theme');
             var t = lTheme || cTheme || '<?php echo esc_js( $active_theme ); ?>' || 'wow';
-            if (t !== 'genshin' && t !== 'wow') t = 'wow';
+            if (t !== 'genshin' && t !== 'hearthstone' && t !== 'wow') t = 'wow';
             document.documentElement.setAttribute('data-sgd-theme', t);
         } catch(e) {}
     })();
@@ -95,21 +103,24 @@ $flash = sgd_get_flash();
                 </div>
             </div>
 
-            <!-- Diamond / Primogem Wallet Badge -->
+            <!-- Diamond / Primogem / Mana Crystal Wallet Badge -->
             <div class="sgd-diamond-wallet" title="Your Total Treasury Balance">
                 <span class="sgd-diamond-icon">
                     <span class="sgd-theme-text-wow">💎</span>
                     <span class="sgd-theme-text-genshin">✦</span>
+                    <span class="sgd-theme-text-hearthstone">💠</span>
                 </span>
                 <div class="sgd-diamond-details">
                     <span class="sgd-diamond-label">
                         <span class="sgd-theme-text-wow">Total Diamonds</span>
                         <span class="sgd-theme-text-genshin">Primogems</span>
+                        <span class="sgd-theme-text-hearthstone">Arcane Mana</span>
                     </span>
                     <span class="sgd-diamond-count">
                         <?php echo number_format( $user_diamonds ); ?> 
                         <span class="sgd-theme-text-wow">💎</span>
                         <span class="sgd-theme-text-genshin">✦</span>
+                        <span class="sgd-theme-text-hearthstone">💠</span>
                     </span>
                 </div>
             </div>
@@ -162,15 +173,19 @@ $flash = sgd_get_flash();
             <!-- Quick Character Switcher & Tools -->
             <div class="sgd-hud-actions">
                 <!-- Realm Theme Switcher -->
-                <div class="sgd-theme-switcher-pill" id="sgd-theme-switcher" title="Switch Theme Realm: World of Warcraft or Genshin Impact">
+                <div class="sgd-theme-switcher-pill" id="sgd-theme-switcher" title="Switch Theme Realm: World of Warcraft, Genshin Impact, or Hearthstone Tavern">
                     <span class="sgd-theme-switcher-tag">REALM:</span>
                     <button type="button" class="sgd-theme-btn <?php echo ( $active_theme === 'wow' ) ? 'active' : ''; ?>" data-theme="wow" title="World of Warcraft (16-Bit Retro Guild)">
                         <span class="sgd-theme-icon">⚔️</span>
                         <span class="sgd-theme-name">WoW</span>
                     </button>
-                    <button type="button" class="sgd-theme-btn <?php echo ( $active_theme === 'genshin' ) ? 'active' : ''; ?>" data-theme="genshin" title="Genshin Impact (Teyvat Celestial)">
+                    <button type="button" class="sgd-theme-btn <?php echo ( $active_theme === 'genshin' ) ? 'active' : ''; ?>" data-theme="genshin" title="Genshin Impact (Teyvat Elemental)">
                         <span class="sgd-theme-icon">✦</span>
                         <span class="sgd-theme-name">Genshin</span>
+                    </button>
+                    <button type="button" class="sgd-theme-btn <?php echo ( $active_theme === 'hearthstone' ) ? 'active' : ''; ?>" data-theme="hearthstone" title="Hearthstone (Cozy Tavern & Mana Crystals)">
+                        <span class="sgd-theme-icon">🎴</span>
+                        <span class="sgd-theme-name">Tavern</span>
                     </button>
                 </div>
 
@@ -218,6 +233,7 @@ $flash = sgd_get_flash();
                         <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-red" style="font-size:8px;">
                             <span class="sgd-theme-text-wow">Hearthstone (Logout)</span>
                             <span class="sgd-theme-text-genshin">Waypoint (Logout)</span>
+                            <span class="sgd-theme-text-hearthstone">Leave Table (Logout)</span>
                         </button>
                     </form>
                 <?php else: ?>
@@ -256,22 +272,22 @@ $flash = sgd_get_flash();
                 👑 HALL OF LEGENDS
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'daily' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'daily' ) ? 'active' : ''; ?>">
-                📜 DAILY TASK (+200 💎)
+                📜 DAILY TASK (+200 <span class="sgd-theme-text-wow">💎</span><span class="sgd-theme-text-genshin">✦</span><span class="sgd-theme-text-hearthstone">💠</span>)
                 <?php if ( $daily_count > 0 ): ?>
                     <span class="sgd-badge-count"><?php echo $daily_count; ?></span>
                 <?php endif; ?>
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'laporan-harian' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'laporan-harian' ) ? 'active' : ''; ?>" style="color:#00e5ff; border-color:#00e5ff;">
-                📋 LAPORAN HARIAN (+150 💎)
+                📋 LAPORAN HARIAN (+150 <span class="sgd-theme-text-wow">💎</span><span class="sgd-theme-text-genshin">✦</span><span class="sgd-theme-text-hearthstone">💠</span>)
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'urgent' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'urgent' ) ? 'active' : ''; ?>">
-                ⚡ URGENT TASK (+1,000 💎)
+                ⚡ URGENT TASK (+1,000 <span class="sgd-theme-text-wow">💎</span><span class="sgd-theme-text-genshin">✦</span><span class="sgd-theme-text-hearthstone">💠</span>)
                 <?php if ( $urgent_count > 0 ): ?>
                     <span class="sgd-badge-count" style="background:#ff4444;"><?php echo $urgent_count; ?></span>
                 <?php endif; ?>
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'shop' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'shop' ) ? 'active' : ''; ?>">
-                💎 CASH SHOP
+                <span class="sgd-theme-text-wow">💎</span><span class="sgd-theme-text-genshin">✦</span><span class="sgd-theme-text-hearthstone">💠</span> CASH SHOP
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'wheel' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'wheel' ) ? 'active' : ''; ?>" style="color:#ffd700; border-color:#ffd700;">
                 🎰 FORTUNE WHEEL

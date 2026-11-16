@@ -104,10 +104,12 @@ if ( $filter === 'mine' && ! $is_admin ) {
             <span>📜</span> 
             <span class="sgd-theme-text-wow">Daily Assigned Tasks</span>
             <span class="sgd-theme-text-genshin">Daily Commissions (Katheryne's Guild)</span>
+            <span class="sgd-theme-text-hearthstone">Tavern Quest Log & Innkeeper's Duties</span>
         </h1>
         <p style="color:#9cb3c9; font-size:13px; margin-top:4px;">
             <span class="sgd-theme-text-wow">Complete your assigned daily duties to maintain the guild! Each completed daily task rewards <strong style="color:#00e5ff;">+200 Diamonds</strong>.</span>
             <span class="sgd-theme-text-genshin">Ad Astra Abyssosque! Complete your Adventurers' Guild commissions across Teyvat to earn <strong style="color:#ffe8b3;">+200 Primogems</strong>.</span>
+            <span class="sgd-theme-text-hearthstone">Pull up a chair by the hearth! Complete your daily tavern duties to earn <strong style="color:#74b9ff;">+200 Arcane Mana</strong>.</span>
         </p>
     </div>
     
@@ -127,6 +129,7 @@ if ( $filter === 'mine' && ! $is_admin ) {
             <strong style="color:#00e5ff; font-family:var(--font-pixel); font-size:12px; margin-left:4px;">
                 <span class="sgd-theme-text-wow">+200 💎</span>
                 <span class="sgd-theme-text-genshin" style="color:#ffe8b3;">+200 ✦</span>
+                <span class="sgd-theme-text-hearthstone" style="color:#74b9ff;">+200 💠</span>
             </strong>
         </div>
     </div>
@@ -144,6 +147,7 @@ $page_streak = sgd_get_user_streak( $current_user_id );
                 <div class="sgd-streak-tracker-sub">
                     <span class="sgd-theme-text-wow">DAILY QUEST CONSISTENCY MULTIPLIER</span>
                     <span class="sgd-theme-text-genshin">COMMISSION STREAK & CONSISTENCY MULTIPLIER</span>
+                    <span class="sgd-theme-text-hearthstone">TAVERN WIN STREAK & MANA MULTIPLIER</span>
                 </div>
                 <h3 class="sgd-streak-tracker-title">
                     <?php if ( $page_streak['current'] > 0 ): ?>

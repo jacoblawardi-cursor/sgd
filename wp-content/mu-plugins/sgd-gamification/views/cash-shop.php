@@ -14,37 +14,44 @@ $my_redemptions = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_rede
     <div style="font-family:var(--font-pixel); font-size:9px; color:var(--wow-gold); letter-spacing:2px; margin-bottom:6px;">
         <span class="sgd-theme-text-wow">💰 STEAMWHEEDLE CARTEL & GOBLIN TREASURY 💰</span>
         <span class="sgd-theme-text-genshin">✦ PAIMON'S BARGAINS & SOUVENIR SHOP ✦</span>
+        <span class="sgd-theme-text-hearthstone">🎴 TAVERN VAULT & DUST CRAFTING EMPORIUM 🎴</span>
     </div>
     <h2>
         <span class="sgd-theme-text-wow">Goblin Diamond Exchange & Cash Shop</span>
         <span class="sgd-theme-text-genshin">Teyvat Souvenir & Primogem Exchange</span>
+        <span class="sgd-theme-text-hearthstone">Tavern Mana Exchange & Card Pack Vault</span>
     </h2>
     <p style="color:#bfa87a; max-width:650px; margin:8px auto 0 auto; font-size:14px;">
         <span class="sgd-theme-text-wow">"Time is money, friend!" Trade your hard-earned Diamonds for real cold cash vouchers, paid leave tokens, and exotic vacation packages!</span>
         <span class="sgd-theme-text-genshin">"Ehe! Welcome to Paimon's Bargains!" Trade your earned Primogems for real cash vouchers, paid leave tokens, and vacation packages!</span>
+        <span class="sgd-theme-text-hearthstone">"Come on in! Pull up a chair!" Trade your hard-earned Arcane Mana for real cash vouchers, paid leave tokens, and legendary tavern rewards!</span>
     </p>
 </div>
 
 <div class="sgd-section-header">
     <h2 class="sgd-section-title">
         <span class="sgd-theme-text-wow">💎</span>
-        <span class="sgd-theme-text-genshin">✦</span> 
+        <span class="sgd-theme-text-genshin">✦</span>
+        <span class="sgd-theme-text-hearthstone">💠</span> 
         Available Rewards
     </h2>
     <div class="sgd-diamond-wallet">
         <span class="sgd-diamond-icon">
             <span class="sgd-theme-text-wow">💎</span>
             <span class="sgd-theme-text-genshin">✦</span>
+            <span class="sgd-theme-text-hearthstone">💠</span>
         </span>
         <div class="sgd-diamond-details">
             <span class="sgd-diamond-label">
                 <span class="sgd-theme-text-wow">Your Wallet</span>
                 <span class="sgd-theme-text-genshin">Primogems</span>
+                <span class="sgd-theme-text-hearthstone">Arcane Mana</span>
             </span>
             <span class="sgd-diamond-count">
                 <?php echo number_format($diamonds); ?> 
                 <span class="sgd-theme-text-wow">💎</span>
                 <span class="sgd-theme-text-genshin">✦</span>
+                <span class="sgd-theme-text-hearthstone">💠</span>
             </span>
         </div>
     </div>

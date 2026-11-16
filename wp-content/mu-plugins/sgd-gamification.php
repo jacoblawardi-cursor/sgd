@@ -1173,17 +1173,18 @@ function sgd_get_flash() {
     return $flash;
 }
 
-// Visual Theme Selector (World of Warcraft or Genshin Impact)
+// Visual Theme Selector (World of Warcraft, Genshin Impact, or Hearthstone Tavern)
 function sgd_get_current_theme() {
-    if ( isset( $_GET['sgd_theme'] ) && in_array( $_GET['sgd_theme'], [ 'wow', 'genshin' ], true ) ) {
+    $allowed_themes = [ 'wow', 'genshin', 'hearthstone' ];
+    if ( isset( $_GET['sgd_theme'] ) && in_array( $_GET['sgd_theme'], $allowed_themes, true ) ) {
         return sanitize_text_field( $_GET['sgd_theme'] );
     }
-    if ( isset( $_COOKIE['sgd_theme'] ) && in_array( $_COOKIE['sgd_theme'], [ 'wow', 'genshin' ], true ) ) {
+    if ( isset( $_COOKIE['sgd_theme'] ) && in_array( $_COOKIE['sgd_theme'], $allowed_themes, true ) ) {
         return sanitize_text_field( $_COOKIE['sgd_theme'] );
     }
     if ( is_user_logged_in() ) {
         $meta = get_user_meta( get_current_user_id(), 'sgd_theme', true );
-        if ( in_array( $meta, [ 'wow', 'genshin' ], true ) ) {
+        if ( in_array( $meta, $allowed_themes, true ) ) {
             return $meta;
         }
     }
@@ -1203,7 +1204,7 @@ function sgd_handle_form_actions() {
     // Theme Switcher Action
     if ( $action === 'sgd_switch_theme' ) {
         $target_theme = sanitize_text_field( $_POST['target_theme'] ?? 'wow' );
-        if ( ! in_array( $target_theme, [ 'wow', 'genshin' ], true ) ) {
+        if ( ! in_array( $target_theme, [ 'wow', 'genshin', 'hearthstone' ], true ) ) {
             $target_theme = 'wow';
         }
         setcookie( 'sgd_theme', $target_theme, time() + 31536000, COOKIEPATH, COOKIE_DOMAIN );

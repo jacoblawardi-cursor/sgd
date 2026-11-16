@@ -14,20 +14,24 @@ $urgent_tasks = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE type = 'ur
             <span>⚡</span> 
             <span class="sgd-theme-text-wow">Urgent Emergency Tasks & Bounties</span>
             <span class="sgd-theme-text-genshin">Trounce Domain & Emergency Bounties</span>
+            <span class="sgd-theme-text-hearthstone">Heroic Tavern Brawl & Wild Encounters</span>
         </h1>
         <p style="color:#ffb8b0; font-size:13px; margin-top:4px;">
             <span class="sgd-theme-text-wow">Critical guild emergencies that anyone can take! Click <strong style="color:#ffd700;">"Take Job"</strong> to claim the bounty, then upload photo proof to finish and earn <strong style="color:#00e5ff;">+1,000 Diamonds</strong>!</span>
             <span class="sgd-theme-text-genshin">High-priority domain crises across Teyvat! Click <strong style="color:#ffd482;">"Take Job"</strong> to deploy, then submit proof of completion to claim <strong style="color:#ffe8b3;">+1,000 Primogems</strong>!</span>
+            <span class="sgd-theme-text-hearthstone">High-stakes Tavern Brawls! Click <strong style="color:#f9ca24;">"Take Job"</strong> to enter the arena, submit photo proof to win and earn <strong style="color:#74b9ff;">+1,000 Arcane Mana</strong>!</span>
         </p>
     </div>
     <div style="background:#2a0f0f; border:2px solid #e74c3c; padding:8px 16px; border-radius:6px; box-shadow:0 0 10px rgba(231,76,60,0.3);">
         <span style="font-family:var(--font-pixel); font-size:9px; color:#ff7675;">
             <span class="sgd-theme-text-wow">EMERGENCY BOUNTY:</span>
             <span class="sgd-theme-text-genshin">DOMAIN REWARD:</span>
+            <span class="sgd-theme-text-hearthstone">BRAWL PRIZE:</span>
         </span>
         <strong style="color:#00e5ff; font-family:var(--font-pixel); font-size:14px; margin-left:6px;">
             <span class="sgd-theme-text-wow">+1,000 💎</span>
             <span class="sgd-theme-text-genshin" style="color:#ffe8b3;">+1,000 ✦</span>
+            <span class="sgd-theme-text-hearthstone" style="color:#74b9ff;">+1,000 💠</span>
         </strong>
     </div>
 </div>

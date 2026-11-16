@@ -113,6 +113,7 @@ $all_users = get_users();
             <span>🏆</span> 
             <span class="sgd-theme-text-wow">Feats of Strength & Employee Achievements</span>
             <span class="sgd-theme-text-genshin">Wonders of the World & Memories of Teyvat</span>
+            <span class="sgd-theme-text-hearthstone">Hall of Fame Feats & Legendary Collections</span>
         </h1>
         <p style="color:#9cb3c9; font-size:13px; margin-top:4px;">
             Showing achievements for: <strong style="color:#ffd700;"><?php echo esc_html( $view_user->display_name ); ?></strong>
@@ -127,11 +128,13 @@ $all_users = get_users();
             <span style="font-family:var(--font-pixel); font-size:8px; color:#00bcd4;">
                 <span class="sgd-theme-text-wow">TOTAL DIAMONDS:</span>
                 <span class="sgd-theme-text-genshin">TOTAL PRIMOGEMS:</span>
+                <span class="sgd-theme-text-hearthstone">TOTAL ARCANE MANA:</span>
             </span>
             <strong style="color:#fff; font-family:var(--font-pixel); font-size:13px; margin-left:4px;">
                 <?php echo number_format($diamonds); ?> 
                 <span class="sgd-theme-text-wow">💎</span>
                 <span class="sgd-theme-text-genshin">✦</span>
+                <span class="sgd-theme-text-hearthstone">💠</span>
             </strong>
         </div>
     </div>

@@ -24,15 +24,17 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
 
 <div class="sgd-main-menu-container">
     
-    <!-- 16-BIT / WOW / GENSHIN GAME TITLE BANNER -->
+    <!-- 16-BIT / WOW / GENSHIN / HEARTHSTONE GAME TITLE BANNER -->
     <div class="sgd-game-header">
         <div class="sgd-realm-badge">
             <span class="sgd-theme-text-wow">⚔️ 16-BIT GAMIFICATION REALM • WORLD OF WARCRAFT ⚔️</span>
             <span class="sgd-theme-text-genshin">✦ TEYVAT ADVENTURERS' GUILD • GENSHIN REALM ✦</span>
+            <span class="sgd-theme-text-hearthstone">🍺 THE INNKEEPER'S TAVERN • HEARTHSTONE REALM 🍺</span>
         </div>
         <h1 class="sgd-game-title">
             <span class="sgd-theme-text-wow">EMPLOYEE QUEST & CASH SHOP</span>
             <span class="sgd-theme-text-genshin">ADVENTURER COMMISSIONS & SOUVENIR SHOP</span>
+            <span class="sgd-theme-text-hearthstone">TAVERN QUEST LOG & CARD PACK STORE</span>
         </h1>
         <div class="sgd-player-summary-bar">
             <?php 
@@ -42,19 +44,21 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
             <span>
                 <span class="sgd-theme-text-wow">PLAYER:</span>
                 <span class="sgd-theme-text-genshin">TRAVELER:</span> 
+                <span class="sgd-theme-text-hearthstone">CHALLENGER:</span>
                 <strong style="color:#fff;"><?php echo $is_logged_in ? esc_html($current_user->display_name) : 'GUEST'; ?></strong>
             </span>
             <span style="color:#ffd700;">
                 ★ LEVEL <?php echo $home_xp['level']; ?> 
-                (<span class="sgd-theme-text-wow"><?php echo esc_html($home_xp['faction']); ?></span><span class="sgd-theme-text-genshin">AR <?php echo $home_xp['level']; ?> • <?php echo esc_html($home_xp['faction']); ?></span>)
+                (<span class="sgd-theme-text-wow"><?php echo esc_html($home_xp['faction']); ?></span><span class="sgd-theme-text-genshin">AR <?php echo $home_xp['level']; ?> • <?php echo esc_html($home_xp['faction']); ?></span><span class="sgd-theme-text-hearthstone">Rank <?php echo max(1, 26 - $home_xp['level']); ?> • <?php echo esc_html($home_xp['faction']); ?></span>)
             </span>
             <span style="color:#00e5ff;">
                 <span class="sgd-theme-text-wow">💎 TOTAL DIAMONDS:</span>
                 <span class="sgd-theme-text-genshin">✦ PRIMOGEMS:</span> 
+                <span class="sgd-theme-text-hearthstone">💠 ARCANE MANA:</span>
                 <strong style="color:#fff;"><?php echo number_format($diamonds); ?></strong>
             </span>
             <span style="color:#ff9f43;">
-                🔥 <span class="sgd-theme-text-wow">STREAK:</span><span class="sgd-theme-text-genshin">COMMISSION STREAK:</span> 
+                🔥 <span class="sgd-theme-text-wow">STREAK:</span><span class="sgd-theme-text-genshin">COMMISSION STREAK:</span><span class="sgd-theme-text-hearthstone">WIN STREAK:</span> 
                 <strong style="color:#fff;"><?php echo $home_streak['current']; ?> DAYS</strong>
                 <?php if ( $home_streak['bonus_percent'] > 0 ) echo ' <span style="background:rgba(255,159,67,0.25); border:1px solid #ff9f43; padding:1px 6px; border-radius:3px; font-size:9px; color:#ffc048;">+' . $home_streak['bonus_percent'] . '% BONUS</span>'; ?>
             </span>
@@ -95,10 +99,12 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                 <span class="sgd-menu-btn-label">
                     <span class="sgd-theme-text-wow">ACHIEVEMENT</span>
                     <span class="sgd-theme-text-genshin">✦ WONDERS OF THE WORLD</span>
+                    <span class="sgd-theme-text-hearthstone">🎴 HALL OF FAME FEATS</span>
                 </span>
                 <span class="sgd-menu-btn-desc">
                     <span class="sgd-theme-text-wow">List of employee achievements, badges & feats of honor</span>
                     <span class="sgd-theme-text-genshin">Adventurer feats, Primogem milestones & memories of Teyvat</span>
+                    <span class="sgd-theme-text-hearthstone">Legendary card achievements, tavern milestones & golden glory</span>
                 </span>
             </div>
             <span class="sgd-menu-btn-arrow">➔</span>
@@ -112,10 +118,12 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                     <span class="sgd-menu-btn-label">
                         <span class="sgd-theme-text-wow">DAILY TASK</span>
                         <span class="sgd-theme-text-genshin">✦ DAILY COMMISSIONS</span>
+                        <span class="sgd-theme-text-hearthstone">📜 TAVERN QUEST LOG</span>
                     </span>
                     <span class="sgd-pill-reward">
                         <span class="sgd-theme-text-wow">+200 💎 REWARD</span>
                         <span class="sgd-theme-text-genshin">+200 ✦ PRIMOGEMS</span>
+                        <span class="sgd-theme-text-hearthstone">+200 💠 MANA</span>
                     </span>
                     <?php if ( $daily_count > 0 ): ?>
                         <span class="sgd-pill-count"><?php echo $daily_count; ?> Available</span>
@@ -124,6 +132,7 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                 <span class="sgd-menu-btn-desc">
                     <span class="sgd-theme-text-wow">Contains jobs to do • "Need Help" & "Finish Job" with photo proof</span>
                     <span class="sgd-theme-text-genshin">Katheryne's Guild • Complete daily commissions & claim Primogems</span>
+                    <span class="sgd-theme-text-hearthstone">Daily tavern duties • Complete quests to refill your Mana Crystals</span>
                 </span>
             </div>
             <span class="sgd-menu-btn-arrow">➔</span>
@@ -137,10 +146,12 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                     <span class="sgd-menu-btn-label" style="color:#00e5ff;">
                         <span class="sgd-theme-text-wow">LAPORAN HARIAN (DAILY REPORT)</span>
                         <span class="sgd-theme-text-genshin">✦ EXPEDITION & FIELD CHRONICLE</span>
+                        <span class="sgd-theme-text-hearthstone">📋 INNKEEPER'S DAILY CHRONICLE</span>
                     </span>
                     <span class="sgd-pill-reward" style="background:rgba(0,229,255,0.2); border-color:#00e5ff; color:#00e5ff;">
                         <span class="sgd-theme-text-wow">+150 💎 REWARD</span>
                         <span class="sgd-theme-text-genshin">+150 ✦ PRIMOGEMS</span>
+                        <span class="sgd-theme-text-hearthstone">+150 💠 MANA</span>
                     </span>
                     <span style="font-family:var(--font-pixel); font-size:8px; background:#70a1ff; color:#0b1933; padding:2px 6px; border-radius:3px;">🎙️ VOICE & AI DECIPHER</span>
                 </div>
@@ -157,10 +168,12 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                     <span class="sgd-menu-btn-label" style="color:#ff8577;">
                         <span class="sgd-theme-text-wow">URGENT TASK</span>
                         <span class="sgd-theme-text-genshin">✦ TROUNCE DOMAIN & CRISIS</span>
+                        <span class="sgd-theme-text-hearthstone">⚔️ HEROIC TAVERN BRAWL</span>
                     </span>
                     <span class="sgd-pill-reward urgent-reward">
                         <span class="sgd-theme-text-wow">+1,000 💎 REWARD</span>
                         <span class="sgd-theme-text-genshin">+1,000 ✦ PRIMOGEMS</span>
+                        <span class="sgd-theme-text-hearthstone">+1,000 💠 MANA</span>
                     </span>
                     <?php if ( $urgent_count > 0 ): ?>
                         <span class="sgd-pill-count urgent-count"><?php echo $urgent_count; ?> Critical</span>
@@ -169,6 +182,7 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                 <span class="sgd-menu-btn-desc">
                     <span class="sgd-theme-text-wow">Emergency jobs anyone could take • "Take Job" & "Finish Job" with photo proof</span>
                     <span class="sgd-theme-text-genshin">High priority domain challenges • Take job & submit proof for rewards</span>
+                    <span class="sgd-theme-text-hearthstone">Heroic tavern boss challenges • Slay urgent emergencies for massive rewards</span>
                 </span>
             </div>
             <span class="sgd-menu-btn-arrow">➔</span>
@@ -182,10 +196,12 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                     <span class="sgd-menu-btn-label" style="color:#80deea;">
                         <span class="sgd-theme-text-wow">CASH SHOP</span>
                         <span class="sgd-theme-text-genshin">✦ PAIMON'S BARGAINS & SOUVENIRS</span>
+                        <span class="sgd-theme-text-hearthstone">💎 TAVERN VAULT & DUST CRAFT</span>
                     </span>
                     <span class="sgd-pill-reward shop-reward">
                         <span class="sgd-theme-text-wow">TRADE DIAMONDS</span>
                         <span class="sgd-theme-text-genshin">TRADE PRIMOGEMS</span>
+                        <span class="sgd-theme-text-hearthstone">SPEND MANA</span>
                     </span>
                 </div>
                 <span class="sgd-menu-btn-desc">IDR 200k Voucher (1k 💎) • 1 Day Paid Leave (20k 💎) • Holiday Trip (100k 💎)</span>
@@ -201,6 +217,7 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                     <span class="sgd-menu-btn-label" style="color:#e056fd;">
                         <span class="sgd-theme-text-wow">HALL OF LEGENDS & GUILDS</span>
                         <span class="sgd-theme-text-genshin">✦ SPIRAL ABYSS & ADVENTURER RANKINGS</span>
+                        <span class="sgd-theme-text-hearthstone">👑 LEGEND LADDER & TAVERN DECKS</span>
                     </span>
                     <span class="sgd-pill-reward" style="background:#8e44ad; border-color:#be2edd;">RANKINGS & SQUADS</span>
                 </div>
@@ -217,10 +234,12 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                     <span class="sgd-menu-btn-label" style="color:#ffd700;">
                         <span class="sgd-theme-text-wow">GOBLIN FORTUNE WHEEL</span>
                         <span class="sgd-theme-text-genshin">✦ STELLA FORTUNA (WISH PRAYER)</span>
+                        <span class="sgd-theme-text-hearthstone">🎴 GOLDEN PACK OPENING (WHEEL)</span>
                     </span>
                     <span class="sgd-pill-reward" style="background:#d49a00; color:#000; font-weight:bold;">
                         <span class="sgd-theme-text-wow">1 FREE DAILY SPIN</span>
                         <span class="sgd-theme-text-genshin">1 FREE DAILY WISH</span>
+                        <span class="sgd-theme-text-hearthstone">1 FREE DAILY DRAW</span>
                     </span>
                 </div>
                 <span class="sgd-menu-btn-desc">Spin for +500 💎 Jackpots, Streak Shields, Coffee Tokens & Arcane XP</span>
@@ -236,6 +255,7 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                     <span class="sgd-menu-btn-label" style="color:#ff9f43;">
                         <span class="sgd-theme-text-wow">PEER BOUNTY BOARD</span>
                         <span class="sgd-theme-text-genshin">✦ TEYVAT REPUTATION BOUNTIES</span>
+                        <span class="sgd-theme-text-hearthstone">🤝 MERCENARY CONTRACTS & FAVORS</span>
                     </span>
                     <span class="sgd-pill-reward" style="background:#e67e22; border-color:#f39c12;">COMMISSIONS</span>
                 </div>

@@ -28,18 +28,22 @@ $pending_achievements = $current_user_id ? sgd_get_pending_achievement_alerts( $
                 <div class="sgd-gilded-corner corner-tl">
                     <span class="sgd-theme-text-wow">⚜️</span>
                     <span class="sgd-theme-text-genshin">✦</span>
+                    <span class="sgd-theme-text-hearthstone">🎴</span>
                 </div>
                 <div class="sgd-gilded-corner corner-tr">
                     <span class="sgd-theme-text-wow">⚜️</span>
                     <span class="sgd-theme-text-genshin">✦</span>
+                    <span class="sgd-theme-text-hearthstone">🎴</span>
                 </div>
                 <div class="sgd-gilded-corner corner-bl">
                     <span class="sgd-theme-text-wow">⚜️</span>
                     <span class="sgd-theme-text-genshin">✦</span>
+                    <span class="sgd-theme-text-hearthstone">🎴</span>
                 </div>
                 <div class="sgd-gilded-corner corner-br">
                     <span class="sgd-theme-text-wow">⚜️</span>
                     <span class="sgd-theme-text-genshin">✦</span>
+                    <span class="sgd-theme-text-hearthstone">🎴</span>
                 </div>
 
                 <!-- Shield Crest Header -->
@@ -52,6 +56,7 @@ $pending_achievements = $current_user_id ? sgd_get_pending_achievement_alerts( $
                 <div class="sgd-gilded-badge-header">
                     <span class="sgd-theme-text-wow">★ GUILD FEAT OF STRENGTH ★</span>
                     <span class="sgd-theme-text-genshin">✦ WONDERS OF THE WORLD ✦</span>
+                    <span class="sgd-theme-text-hearthstone">🎴 HALL OF FAME LEGENDARY FEAT 🎴</span>
                 </div>
 
                 <h2 class="sgd-gilded-main-title">
@@ -72,13 +77,16 @@ $pending_achievements = $current_user_id ? sgd_get_pending_achievement_alerts( $
                     <div class="sgd-gilded-reward-pill">
                         <span class="sgd-theme-text-wow" style="font-size:18px;">💎</span>
                         <span class="sgd-theme-text-genshin" style="font-size:18px;">✦</span>
+                        <span class="sgd-theme-text-hearthstone" style="font-size:18px;">💠</span>
                         <span>
                             +<?php echo number_format( $ach_alert->reward_diamonds ); ?> 
                             <span class="sgd-theme-text-wow">DIAMONDS</span>
-                            <span class="sgd-theme-text-genshin">PRIMOGEMS</span> AWARDED!
+                            <span class="sgd-theme-text-genshin">PRIMOGEMS</span>
+                            <span class="sgd-theme-text-hearthstone">ARCANE MANA</span> AWARDED!
                         </span>
                         <span class="sgd-theme-text-wow" style="font-size:18px;">💎</span>
                         <span class="sgd-theme-text-genshin" style="font-size:18px;">✦</span>
+                        <span class="sgd-theme-text-hearthstone" style="font-size:18px;">💠</span>
                     </div>
                 <?php endif; ?>
 
@@ -90,6 +98,7 @@ $pending_achievements = $current_user_id ? sgd_get_pending_achievement_alerts( $
                         <button type="submit" class="sgd-gilded-claim-btn">
                             <span class="sgd-theme-text-wow">🏆 CLAIM GLORY & ACCEPT HONOR 🏆</span>
                             <span class="sgd-theme-text-genshin">✦ CLAIM PRIMOGEMS & PROCEED ✦</span>
+                            <span class="sgd-theme-text-hearthstone">🎴 CLAIM MANA & ADD TO COLLECTION 🎴</span>
                         </button>
                     </form>
                 </div>

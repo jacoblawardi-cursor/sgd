@@ -44,6 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Genshin Impact crystalline UI chime
                 this.playTone(880, 'sine', 0.04);
                 this.playTone(1320, 'triangle', 0.04, 0.01);
+            } else if (document.body && document.body.classList.contains('sgd-theme-hearthstone')) {
+                // Hearthstone wooden card click / snap
+                this.playHearthstoneCardSnap();
             } else {
                 this.playTone(600, 'square', 0.05);
             }
@@ -52,6 +55,9 @@ document.addEventListener('DOMContentLoaded', function() {
         playQuestAccept: function() {
             if (document.body && document.body.classList.contains('sgd-theme-genshin')) {
                 this.playGenshinChime();
+                return;
+            } else if (document.body && document.body.classList.contains('sgd-theme-hearthstone')) {
+                this.playHearthstoneTavernFanfare();
                 return;
             }
             this.playTone(440, 'triangle', 0.1, 0);
@@ -62,6 +68,9 @@ document.addEventListener('DOMContentLoaded', function() {
         playVictoryFanfare: function() {
             if (document.body && document.body.classList.contains('sgd-theme-genshin')) {
                 this.playGenshinWish();
+                return;
+            } else if (document.body && document.body.classList.contains('sgd-theme-hearthstone')) {
+                this.playHearthstoneLegendaryFanfare();
                 return;
             }
             // Retro 8-bit level up / quest complete fanfare
@@ -99,9 +108,40 @@ document.addEventListener('DOMContentLoaded', function() {
             notes.forEach(n => this.playTone(n.f, n.type, n.d, n.t));
         },
 
+        playHearthstoneCardSnap: function() {
+            // Wooden card snap and mana crystal chime
+            this.playTone(330, 'triangle', 0.04, 0);
+            this.playTone(660, 'sine', 0.05, 0.01);
+        },
+
+        playHearthstoneTavernFanfare: function() {
+            // Cozy tavern lute / accordion arpeggio
+            const notes = [
+                { f: 293.66, type: 'triangle', d: 0.12, t: 0 },
+                { f: 369.99, type: 'triangle', d: 0.12, t: 0.08 },
+                { f: 440.00, type: 'sine', d: 0.15, t: 0.16 },
+                { f: 587.33, type: 'triangle', d: 0.25, t: 0.24 }
+            ];
+            notes.forEach(n => this.playTone(n.f, n.type, n.d, n.t));
+        },
+
+        playHearthstoneLegendaryFanfare: function() {
+            // Grand Golden Legendary card trumpets & tavern fanfare
+            const notes = [
+                { f: 392.00, type: 'triangle', d: 0.14, t: 0 },
+                { f: 523.25, type: 'triangle', d: 0.14, t: 0.09 },
+                { f: 659.25, type: 'triangle', d: 0.16, t: 0.18 },
+                { f: 783.99, type: 'square', d: 0.26, t: 0.27 },
+                { f: 1046.50, type: 'sine', d: 0.55, t: 0.38 }
+            ];
+            notes.forEach(n => this.playTone(n.f, n.type, n.d, n.t));
+        },
+
         playThemeSwitch: function(theme) {
             if (theme === 'genshin') {
                 this.playGenshinChime();
+            } else if (theme === 'hearthstone') {
+                this.playHearthstoneTavernFanfare();
             } else {
                 // WoW heroic guild fanfare
                 const notes = [
@@ -135,6 +175,9 @@ document.addEventListener('DOMContentLoaded', function() {
         playAchievementFanfare: function() {
             if (document.body && document.body.classList.contains('sgd-theme-genshin')) {
                 this.playGenshinWish();
+                return;
+            } else if (document.body && document.body.classList.contains('sgd-theme-hearthstone')) {
+                this.playHearthstoneLegendaryFanfare();
                 return;
             }
             // World of Warcraft grand golden achievement fanfare
@@ -228,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ==========================================
-    // THEME SWITCHER CONTROLLER (WoW & Genshin Impact)
+    // THEME SWITCHER CONTROLLER (WoW, Genshin & Hearthstone)
     // ==========================================
     const ThemeManager = {
         currentTheme: 'wow',
@@ -241,7 +284,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 savedTheme = localStorage.getItem('sgd_active_theme');
             } catch(e) {}
 
-            const initialTheme = savedTheme || cookieTheme || (document.body.classList.contains('sgd-theme-genshin') ? 'genshin' : 'wow');
+            let domTheme = 'wow';
+            if (document.body.classList.contains('sgd-theme-hearthstone')) domTheme = 'hearthstone';
+            else if (document.body.classList.contains('sgd-theme-genshin')) domTheme = 'genshin';
+
+            const initialTheme = savedTheme || cookieTheme || domTheme;
             this.setTheme(initialTheme, false);
 
             document.querySelectorAll('.sgd-theme-btn').forEach(btn => {
@@ -256,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         setTheme: function(theme, userTriggered = false) {
-            if (theme !== 'wow' && theme !== 'genshin') {
+            if (!['wow', 'genshin', 'hearthstone'].includes(theme)) {
                 theme = 'wow';
             }
             this.currentTheme = theme;
@@ -264,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Apply classes & attributes
             document.documentElement.setAttribute('data-sgd-theme', theme);
             if (document.body) {
-                document.body.classList.remove('sgd-theme-wow', 'sgd-theme-genshin');
+                document.body.classList.remove('sgd-theme-wow', 'sgd-theme-genshin', 'sgd-theme-hearthstone');
                 document.body.classList.add('sgd-theme-' + theme);
             }
 
@@ -273,14 +320,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
             });
 
-            // Update document title if appropriate
-            if (theme === 'genshin') {
-                if (document.title.includes('Goblin Treasury')) {
-                    document.title = document.title.replace('16-Bit Gamification Portal & Goblin Treasury', 'Teyvat Adventurers\' Guild & Primogem Treasury');
-                }
-            } else {
-                if (document.title.includes('Teyvat Adventurers')) {
-                    document.title = document.title.replace('Teyvat Adventurers\' Guild & Primogem Treasury', '16-Bit Gamification Portal & Goblin Treasury');
+            // Update document title dynamically
+            const titleThemeMap = {
+                'wow': '16-Bit Gamification Portal & Goblin Treasury',
+                'genshin': 'Teyvat Adventurers\' Guild & Primogem Treasury',
+                'hearthstone': 'Hearthstone Tavern & Mana Treasury'
+            };
+            for (const key in titleThemeMap) {
+                if (document.title.includes(titleThemeMap[key])) {
+                    document.title = document.title.replace(titleThemeMap[key], titleThemeMap[theme]);
+                    break;
                 }
             }
 

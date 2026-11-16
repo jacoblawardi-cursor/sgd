@@ -26,14 +26,17 @@ foreach ( $leaderboard as $hero ) {
     <div style="font-family:var(--font-pixel); font-size:9px; color:#be2edd; letter-spacing:2px; margin-bottom:6px;">
         <span class="sgd-theme-text-wow">⚔️ PANTHEON OF VALOR & GUILD SQUADS ⚔️</span>
         <span class="sgd-theme-text-genshin">✦ SPIRAL ABYSS & TEYVAT ADVENTURER RANKINGS ✦</span>
+        <span class="sgd-theme-text-hearthstone">🎴 GRAND TOURNAMENT & INNKEEPER'S LADDER 🎴</span>
     </div>
     <h1 style="font-family:var(--font-title); font-size:26px; color:#fff; text-shadow:0 0 15px rgba(190,46,221,0.6); margin:0;">
         <span class="sgd-theme-text-wow">👑 Hall of Legends & Leaderboard</span>
         <span class="sgd-theme-text-genshin">✦ Spiral Abyss & Adventurer Rankings</span>
+        <span class="sgd-theme-text-hearthstone">🎴 Legend Rank Ladder & Hall of Champions</span>
     </h1>
     <p style="color:#d1d8e0; max-width:700px; margin:8px auto 0 auto; font-size:14px;">
         <span class="sgd-theme-text-wow">Stand tall among the legendary heroes of the guild! Earn XP from daily tasks and emergency bounties, lead your squad faction to glory, and empower your comrades with peer Mana.</span>
         <span class="sgd-theme-text-genshin">Stand tall among the star travelers of Teyvat! Earn Adventure EXP from commissions and trounce domains, lead your element faction to glory, and send peer praise.</span>
+        <span class="sgd-theme-text-hearthstone">Climb to Rank 1 Legend! Earn XP from tavern duties and brawls, build prestige for your tavern squad, and send cheers to fellow champions.</span>
     </p>
 </div>
 

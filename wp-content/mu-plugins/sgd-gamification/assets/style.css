@@ -225,13 +225,15 @@ body.sgd-wow-body {
 /* ========================================================
    THEME SWITCHING UTILITY & TEXT TOGGLES
    ======================================================== */
-.sgd-theme-text-genshin {
+.sgd-theme-text-genshin,
+.sgd-theme-text-hearthstone {
   display: none !important;
 }
 .sgd-theme-text-wow {
   display: inline !important;
 }
-.sgd-theme-block-genshin {
+.sgd-theme-block-genshin,
+.sgd-theme-block-hearthstone {
   display: none !important;
 }
 .sgd-theme-block-wow {
@@ -239,7 +241,9 @@ body.sgd-wow-body {
 }
 
 body.sgd-theme-genshin .sgd-theme-text-wow,
-html[data-sgd-theme="genshin"] body .sgd-theme-text-wow {
+html[data-sgd-theme="genshin"] body .sgd-theme-text-wow,
+body.sgd-theme-genshin .sgd-theme-text-hearthstone,
+html[data-sgd-theme="genshin"] body .sgd-theme-text-hearthstone {
   display: none !important;
 }
 body.sgd-theme-genshin .sgd-theme-text-genshin,
@@ -248,11 +252,35 @@ html[data-sgd-theme="genshin"] body .sgd-theme-text-genshin {
 }
 
 body.sgd-theme-genshin .sgd-theme-block-wow,
-html[data-sgd-theme="genshin"] body .sgd-theme-block-wow {
+html[data-sgd-theme="genshin"] body .sgd-theme-block-wow,
+body.sgd-theme-genshin .sgd-theme-block-hearthstone,
+html[data-sgd-theme="genshin"] body .sgd-theme-block-hearthstone {
   display: none !important;
 }
 body.sgd-theme-genshin .sgd-theme-block-genshin,
 html[data-sgd-theme="genshin"] body .sgd-theme-block-genshin {
+  display: block !important;
+}
+
+body.sgd-theme-hearthstone .sgd-theme-text-wow,
+html[data-sgd-theme="hearthstone"] body .sgd-theme-text-wow,
+body.sgd-theme-hearthstone .sgd-theme-text-genshin,
+html[data-sgd-theme="hearthstone"] body .sgd-theme-text-genshin {
+  display: none !important;
+}
+body.sgd-theme-hearthstone .sgd-theme-text-hearthstone,
+html[data-sgd-theme="hearthstone"] body .sgd-theme-text-hearthstone {
+  display: inline !important;
+}
+
+body.sgd-theme-hearthstone .sgd-theme-block-wow,
+html[data-sgd-theme="hearthstone"] body .sgd-theme-block-wow,
+body.sgd-theme-hearthstone .sgd-theme-block-genshin,
+html[data-sgd-theme="hearthstone"] body .sgd-theme-block-genshin {
+  display: none !important;
+}
+body.sgd-theme-hearthstone .sgd-theme-block-hearthstone,
+html[data-sgd-theme="hearthstone"] body .sgd-theme-block-hearthstone {
   display: block !important;
 }
 
@@ -4808,4 +4836,707 @@ body.sgd-theme-genshin .sgd-shop-item-card:hover {
   transform: translateY(-3px);
   border-color: #ffb822;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), 0 0 20px rgba(255, 184, 34, 0.35);
+}
+
+
+/* ==========================================================================
+   HEARTHSTONE THEME STYLES (THE INNKEEPER'S TAVERN)
+   Cozy Tavern Aesthetic: Aged Mahogany, Brass Filigrees, Mana Crystals, Hearth Glow
+   ========================================================================== */
+
+/* 1. Root Variable Overrides for Hearthstone Theme */
+body.sgd-theme-hearthstone,
+html[data-sgd-theme="hearthstone"] body {
+  --wow-gold-light: #fed330;
+  --wow-gold: #e1b12c;
+  --wow-gold-dark: #b87b1e;
+  --wow-gold-border: rgba(225, 177, 44, 0.7);
+  --wow-bg-dark: #1b1008;
+  --wow-bg-card: rgba(43, 23, 12, 0.82);
+  --wow-bg-card-hover: rgba(59, 32, 17, 0.92);
+  --wow-stone: #2f190d;
+  --wow-parchment: #fdf3df;
+  --wow-parchment-border: #c49c66;
+  --wow-parchment-text: #2a1609;
+
+  --hs-wood-dark: #1b1008;
+  --hs-wood-card: #2e190e;
+  --hs-wood-hover: #432414;
+  --hs-brass: #d4a017;
+  --hs-gold: #f9ca24;
+  --hs-mana-blue: #0984e3;
+  --hs-mana-glow: #74b9ff;
+  --hs-ember: #e67e22;
+  --hs-hearth-glow: #ff7675;
+
+  --font-pixel: 'Plus Jakarta Sans', sans-serif;
+  --font-title: 'Cinzel', 'Marcellus', 'Georgia', serif;
+  --font-parchment: 'Cinzel', 'Georgia', serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --pixel-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* 2. Body Atmosphere: Cozy Warm Tavern Fireplace & Polished Mahogany Wood */
+body.sgd-theme-hearthstone {
+  background-color: #1a0f07 !important;
+  background-image:
+    /* Ambient Fireplace Hearth Glow from top center */
+    radial-gradient(circle at 50% 8%, rgba(243, 156, 18, 0.38) 0%, rgba(230, 126, 34, 0.18) 35%, transparent 60%),
+    /* Cozy left fireplace amber reflections */
+    radial-gradient(circle at 8% 45%, rgba(211, 84, 0, 0.28) 0%, transparent 40%),
+    /* Cozy right candlelit warmth */
+    radial-gradient(circle at 92% 45%, rgba(241, 196, 15, 0.25) 0%, transparent 40%),
+    /* Arcane Mana Crystal shimmer in the tavern air */
+    radial-gradient(circle at 50% 85%, rgba(9, 132, 227, 0.15) 0%, transparent 45%),
+    /* Hearthstone Brass Star Dust */
+    radial-gradient(1.5px 1.5px at 40px 60px, rgba(254, 211, 48, 0.6), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 120px 180px, rgba(243, 156, 18, 0.5), rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 280px 100px, rgba(254, 211, 48, 0.5), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 410px 260px, rgba(230, 126, 34, 0.4), rgba(0,0,0,0)),
+    /* Warm Mahogany & Aged Oak Wood plank gradient */
+    linear-gradient(180deg, #2b170c 0%, #1e1007 35%, #180c05 70%, #120904 100%) !important;
+  background-attachment: fixed !important;
+  background-size: auto, auto, auto, auto, 350px 350px, 350px 350px, 350px 350px, 350px 350px, cover !important;
+  color: #faebd7;
+  font-family: var(--font-body);
+}
+
+/* 3. Top Status HUD Bar: Polished Oak Mantle with Carved Brass Filigree */
+body.sgd-theme-hearthstone .sgd-top-hud {
+  background: linear-gradient(180deg, rgba(46, 25, 14, 0.95) 0%, rgba(29, 16, 9, 0.98) 100%) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 3px solid #d4a017 !important;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.6), 0 2px 10px rgba(230, 126, 34, 0.35) !important;
+}
+
+/* Character Unit Frame: Hearthstone Hero Frame */
+body.sgd-theme-hearthstone .sgd-unit-frame {
+  background: linear-gradient(135deg, rgba(58, 32, 17, 0.95) 0%, rgba(36, 20, 11, 0.98) 100%) !important;
+  border: 2px solid #d4a017 !important;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5), 0 0 12px rgba(212, 160, 23, 0.3) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-portrait {
+  border: 2px solid #f9ca24 !important;
+  background: linear-gradient(135deg, #3a2011, #1a0f07) !important;
+  box-shadow: 0 0 14px rgba(249, 202, 36, 0.6), inset 0 0 10px rgba(0, 0, 0, 0.7) !important;
+  border-radius: 50%;
+}
+
+body.sgd-theme-hearthstone .sgd-unit-level {
+  background: linear-gradient(135deg, #f9ca24 0%, #e67e22 100%) !important;
+  color: #2b170c !important;
+  border: 1.5px solid #fff !important;
+  font-weight: 800;
+  border-radius: 6px;
+  font-family: var(--font-body) !important;
+  font-size: 9px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
+body.sgd-theme-hearthstone .sgd-unit-name {
+  font-family: var(--font-title) !important;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: #ffd89b !important;
+  text-shadow: 0 0 10px rgba(249, 202, 36, 0.4);
+}
+
+body.sgd-theme-hearthstone .sgd-unit-role {
+  font-family: var(--font-body) !important;
+  font-size: 11px;
+  font-weight: 600;
+  color: #dfb285 !important;
+}
+
+body.sgd-theme-hearthstone .sgd-bar {
+  border-radius: 4px;
+  border: 1px solid rgba(212, 160, 23, 0.45);
+  background: rgba(18, 10, 5, 0.9);
+}
+
+body.sgd-theme-hearthstone .sgd-bar-hp {
+  background: linear-gradient(90deg, #e74c3c, #c0392b) !important;
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(231, 76, 60, 0.6);
+}
+
+/* Hearthstone Arcane Mana Crystals Bar */
+body.sgd-theme-hearthstone .sgd-bar-mp {
+  background: linear-gradient(90deg, #0984e3, #74b9ff) !important;
+  border-radius: 3px;
+  box-shadow: 0 0 10px rgba(116, 185, 255, 0.7);
+}
+
+/* Arcane Mana Crystal Wallet */
+body.sgd-theme-hearthstone .sgd-diamond-wallet {
+  background: linear-gradient(135deg, rgba(9, 132, 227, 0.28) 0%, rgba(46, 25, 14, 0.95) 100%) !important;
+  border: 1.5px solid #0984e3 !important;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), inset 0 0 12px rgba(116, 185, 255, 0.35) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-diamond-icon {
+  color: #74b9ff;
+  filter: drop-shadow(0 0 8px #0984e3) drop-shadow(0 0 3px #74b9ff);
+}
+
+body.sgd-theme-hearthstone .sgd-diamond-label {
+  font-family: var(--font-body);
+  letter-spacing: 0.5px;
+  font-size: 8px;
+  color: #74b9ff !important;
+}
+
+body.sgd-theme-hearthstone .sgd-diamond-count {
+  color: #eaf2f8 !important;
+  text-shadow: 0 0 10px rgba(116, 185, 255, 0.8);
+  font-family: var(--font-title);
+  letter-spacing: 0.5px;
+}
+
+/* Win Streak HUD Badge: Fireplace Hearth Glow */
+body.sgd-theme-hearthstone .sgd-streak-hud-badge {
+  background: linear-gradient(135deg, rgba(230, 126, 34, 0.32) 0%, rgba(46, 25, 14, 0.95) 100%) !important;
+  border: 1.5px solid #f39c12 !important;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(230, 126, 34, 0.4) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-streak-hud-val {
+  font-family: var(--font-title);
+  color: #fed330 !important;
+}
+
+/* Theme Switcher Pill in Hearthstone Mode */
+body.sgd-theme-hearthstone .sgd-theme-switcher-pill {
+  border-color: #d4a017;
+  background: #231309;
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(212, 160, 23, 0.3);
+}
+
+body.sgd-theme-hearthstone .sgd-theme-btn.active {
+  background: linear-gradient(135deg, #f39c12 0%, #d35400 50%, #962d00 100%) !important;
+  color: #fff !important;
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 16px rgba(243, 156, 18, 0.75) !important;
+}
+
+/* Switcher & Sound FX Buttons */
+body.sgd-theme-hearthstone .sgd-switch-pill {
+  background: #231309;
+  border: 1px solid rgba(212, 160, 23, 0.5);
+  border-radius: 8px;
+}
+
+body.sgd-theme-hearthstone .sgd-switch-btn {
+  border-radius: 6px;
+  font-family: var(--font-body);
+}
+
+body.sgd-theme-hearthstone .sgd-switch-btn.active {
+  background: linear-gradient(135deg, #e67e22, #b85d19) !important;
+  color: #fff !important;
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 10px rgba(230, 126, 34, 0.5);
+}
+
+body.sgd-theme-hearthstone .sgd-sfx-btn {
+  background: #28150a;
+  border: 1px solid rgba(212, 160, 23, 0.6);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  box-shadow: 0 0 10px rgba(212, 160, 23, 0.2);
+  color: #ffd89b;
+}
+
+body.sgd-theme-hearthstone .sgd-sound-popover {
+  background: #241309;
+  border: 1.5px solid #d4a017;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+}
+
+/* 4. Navigation Tabs in Hearthstone Mode */
+body.sgd-theme-hearthstone .sgd-nav-tabs {
+  background: rgba(36, 20, 11, 0.85) !important;
+  backdrop-filter: blur(14px);
+  border: 1.5px solid #d4a017 !important;
+  border-radius: 12px;
+  padding: 8px !important;
+  gap: 8px !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+body.sgd-theme-hearthstone .sgd-tab-btn {
+  border-radius: 8px !important;
+  border: 1px solid rgba(212, 160, 23, 0.4) !important;
+  background: rgba(46, 25, 14, 0.8) !important;
+  font-family: var(--font-title) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.5px !important;
+  transition: all 0.25s ease !important;
+  color: #ecd5b8;
+}
+
+body.sgd-theme-hearthstone .sgd-tab-btn:hover {
+  background: rgba(68, 38, 21, 0.95) !important;
+  border-color: #f9ca24 !important;
+  color: #fff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(249, 202, 36, 0.35) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-tab-btn.active {
+  background: linear-gradient(135deg, rgba(230, 126, 34, 0.4) 0%, rgba(58, 32, 17, 0.98) 100%) !important;
+  border-color: #ffd700 !important;
+  color: #fff !important;
+  box-shadow: 0 0 16px rgba(243, 156, 18, 0.5) !important;
+}
+
+/* 5. Buttons Styling in Hearthstone Mode */
+body.sgd-theme-hearthstone .sgd-btn {
+  border-radius: 8px !important;
+  font-family: var(--font-title) !important;
+  letter-spacing: 0.5px !important;
+  font-weight: 700 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.55) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-btn-gold {
+  background: linear-gradient(135deg, #f9ca24 0%, #f39c12 50%, #d35400 100%) !important;
+  color: #2b170c !important;
+  border-color: #ffd700 !important;
+  box-shadow: 0 4px 16px rgba(243, 156, 18, 0.55) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-btn-blue {
+  background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%) !important;
+  border-color: #a0c4ff !important;
+  box-shadow: 0 4px 16px rgba(9, 132, 227, 0.5) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-btn-red {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+  border-color: #ff7675 !important;
+  box-shadow: 0 4px 16px rgba(231, 76, 60, 0.5) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-btn-green {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%) !important;
+  color: #0b2212 !important;
+  border-color: #a8e6cf !important;
+  box-shadow: 0 4px 16px rgba(46, 204, 113, 0.5) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-btn-purple {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%) !important;
+  border-color: #e0b0ff !important;
+  box-shadow: 0 4px 16px rgba(155, 89, 182, 0.5) !important;
+}
+
+/* 6. Homepage Banners & Cozy Tavern Menu Cards */
+body.sgd-theme-hearthstone .sgd-game-header {
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(50, 27, 14, 0.9) 0%, rgba(36, 19, 10, 0.95) 50%, rgba(26, 14, 7, 0.95) 100%) !important;
+  border: 2px solid #d4a017 !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55), 0 0 25px rgba(243, 156, 18, 0.25), inset 0 0 25px rgba(212, 160, 23, 0.15) !important;
+  padding: 24px;
+}
+
+body.sgd-theme-hearthstone .sgd-realm-badge {
+  border-radius: 20px;
+  background: linear-gradient(90deg, rgba(243, 156, 18, 0.3), rgba(211, 84, 0, 0.3)) !important;
+  border: 1px solid #ffd700 !important;
+  color: #fed330 !important;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  font-size: 11px;
+  text-shadow: 0 0 10px rgba(254, 211, 48, 0.7);
+}
+
+body.sgd-theme-hearthstone .sgd-game-title {
+  font-family: var(--font-title) !important;
+  color: #fff0c2;
+  text-shadow: 0 0 25px rgba(243, 156, 18, 0.6);
+  letter-spacing: 1px;
+}
+
+body.sgd-theme-hearthstone .sgd-player-summary-bar {
+  border-radius: 10px;
+  background: rgba(36, 19, 10, 0.88);
+  border: 1px solid rgba(212, 160, 23, 0.45);
+  font-family: var(--font-body);
+}
+
+/* HEARTHSTONE MENU BUTTONS (TAVERN CARD PACK TILES) */
+body.sgd-theme-hearthstone .sgd-wow-menu-btn {
+  border-radius: 14px !important;
+  backdrop-filter: blur(14px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-wow-menu-btn:hover {
+  transform: translateY(-4px) scale(1.01) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-menu-btn-icon {
+  border-radius: 12px !important;
+  background: rgba(26, 14, 7, 0.9) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-menu-btn-label {
+  font-family: var(--font-title) !important;
+  font-size: 15px !important;
+  letter-spacing: 0.6px !important;
+  color: #fff !important;
+}
+
+body.sgd-theme-hearthstone .sgd-menu-btn-desc {
+  font-family: var(--font-body) !important;
+  font-size: 12px !important;
+  color: #dfb285 !important;
+}
+
+body.sgd-theme-hearthstone .sgd-pill-reward {
+  border-radius: 12px !important;
+  font-family: var(--font-body) !important;
+  font-size: 10px !important;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+body.sgd-theme-hearthstone .sgd-pill-count {
+  border-radius: 12px !important;
+  font-family: var(--font-body) !important;
+  font-size: 10px !important;
+  font-weight: 700;
+}
+
+/* Individual Hearthstone Menu Card Styles */
+
+/* 1. Achievement (Legendary Golden Dragon Ribbon) */
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-achievement {
+  border: 2px solid #ffd700 !important;
+  background: linear-gradient(135deg, rgba(249, 202, 36, 0.28) 0%, rgba(58, 32, 17, 0.92) 100%) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 20px rgba(255, 215, 0, 0.3) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-achievement:hover {
+  border-color: #fff275 !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 30px rgba(255, 215, 0, 0.55) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-achievement .sgd-menu-btn-icon {
+  border: 1.5px solid #ffd700 !important;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.45) !important;
+}
+
+/* 2. Daily Tasks (Tavern Quest Parchment) */
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-daily {
+  border: 2px solid #e67e22 !important;
+  background: linear-gradient(135deg, rgba(230, 126, 34, 0.28) 0%, rgba(46, 25, 14, 0.92) 100%) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 18px rgba(230, 126, 34, 0.3) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-daily:hover {
+  border-color: #f39c12 !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 28px rgba(230, 126, 34, 0.55) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-daily .sgd-menu-btn-icon {
+  border: 1.5px solid #e67e22 !important;
+  box-shadow: 0 0 12px rgba(230, 126, 34, 0.4) !important;
+}
+
+/* 2.5 Daily Report (Innkeeper's Daily Chronicle) */
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-laporan {
+  border: 2px solid #74b9ff !important;
+  background: linear-gradient(135deg, rgba(9, 132, 227, 0.28) 0%, rgba(36, 22, 14, 0.92) 100%) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 18px rgba(116, 185, 255, 0.3) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-laporan:hover {
+  border-color: #a0c4ff !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 28px rgba(116, 185, 255, 0.55) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-laporan .sgd-menu-btn-icon {
+  border: 1.5px solid #74b9ff !important;
+  box-shadow: 0 0 12px rgba(116, 185, 255, 0.45) !important;
+}
+
+/* 3. Heroic Tavern Brawl (Fiery Hearth Flame) */
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-urgent {
+  border: 2px solid #e74c3c !important;
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.28) 0%, rgba(48, 18, 12, 0.92) 100%) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 18px rgba(231, 76, 60, 0.3) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-urgent:hover {
+  border-color: #ff7675 !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 28px rgba(231, 76, 60, 0.55) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-urgent .sgd-menu-btn-icon {
+  border: 1.5px solid #e74c3c !important;
+  box-shadow: 0 0 12px rgba(231, 76, 60, 0.45) !important;
+}
+
+/* 4. Tavern Vault & Dust Crafting (Arcane Mana Crystal) */
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-shop {
+  border: 2px solid #00cec9 !important;
+  background: linear-gradient(135deg, rgba(0, 206, 201, 0.28) 0%, rgba(24, 32, 28, 0.92) 100%) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 18px rgba(0, 206, 201, 0.3) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-shop:hover {
+  border-color: #81ecec !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 28px rgba(0, 206, 201, 0.55) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-shop .sgd-menu-btn-icon {
+  border: 1.5px solid #00cec9 !important;
+  box-shadow: 0 0 12px rgba(0, 206, 201, 0.45) !important;
+}
+
+/* 5. Legend Ladder & Tavern Decks (Royal Rank 1 Legend) */
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-ladder {
+  border: 2px solid #f39c12 !important;
+  background: linear-gradient(135deg, rgba(243, 156, 18, 0.28) 0%, rgba(48, 28, 14, 0.92) 100%) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 18px rgba(243, 156, 18, 0.3) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-ladder:hover {
+  border-color: #fed330 !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 28px rgba(243, 156, 18, 0.55) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-ladder .sgd-menu-btn-icon {
+  border: 1.5px solid #f39c12 !important;
+  box-shadow: 0 0 12px rgba(243, 156, 18, 0.45) !important;
+}
+
+/* 6. Golden Card Pack Opening */
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-wheel {
+  border: 2px solid #fdcb6e !important;
+  background: linear-gradient(135deg, rgba(253, 203, 110, 0.28) 0%, rgba(52, 34, 18, 0.92) 100%) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 18px rgba(253, 203, 110, 0.3) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-wheel:hover {
+  border-color: #ffeaa7 !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 28px rgba(253, 203, 110, 0.55) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-wheel .sgd-menu-btn-icon {
+  border: 1.5px solid #fdcb6e !important;
+  box-shadow: 0 0 12px rgba(253, 203, 110, 0.45) !important;
+}
+
+/* 7. Mercenary Contracts (Tavern Bulletin Board) */
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-bounty {
+  border: 2px solid #b87b1e !important;
+  background: linear-gradient(135deg, rgba(184, 123, 30, 0.28) 0%, rgba(42, 24, 12, 0.92) 100%) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 18px rgba(184, 123, 30, 0.3) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-bounty:hover {
+  border-color: #d4a017 !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 28px rgba(184, 123, 30, 0.55) !important;
+}
+body.sgd-theme-hearthstone .sgd-wow-menu-btn.btn-bounty .sgd-menu-btn-icon {
+  border: 1.5px solid #b87b1e !important;
+  box-shadow: 0 0 12px rgba(184, 123, 30, 0.45) !important;
+}
+
+/* 7. Generic Cards, Panels & Modals in Hearthstone Mode */
+body.sgd-theme-hearthstone .sgd-card {
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(46, 25, 14, 0.92) 0%, rgba(29, 16, 9, 0.96) 100%) !important;
+  border: 1.5px solid #d4a017 !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 15px rgba(212, 160, 23, 0.18) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-card-header {
+  border-bottom: 1px solid rgba(212, 160, 23, 0.4) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-card-title {
+  font-family: var(--font-title) !important;
+  color: #ffd89b !important;
+}
+
+body.sgd-theme-hearthstone .sgd-quest-card {
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(50, 27, 14, 0.9) 0%, rgba(32, 17, 9, 0.95) 100%) !important;
+  border: 1.5px solid rgba(212, 160, 23, 0.5) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-quest-card:hover {
+  border-color: #ffd700 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.55), 0 0 15px rgba(243, 156, 18, 0.35) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-quest-title {
+  font-family: var(--font-title) !important;
+  color: #ffd89b !important;
+}
+
+body.sgd-theme-hearthstone .sgd-quest-desc {
+  font-family: var(--font-body) !important;
+  color: #dfb285 !important;
+  line-height: 1.6;
+}
+
+/* 8. Gilded Achievement Modal (Legendary Golden Card Fanfare) */
+body.sgd-theme-hearthstone .sgd-gilded-celebration-backdrop {
+  background: rgba(18, 10, 5, 0.9) !important;
+  backdrop-filter: blur(16px);
+}
+
+body.sgd-theme-hearthstone .sgd-gilded-achievement-box {
+  background: linear-gradient(145deg, rgba(50, 27, 14, 0.98) 0%, rgba(29, 16, 9, 0.99) 100%) !important;
+  border: 2px solid #ffd700 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 0 50px rgba(255, 215, 0, 0.5), 0 20px 60px rgba(0, 0, 0, 0.8) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-gilded-badge-header {
+  color: #ffd700 !important;
+  font-family: var(--font-title) !important;
+  letter-spacing: 2px !important;
+  font-size: 11px !important;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+}
+
+body.sgd-theme-hearthstone .sgd-gilded-main-title {
+  font-family: var(--font-title) !important;
+  color: #fed330 !important;
+  text-shadow: 0 0 20px rgba(254, 211, 48, 0.8) !important;
+  font-size: 24px !important;
+}
+
+body.sgd-theme-hearthstone .sgd-gilded-ach-name {
+  font-family: var(--font-title) !important;
+  color: #fff !important;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+}
+
+body.sgd-theme-hearthstone .sgd-gilded-reward-pill {
+  border-radius: 20px !important;
+  background: linear-gradient(90deg, rgba(243, 156, 18, 0.3), rgba(9, 132, 227, 0.3)) !important;
+  border: 1.5px solid #ffd700 !important;
+  color: #ffd89b !important;
+  font-family: var(--font-title) !important;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+}
+
+body.sgd-theme-hearthstone .sgd-gilded-claim-btn {
+  background: linear-gradient(135deg, #ffd700 0%, #f39c12 50%, #d35400 100%) !important;
+  color: #1a0f07 !important;
+  border-radius: 10px !important;
+  font-family: var(--font-title) !important;
+  box-shadow: 0 4px 22px rgba(243, 156, 18, 0.7) !important;
+}
+
+/* 9. Modals & Dialogs */
+body.sgd-theme-hearthstone .sgd-modal-box {
+  border-radius: 16px !important;
+  border: 1.5px solid #d4a017 !important;
+  background: linear-gradient(145deg, #321b0e 0%, #1e1007 100%) !important;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.7), 0 0 25px rgba(243, 156, 18, 0.25) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-modal-header {
+  border-bottom: 1px solid rgba(212, 160, 23, 0.4) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-modal-title {
+  font-family: var(--font-title) !important;
+  color: #ffd89b !important;
+}
+
+/* 10. Form Controls, Inputs & Tables */
+body.sgd-theme-hearthstone .sgd-form-input,
+body.sgd-theme-hearthstone .sgd-form-select,
+body.sgd-theme-hearthstone .sgd-form-textarea {
+  border-radius: 8px !important;
+  border: 1px solid rgba(212, 160, 23, 0.45) !important;
+  background: rgba(29, 16, 9, 0.9) !important;
+  color: #fff !important;
+  font-family: var(--font-body) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-form-input:focus,
+body.sgd-theme-hearthstone .sgd-form-select:focus,
+body.sgd-theme-hearthstone .sgd-form-textarea:focus {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 14px rgba(255, 215, 0, 0.5) !important;
+  outline: none;
+}
+
+body.sgd-theme-hearthstone .sgd-form-label {
+  font-family: var(--font-title);
+  color: #ffd89b;
+  letter-spacing: 0.5px;
+}
+
+body.sgd-theme-hearthstone .sgd-table {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(212, 160, 23, 0.45) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-table th {
+  background: #231309 !important;
+  color: #ffd89b !important;
+  font-family: var(--font-title) !important;
+  letter-spacing: 0.5px;
+  border-bottom: 1.5px solid rgba(212, 160, 23, 0.5) !important;
+}
+
+body.sgd-theme-hearthstone .sgd-table td {
+  border-bottom: 1px solid rgba(212, 160, 23, 0.2) !important;
+  font-family: var(--font-body);
+}
+
+/* 11. Daily Report & Weather Spec Cards in Hearthstone Mode */
+body.sgd-theme-hearthstone .sgd-laporan-wrapper .sgd-card,
+body.sgd-theme-hearthstone .sgd-laporan-spec-card {
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(46, 25, 14, 0.9) 0%, rgba(29, 16, 9, 0.95) 100%);
+  border: 1.5px solid rgba(212, 160, 23, 0.5);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 15px rgba(212, 160, 23, 0.18);
+}
+
+body.sgd-theme-hearthstone .sgd-date-nav-bar {
+  border-radius: 12px;
+  background: rgba(36, 19, 10, 0.9);
+  border: 1px solid rgba(212, 160, 23, 0.45);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+body.sgd-theme-hearthstone .sgd-weather-pill-btn {
+  border-radius: 8px;
+  font-family: var(--font-body);
+}
+
+/* 12. Fortune Wheel (Golden Pack Opening) */
+body.sgd-theme-hearthstone .sgd-wheel-wrap {
+  border-radius: 20px;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.25) 0%, rgba(230, 126, 34, 0.25) 40%, rgba(36, 19, 10, 0.95) 80%);
+  border: 2px solid #ffd700;
+  box-shadow: 0 0 45px rgba(255, 215, 0, 0.45), 0 0 20px rgba(230, 126, 34, 0.35);
+}
+
+/* 13. Card Pack Store & Dust Crafting Cards */
+body.sgd-theme-hearthstone .sgd-shop-item-card {
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(50, 27, 14, 0.9) 0%, rgba(32, 17, 9, 0.95) 100%);
+  border: 1.5px solid rgba(212, 160, 23, 0.5);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  transition: all 0.25s ease;
+}
+
+body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
+  transform: translateY(-3px);
+  border-color: #ffd700;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55), 0 0 20px rgba(255, 215, 0, 0.4);
 }

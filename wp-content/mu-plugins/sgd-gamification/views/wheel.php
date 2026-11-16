@@ -20,14 +20,17 @@ $today_prize = get_user_meta( $current_user_id, 'sgd_last_wheel_reward', true ) 
     <div style="font-family:var(--font-pixel); font-size:9px; color:var(--wow-gold-light); letter-spacing:2px; margin-bottom:6px;">
         <span class="sgd-theme-text-wow">💰 STEAMWHEEDLE CASINO & GOBLIN ROULETTE 💰</span>
         <span class="sgd-theme-text-genshin">✦ CELESTIA WISH & STELLA FORTUNA PRAYER ✦</span>
+        <span class="sgd-theme-text-hearthstone">🎴 GOLDEN PACK OPENING & TAVERN REWARDS 🎴</span>
     </div>
     <h1 style="font-family:var(--font-title); font-size:28px; color:#fff; text-shadow:0 0 18px rgba(255,215,0,0.6); margin:0;">
         <span class="sgd-theme-text-wow">🎰 Goblin Daily Fortune Wheel</span>
         <span class="sgd-theme-text-genshin">✦ Stella Fortuna (Daily Wish Prayer)</span>
+        <span class="sgd-theme-text-hearthstone">🎴 Golden Pack Opening (Daily Free Pack)</span>
     </h1>
     <p style="color:#e0d2b4; max-width:650px; margin:8px auto 0 auto; font-size:14px;">
         <span class="sgd-theme-text-wow">"Step right up, hero! One free spin every morning! Win diamond jackpots, streak shields, coffee tokens, and legendary perks!"</span>
         <span class="sgd-theme-text-genshin">"May the stars guide your journey, Traveler! One free wish prayer every morning! Win Primogem jackpots, shields, and blessings!"</span>
+        <span class="sgd-theme-text-hearthstone">"Whaaa! Golden Legendary!" Crack open your daily tavern pack! Win Arcane Mana jackpots, win streak shields, and epic perks!</span>
     </p>
 </div>
 
@@ -37,16 +40,19 @@ $today_prize = get_user_meta( $current_user_id, 'sgd_last_wheel_reward', true ) 
         <span class="perk-icon">
             <span class="sgd-theme-text-wow">💎</span>
             <span class="sgd-theme-text-genshin">✦</span>
+            <span class="sgd-theme-text-hearthstone">💠</span>
         </span>
         <div>
             <div class="perk-label">
                 <span class="sgd-theme-text-wow">DIAMOND TREASURY</span>
                 <span class="sgd-theme-text-genshin">PRIMOGEM TREASURY</span>
+                <span class="sgd-theme-text-hearthstone">ARCANE MANA TREASURY</span>
             </div>
             <div class="perk-val" style="color:#00e5ff;">
                 <?php echo number_format($diamonds); ?> 
                 <span class="sgd-theme-text-wow">💎</span>
                 <span class="sgd-theme-text-genshin">✦</span>
+                <span class="sgd-theme-text-hearthstone">💠</span>
             </div>
         </div>
     </div>

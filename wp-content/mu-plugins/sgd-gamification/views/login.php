@@ -11,14 +11,17 @@ $is_logged_in = is_user_logged_in();
         <div style="font-size:48px; margin-bottom:10px;">
             <span class="sgd-theme-text-wow">🛡️</span>
             <span class="sgd-theme-text-genshin">✦</span>
+            <span class="sgd-theme-text-hearthstone">🎴</span>
         </div>
         <div style="font-family:var(--font-pixel); font-size:9px; color:var(--wow-gold); letter-spacing:2px;">
             <span class="sgd-theme-text-wow">HEARTHSTONE INN</span>
             <span class="sgd-theme-text-genshin">TEYVAT ADVENTURERS' HEADQUARTERS</span>
+            <span class="sgd-theme-text-hearthstone">THE INNKEEPER'S TAVERN</span>
         </div>
         <h2 style="font-family:var(--font-title); font-size:26px; color:var(--wow-gold-light); margin-bottom:15px;">
             <span class="sgd-theme-text-wow">Hero Authentication</span>
             <span class="sgd-theme-text-genshin">Traveler Authentication</span>
+            <span class="sgd-theme-text-hearthstone">Challenger Authentication</span>
         </h2>
 
         <?php if ( $is_logged_in ): ?>
@@ -42,6 +45,7 @@ $is_logged_in = is_user_logged_in();
                     <button type="submit" class="sgd-btn sgd-btn-red sgd-btn-lg" style="width:100%;">
                         <span class="sgd-theme-text-wow">🚪 Rest at Inn (Log Out)</span>
                         <span class="sgd-theme-text-genshin">🚪 Return to Waypoint (Log Out)</span>
+                        <span class="sgd-theme-text-hearthstone">🚪 Leave Table (Log Out)</span>
                     </button>
                 </form>
             </div>
