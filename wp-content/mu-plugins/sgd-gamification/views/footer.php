@@ -25,10 +25,22 @@ $pending_achievements = $current_user_id ? sgd_get_pending_achievement_alerts( $
 
             <div class="sgd-gilded-achievement-box">
                 <!-- Ornate corner filigrees -->
-                <div class="sgd-gilded-corner corner-tl">⚜️</div>
-                <div class="sgd-gilded-corner corner-tr">⚜️</div>
-                <div class="sgd-gilded-corner corner-bl">⚜️</div>
-                <div class="sgd-gilded-corner corner-br">⚜️</div>
+                <div class="sgd-gilded-corner corner-tl">
+                    <span class="sgd-theme-text-wow">⚜️</span>
+                    <span class="sgd-theme-text-genshin">✦</span>
+                </div>
+                <div class="sgd-gilded-corner corner-tr">
+                    <span class="sgd-theme-text-wow">⚜️</span>
+                    <span class="sgd-theme-text-genshin">✦</span>
+                </div>
+                <div class="sgd-gilded-corner corner-bl">
+                    <span class="sgd-theme-text-wow">⚜️</span>
+                    <span class="sgd-theme-text-genshin">✦</span>
+                </div>
+                <div class="sgd-gilded-corner corner-br">
+                    <span class="sgd-theme-text-wow">⚜️</span>
+                    <span class="sgd-theme-text-genshin">✦</span>
+                </div>
 
                 <!-- Shield Crest Header -->
                 <div class="sgd-gilded-shield-wrap">
@@ -38,7 +50,8 @@ $pending_achievements = $current_user_id ? sgd_get_pending_achievement_alerts( $
                 </div>
 
                 <div class="sgd-gilded-badge-header">
-                    ★ GUILD FEAT OF STRENGTH ★
+                    <span class="sgd-theme-text-wow">★ GUILD FEAT OF STRENGTH ★</span>
+                    <span class="sgd-theme-text-genshin">✦ WONDERS OF THE WORLD ✦</span>
                 </div>
 
                 <h2 class="sgd-gilded-main-title">
@@ -57,9 +70,15 @@ $pending_achievements = $current_user_id ? sgd_get_pending_achievement_alerts( $
 
                 <?php if ( $ach_alert->reward_diamonds > 0 ): ?>
                     <div class="sgd-gilded-reward-pill">
-                        <span style="font-size:18px;">💎</span>
-                        <span>+<?php echo number_format( $ach_alert->reward_diamonds ); ?> DIAMONDS AWARDED!</span>
-                        <span style="font-size:18px;">💎</span>
+                        <span class="sgd-theme-text-wow" style="font-size:18px;">💎</span>
+                        <span class="sgd-theme-text-genshin" style="font-size:18px;">✦</span>
+                        <span>
+                            +<?php echo number_format( $ach_alert->reward_diamonds ); ?> 
+                            <span class="sgd-theme-text-wow">DIAMONDS</span>
+                            <span class="sgd-theme-text-genshin">PRIMOGEMS</span> AWARDED!
+                        </span>
+                        <span class="sgd-theme-text-wow" style="font-size:18px;">💎</span>
+                        <span class="sgd-theme-text-genshin" style="font-size:18px;">✦</span>
                     </div>
                 <?php endif; ?>
 
@@ -69,7 +88,8 @@ $pending_achievements = $current_user_id ? sgd_get_pending_achievement_alerts( $
                         <input type="hidden" name="achievement_id" value="<?php echo esc_attr( $ach_alert->id ); ?>">
                         <input type="hidden" name="redirect_to" value="<?php echo esc_attr( sanitize_text_field( $_GET['sgd_page'] ?? '' ) ); ?>">
                         <button type="submit" class="sgd-gilded-claim-btn">
-                            🏆 CLAIM GLORY & ACCEPT HONOR 🏆
+                            <span class="sgd-theme-text-wow">🏆 CLAIM GLORY & ACCEPT HONOR 🏆</span>
+                            <span class="sgd-theme-text-genshin">✦ CLAIM PRIMOGEMS & PROCEED ✦</span>
                         </button>
                     </form>
                 </div>

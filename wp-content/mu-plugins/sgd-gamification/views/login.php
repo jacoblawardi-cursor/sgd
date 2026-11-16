@@ -8,10 +8,17 @@ $is_logged_in = is_user_logged_in();
 <div style="max-width:550px; margin:30px auto;">
     <div style="background:radial-gradient(circle at 50% 20%, #1c2235 0%, #0c0e17 80%); border:3px solid var(--wow-gold); border-radius:8px; padding:30px; box-shadow:0 12px 30px rgba(0,0,0,0.8); text-align:center;">
         
-        <div style="font-size:48px; margin-bottom:10px;">🛡️</div>
-        <div style="font-family:var(--font-pixel); font-size:9px; color:#c69b3a; letter-spacing:2px;">HEARTHSTONE INN</div>
+        <div style="font-size:48px; margin-bottom:10px;">
+            <span class="sgd-theme-text-wow">🛡️</span>
+            <span class="sgd-theme-text-genshin">✦</span>
+        </div>
+        <div style="font-family:var(--font-pixel); font-size:9px; color:var(--wow-gold); letter-spacing:2px;">
+            <span class="sgd-theme-text-wow">HEARTHSTONE INN</span>
+            <span class="sgd-theme-text-genshin">TEYVAT ADVENTURERS' HEADQUARTERS</span>
+        </div>
         <h2 style="font-family:var(--font-title); font-size:26px; color:var(--wow-gold-light); margin-bottom:15px;">
-            Hero Authentication
+            <span class="sgd-theme-text-wow">Hero Authentication</span>
+            <span class="sgd-theme-text-genshin">Traveler Authentication</span>
         </h2>
 
         <?php if ( $is_logged_in ): ?>
@@ -33,7 +40,8 @@ $is_logged_in = is_user_logged_in();
                 <form method="post" style="display:inline;">
                     <input type="hidden" name="sgd_action" value="sgd_logout">
                     <button type="submit" class="sgd-btn sgd-btn-red sgd-btn-lg" style="width:100%;">
-                        🚪 Rest at Inn (Log Out)
+                        <span class="sgd-theme-text-wow">🚪 Rest at Inn (Log Out)</span>
+                        <span class="sgd-theme-text-genshin">🚪 Return to Waypoint (Log Out)</span>
                     </button>
                 </form>
             </div>

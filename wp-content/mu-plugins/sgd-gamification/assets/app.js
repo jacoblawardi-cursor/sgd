@@ -40,16 +40,30 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         playClick: function() {
-            this.playTone(600, 'square', 0.05);
+            if (document.body && document.body.classList.contains('sgd-theme-genshin')) {
+                // Genshin Impact crystalline UI chime
+                this.playTone(880, 'sine', 0.04);
+                this.playTone(1320, 'triangle', 0.04, 0.01);
+            } else {
+                this.playTone(600, 'square', 0.05);
+            }
         },
 
         playQuestAccept: function() {
+            if (document.body && document.body.classList.contains('sgd-theme-genshin')) {
+                this.playGenshinChime();
+                return;
+            }
             this.playTone(440, 'triangle', 0.1, 0);
             this.playTone(554.37, 'triangle', 0.1, 0.08);
             this.playTone(659.25, 'triangle', 0.2, 0.16);
         },
 
         playVictoryFanfare: function() {
+            if (document.body && document.body.classList.contains('sgd-theme-genshin')) {
+                this.playGenshinWish();
+                return;
+            }
             // Retro 8-bit level up / quest complete fanfare
             const notes = [
                 { f: 523.25, d: 0.12, t: 0 },
@@ -58,6 +72,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 { f: 1046.50, d: 0.35, t: 0.36 }
             ];
             notes.forEach(n => this.playTone(n.f, 'square', n.d, n.t));
+        },
+
+        playGenshinChime: function() {
+            // Ethereal Teyvat harp & crystal chime
+            const notes = [
+                { f: 587.33, type: 'sine', d: 0.2, t: 0 },
+                { f: 739.99, type: 'sine', d: 0.25, t: 0.07 },
+                { f: 880.00, type: 'sine', d: 0.3, t: 0.14 },
+                { f: 1174.66, type: 'sine', d: 0.45, t: 0.21 },
+                { f: 1479.98, type: 'triangle', d: 0.55, t: 0.28 }
+            ];
+            notes.forEach(n => this.playTone(n.f, n.type, n.d, n.t));
+        },
+
+        playGenshinWish: function() {
+            // Genshin 5-star golden wish celestial fanfare
+            const notes = [
+                { f: 523.25, type: 'sine', d: 0.18, t: 0 },
+                { f: 659.25, type: 'sine', d: 0.18, t: 0.08 },
+                { f: 783.99, type: 'sine', d: 0.22, t: 0.16 },
+                { f: 1046.50, type: 'sine', d: 0.32, t: 0.24 },
+                { f: 1318.51, type: 'triangle', d: 0.45, t: 0.32 },
+                { f: 1567.98, type: 'sine', d: 0.75, t: 0.40 }
+            ];
+            notes.forEach(n => this.playTone(n.f, n.type, n.d, n.t));
+        },
+
+        playThemeSwitch: function(theme) {
+            if (theme === 'genshin') {
+                this.playGenshinChime();
+            } else {
+                // WoW heroic guild fanfare
+                const notes = [
+                    { f: 440, type: 'square', d: 0.08, t: 0 },
+                    { f: 554.37, type: 'triangle', d: 0.1, t: 0.07 },
+                    { f: 659.25, type: 'triangle', d: 0.12, t: 0.14 },
+                    { f: 880, type: 'square', d: 0.3, t: 0.21 }
+                ];
+                notes.forEach(n => this.playTone(n.f, n.type, n.d, n.t));
+            }
         },
 
         playStreakFanfare: function() {
@@ -79,6 +133,10 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         playAchievementFanfare: function() {
+            if (document.body && document.body.classList.contains('sgd-theme-genshin')) {
+                this.playGenshinWish();
+                return;
+            }
             // World of Warcraft grand golden achievement fanfare
             const notes = [
                 { f: 523.25, type: 'triangle', d: 0.15, t: 0 },       // C5
@@ -168,6 +226,78 @@ document.addEventListener('DOMContentLoaded', function() {
             if (soundPopover) soundPopover.classList.remove('sgd-popover-open');
         }
     });
+
+    // ==========================================
+    // THEME SWITCHER CONTROLLER (WoW & Genshin Impact)
+    // ==========================================
+    const ThemeManager = {
+        currentTheme: 'wow',
+
+        init: function() {
+            const cookieMatch = document.cookie.match(/(^|; )sgd_theme=([^;]+)/);
+            const cookieTheme = cookieMatch ? decodeURIComponent(cookieMatch[2]) : null;
+            let savedTheme = null;
+            try {
+                savedTheme = localStorage.getItem('sgd_active_theme');
+            } catch(e) {}
+
+            const initialTheme = savedTheme || cookieTheme || (document.body.classList.contains('sgd-theme-genshin') ? 'genshin' : 'wow');
+            this.setTheme(initialTheme, false);
+
+            document.querySelectorAll('.sgd-theme-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetTheme = btn.getAttribute('data-theme');
+                    if (targetTheme && targetTheme !== this.currentTheme) {
+                        this.setTheme(targetTheme, true);
+                    }
+                });
+            });
+        },
+
+        setTheme: function(theme, userTriggered = false) {
+            if (theme !== 'wow' && theme !== 'genshin') {
+                theme = 'wow';
+            }
+            this.currentTheme = theme;
+
+            // Apply classes & attributes
+            document.documentElement.setAttribute('data-sgd-theme', theme);
+            if (document.body) {
+                document.body.classList.remove('sgd-theme-wow', 'sgd-theme-genshin');
+                document.body.classList.add('sgd-theme-' + theme);
+            }
+
+            // Update button states
+            document.querySelectorAll('.sgd-theme-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
+            });
+
+            // Update document title if appropriate
+            if (theme === 'genshin') {
+                if (document.title.includes('Goblin Treasury')) {
+                    document.title = document.title.replace('16-Bit Gamification Portal & Goblin Treasury', 'Teyvat Adventurers\' Guild & Primogem Treasury');
+                }
+            } else {
+                if (document.title.includes('Teyvat Adventurers')) {
+                    document.title = document.title.replace('Teyvat Adventurers\' Guild & Primogem Treasury', '16-Bit Gamification Portal & Goblin Treasury');
+                }
+            }
+
+            // Persist preference in localStorage and Cookie
+            try {
+                localStorage.setItem('sgd_active_theme', theme);
+            } catch(e) {}
+            document.cookie = `sgd_theme=${encodeURIComponent(theme)}; path=/; max-age=31536000; SameSite=Lax`;
+
+            // Sound feedback
+            if (userTriggered && typeof AudioEngine !== 'undefined') {
+                AudioEngine.playThemeSwitch(theme);
+            }
+        }
+    };
+
+    ThemeManager.init();
 
     // Attach click sound to buttons
     document.querySelectorAll('.sgd-btn, .sgd-tab-btn, .sgd-portal-card').forEach(btn => {

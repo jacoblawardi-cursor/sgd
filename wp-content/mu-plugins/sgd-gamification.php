@@ -1173,6 +1173,23 @@ function sgd_get_flash() {
     return $flash;
 }
 
+// Visual Theme Selector (World of Warcraft or Genshin Impact)
+function sgd_get_current_theme() {
+    if ( isset( $_GET['sgd_theme'] ) && in_array( $_GET['sgd_theme'], [ 'wow', 'genshin' ], true ) ) {
+        return sanitize_text_field( $_GET['sgd_theme'] );
+    }
+    if ( isset( $_COOKIE['sgd_theme'] ) && in_array( $_COOKIE['sgd_theme'], [ 'wow', 'genshin' ], true ) ) {
+        return sanitize_text_field( $_COOKIE['sgd_theme'] );
+    }
+    if ( is_user_logged_in() ) {
+        $meta = get_user_meta( get_current_user_id(), 'sgd_theme', true );
+        if ( in_array( $meta, [ 'wow', 'genshin' ], true ) ) {
+            return $meta;
+        }
+    }
+    return 'wow';
+}
+
 // 2. Action Handlers (Form Submissions)
 function sgd_handle_form_actions() {
     if ( ! isset( $_POST['sgd_action'] ) ) {
@@ -1182,6 +1199,24 @@ function sgd_handle_form_actions() {
     global $wpdb;
     $action = sanitize_text_field( $_POST['sgd_action'] );
     $current_user_id = get_current_user_id();
+
+    // Theme Switcher Action
+    if ( $action === 'sgd_switch_theme' ) {
+        $target_theme = sanitize_text_field( $_POST['target_theme'] ?? 'wow' );
+        if ( ! in_array( $target_theme, [ 'wow', 'genshin' ], true ) ) {
+            $target_theme = 'wow';
+        }
+        setcookie( 'sgd_theme', $target_theme, time() + 31536000, COOKIEPATH, COOKIE_DOMAIN );
+        if ( is_user_logged_in() ) {
+            update_user_meta( get_current_user_id(), 'sgd_theme', $target_theme );
+        }
+        if ( ! empty( $_POST['is_ajax'] ) ) {
+            wp_send_json_success( [ 'theme' => $target_theme ] );
+        }
+        $redirect_page = sanitize_text_field( $_POST['redirect_to'] ?? '' );
+        wp_safe_redirect( sgd_get_portal_url( $redirect_page ) );
+        exit;
+    }
 
     // Quick Character Switcher (for painless evaluator/user testing)
     if ( $action === 'sgd_switch_user' ) {

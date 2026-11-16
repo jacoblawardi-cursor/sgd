@@ -110,7 +110,9 @@ $all_users = get_users();
 <div class="sgd-section-header">
     <div>
         <h1 class="sgd-section-title">
-            <span>🏆</span> Feats of Strength & Employee Achievements
+            <span>🏆</span> 
+            <span class="sgd-theme-text-wow">Feats of Strength & Employee Achievements</span>
+            <span class="sgd-theme-text-genshin">Wonders of the World & Memories of Teyvat</span>
         </h1>
         <p style="color:#9cb3c9; font-size:13px; margin-top:4px;">
             Showing achievements for: <strong style="color:#ffd700;"><?php echo esc_html( $view_user->display_name ); ?></strong>
@@ -118,12 +120,19 @@ $all_users = get_users();
     </div>
     <div style="background:#111522; border:2px solid var(--wow-gold); padding:10px 18px; border-radius:6px; display:flex; gap:20px; align-items:center;">
         <div>
-            <span style="font-family:var(--font-pixel); font-size:8px; color:#c69b3a;">UNLOCKED:</span>
+            <span style="font-family:var(--font-pixel); font-size:8px; color:var(--wow-gold);">UNLOCKED:</span>
             <strong style="color:#ffd700; font-family:var(--font-pixel); font-size:13px; margin-left:4px;"><?php echo $total_unlocked; ?> / <?php echo $total_ach; ?></strong>
         </div>
         <div style="border-left:1px solid #333; padding-left:15px;">
-            <span style="font-family:var(--font-pixel); font-size:8px; color:#00bcd4;">TOTAL DIAMONDS:</span>
-            <strong style="color:#fff; font-family:var(--font-pixel); font-size:13px; margin-left:4px;"><?php echo number_format($diamonds); ?> 💎</strong>
+            <span style="font-family:var(--font-pixel); font-size:8px; color:#00bcd4;">
+                <span class="sgd-theme-text-wow">TOTAL DIAMONDS:</span>
+                <span class="sgd-theme-text-genshin">TOTAL PRIMOGEMS:</span>
+            </span>
+            <strong style="color:#fff; font-family:var(--font-pixel); font-size:13px; margin-left:4px;">
+                <?php echo number_format($diamonds); ?> 
+                <span class="sgd-theme-text-wow">💎</span>
+                <span class="sgd-theme-text-genshin">✦</span>
+            </strong>
         </div>
     </div>
 </div>

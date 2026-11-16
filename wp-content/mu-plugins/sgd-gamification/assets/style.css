@@ -1,8 +1,8 @@
 /* 
- * SGD 16-Bit & World of Warcraft Gamification Theme
+ * SGD Gamification Portal - World of Warcraft & Genshin Impact Themes
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Press+Start+2P&family=MedievalSharp&family=Fira+Code:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Press+Start+2P&family=MedievalSharp&family=Fira+Code:wght@400;600&family=Marcellus&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   --wow-gold-light: #ffd700;
@@ -220,6 +220,98 @@ body.sgd-wow-body {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* ========================================================
+   THEME SWITCHING UTILITY & TEXT TOGGLES
+   ======================================================== */
+.sgd-theme-text-genshin {
+  display: none !important;
+}
+.sgd-theme-text-wow {
+  display: inline !important;
+}
+.sgd-theme-block-genshin {
+  display: none !important;
+}
+.sgd-theme-block-wow {
+  display: block !important;
+}
+
+body.sgd-theme-genshin .sgd-theme-text-wow,
+html[data-sgd-theme="genshin"] body .sgd-theme-text-wow {
+  display: none !important;
+}
+body.sgd-theme-genshin .sgd-theme-text-genshin,
+html[data-sgd-theme="genshin"] body .sgd-theme-text-genshin {
+  display: inline !important;
+}
+
+body.sgd-theme-genshin .sgd-theme-block-wow,
+html[data-sgd-theme="genshin"] body .sgd-theme-block-wow {
+  display: none !important;
+}
+body.sgd-theme-genshin .sgd-theme-block-genshin,
+html[data-sgd-theme="genshin"] body .sgd-theme-block-genshin {
+  display: block !important;
+}
+
+/* ========================================================
+   THEME REALM SWITCHER (WoW vs Genshin Impact)
+   ======================================================== */
+.sgd-theme-switcher-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #111420;
+  border: 1px solid var(--wow-gold);
+  border-radius: 6px;
+  padding: 3px 6px;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.7), 0 2px 5px rgba(0,0,0,0.4);
+}
+
+.sgd-theme-switcher-tag {
+  color: #8fa0bd;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  margin-right: 2px;
+  user-select: none;
+  letter-spacing: 0.5px;
+}
+
+.sgd-theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #1f2334;
+  color: #a6b5cc;
+  border: 1px solid #363e58;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  font-family: var(--font-body);
+}
+
+.sgd-theme-btn:hover {
+  background: #2a3149;
+  color: #fff;
+  border-color: var(--wow-gold);
+}
+
+.sgd-theme-btn.active {
+  background: linear-gradient(180deg, #d4a017 0%, #7a5405 100%);
+  color: #fff;
+  border-color: #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+  font-weight: bold;
+}
+
+.sgd-theme-icon {
+  font-size: 11px;
 }
 
 .sgd-switch-pill {
@@ -4005,4 +4097,592 @@ body.sgd-wow-body {
   .sgd-top-hud, .sgd-nav-tabs, .sgd-date-nav-bar, .sgd-footer, .sgd-main-menu-container {
     display: none !important;
   }
+}
+
+/* ==========================================================================
+   GENSHIN IMPACT THEME STYLES (TEYVAT CELESTIAL REALM)
+   ========================================================================== */
+
+/* 1. Root Variable Overrides for Genshin Impact Theme */
+body.sgd-theme-genshin,
+html[data-sgd-theme="genshin"] body {
+  --wow-gold-light: #ffe8b3;
+  --wow-gold: #e9b76c;
+  --wow-gold-dark: #8c6428;
+  --wow-gold-border: rgba(233, 183, 108, 0.45);
+  --wow-bg-dark: #0b0f19;
+  --wow-bg-card: rgba(21, 28, 48, 0.92);
+  --wow-bg-card-hover: rgba(30, 40, 68, 0.96);
+  --wow-stone: #1a2238;
+  --wow-parchment: #f9f3e4;
+  --wow-parchment-border: #d4a86a;
+  --wow-parchment-text: #1d1b18;
+
+  --genshin-gold: #e9b76c;
+  --genshin-gold-bright: #ffd482;
+  --genshin-gold-subtle: #fbe2a7;
+  --genshin-navy-dark: #0b0e1b;
+  --genshin-navy-card: rgba(22, 28, 48, 0.92);
+  --genshin-card-glass: rgba(24, 32, 54, 0.88);
+  --genshin-card-border: rgba(233, 183, 108, 0.35);
+
+  --genshin-anemo: #00e5cc;
+  --genshin-geo: #e8a63c;
+  --genshin-electro: #ba76fc;
+  --genshin-dendro: #7cdb35;
+  --genshin-hydro: #3888ff;
+  --genshin-pyro: #ff6050;
+  --genshin-cryo: #9ae2f8;
+  --genshin-primo: #a370f7;
+
+  --font-pixel: 'Plus Jakarta Sans', sans-serif;
+  --font-title: 'Marcellus', 'Cinzel', serif;
+  --font-parchment: 'Marcellus', 'Georgia', serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --pixel-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* 2. Body Atmosphere: Deep Celestial Night Sky with Constellations */
+body.sgd-theme-genshin {
+  background-color: #0b0e1b !important;
+  background-image: 
+    radial-gradient(ellipse at 50% -10%, rgba(68, 97, 168, 0.35) 0%, transparent 60%),
+    radial-gradient(circle at 10% 25%, rgba(186, 118, 252, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 90% 65%, rgba(0, 229, 204, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 50% 85%, rgba(233, 183, 108, 0.12) 0%, transparent 60%),
+    radial-gradient(1px 1px at 25px 35px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 75px 120px, #ffd482, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 150px 80px, #a8d5ff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 220px 190px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 310px 40px, #ffd482, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 390px 160px, #a8d5ff, rgba(0,0,0,0)),
+    linear-gradient(180deg, #090c17 0%, #0e1424 50%, #0b0f1a 100%) !important;
+  background-size: auto, auto, auto, auto, 450px 450px, 450px 450px, 450px 450px, 450px 450px, 450px 450px, 450px 450px, auto !important;
+  background-attachment: fixed !important;
+  color: #e5ebf5;
+  font-family: var(--font-body);
+}
+
+/* 3. Top Status HUD Bar */
+body.sgd-theme-genshin .sgd-top-hud {
+  background: rgba(14, 19, 34, 0.88) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 2px solid rgba(233, 183, 108, 0.5) !important;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 232, 179, 0.2);
+}
+
+/* Character Unit Frame (Genshin Paimon / Adventurer Profile Card) */
+body.sgd-theme-genshin .sgd-unit-frame {
+  background: linear-gradient(135deg, rgba(28, 36, 62, 0.95) 0%, rgba(17, 23, 40, 0.95) 100%) !important;
+  border: 1.5px solid rgba(233, 183, 108, 0.6) !important;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 0 12px rgba(233, 183, 108, 0.1) !important;
+}
+
+body.sgd-theme-genshin .sgd-portrait {
+  border: 2px solid #e9b76c !important;
+  background: linear-gradient(135deg, #1c2642, #101524) !important;
+  box-shadow: 0 0 12px rgba(233, 183, 108, 0.45) !important;
+}
+
+body.sgd-theme-genshin .sgd-unit-level {
+  background: linear-gradient(135deg, #fbe2a7 0%, #e9b76c 100%) !important;
+  color: #0b0f19 !important;
+  border: 1.5px solid #fff !important;
+  font-weight: 800;
+  border-radius: 6px;
+  font-family: var(--font-body) !important;
+  font-size: 9px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
+body.sgd-theme-genshin .sgd-unit-name {
+  font-family: var(--font-title) !important;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: #fff !important;
+}
+
+body.sgd-theme-genshin .sgd-unit-role {
+  font-family: var(--font-body) !important;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+body.sgd-theme-genshin .sgd-bar {
+  border-radius: 4px;
+  border: 1px solid rgba(233, 183, 108, 0.3);
+  background: #090c14;
+}
+
+body.sgd-theme-genshin .sgd-bar-hp {
+  background: linear-gradient(90deg, #4cd964, #2ecc71) !important;
+  border-radius: 3px;
+}
+
+body.sgd-theme-genshin .sgd-bar-mp {
+  border-radius: 3px;
+}
+
+/* Primogem Wallet */
+body.sgd-theme-genshin .sgd-diamond-wallet {
+  background: linear-gradient(135deg, rgba(30, 24, 54, 0.92) 0%, rgba(18, 22, 42, 0.92) 100%) !important;
+  border: 1.5px solid rgba(186, 118, 252, 0.5) !important;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(186, 118, 252, 0.25), inset 0 0 10px rgba(0, 229, 204, 0.15) !important;
+}
+
+body.sgd-theme-genshin .sgd-diamond-icon {
+  color: #ffd482;
+  filter: drop-shadow(0 0 8px #ba76fc);
+}
+
+body.sgd-theme-genshin .sgd-diamond-label {
+  font-family: var(--font-body);
+  letter-spacing: 0.5px;
+  font-size: 8px;
+  color: #c4b5fd;
+}
+
+body.sgd-theme-genshin .sgd-diamond-count {
+  color: #ffe8b3 !important;
+  text-shadow: 0 0 8px rgba(233, 183, 108, 0.6);
+  font-family: var(--font-title);
+  letter-spacing: 0.5px;
+}
+
+/* Daily Streak HUD Badge */
+body.sgd-theme-genshin .sgd-streak-hud-badge {
+  background: linear-gradient(135deg, rgba(46, 26, 18, 0.92) 0%, rgba(26, 16, 24, 0.92) 100%) !important;
+  border: 1.5px solid rgba(255, 96, 80, 0.55) !important;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(255, 96, 80, 0.25) !important;
+}
+
+body.sgd-theme-genshin .sgd-streak-hud-val {
+  font-family: var(--font-title);
+}
+
+/* Theme Switcher Button (Genshin Active) */
+body.sgd-theme-genshin .sgd-theme-switcher-pill {
+  border-color: rgba(233, 183, 108, 0.6);
+  background: rgba(18, 24, 42, 0.9);
+  border-radius: 8px;
+}
+
+body.sgd-theme-genshin .sgd-theme-btn.active {
+  background: linear-gradient(135deg, #fbe2a7 0%, #e9b76c 50%, #c49646 100%) !important;
+  color: #0b0f19 !important;
+  border-color: #fff !important;
+  box-shadow: 0 0 14px rgba(233, 183, 108, 0.65) !important;
+}
+
+/* Demo Switcher Pill in Genshin Mode */
+body.sgd-theme-genshin .sgd-switch-pill {
+  background: rgba(18, 24, 42, 0.9);
+  border: 1px solid rgba(233, 183, 108, 0.4);
+  border-radius: 8px;
+}
+
+body.sgd-theme-genshin .sgd-switch-btn {
+  border-radius: 6px;
+  font-family: var(--font-body);
+}
+
+body.sgd-theme-genshin .sgd-switch-btn.active {
+  background: linear-gradient(135deg, #e9b76c, #c49646) !important;
+  color: #0b0f19 !important;
+  border-color: #ffe8b3 !important;
+}
+
+/* Sound FX Button in Genshin Mode */
+body.sgd-theme-genshin .sgd-sfx-btn {
+  background: rgba(22, 28, 48, 0.9);
+  border: 1px solid rgba(233, 183, 108, 0.5);
+  border-radius: 8px;
+  font-family: var(--font-body);
+}
+
+body.sgd-theme-genshin .sgd-sound-popover {
+  background: #151b2e;
+  border: 1.5px solid rgba(233, 183, 108, 0.45);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+
+/* 4. Navigation Tabs in Genshin Mode */
+body.sgd-theme-genshin .sgd-nav-tabs {
+  background: rgba(18, 24, 42, 0.8) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(233, 183, 108, 0.25) !important;
+  border-radius: 12px;
+  padding: 8px !important;
+  gap: 8px !important;
+}
+
+body.sgd-theme-genshin .sgd-tab-btn {
+  border-radius: 8px !important;
+  border: 1px solid rgba(233, 183, 108, 0.3) !important;
+  background: rgba(25, 34, 58, 0.65) !important;
+  font-family: var(--font-title) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.5px !important;
+  transition: all 0.25s ease !important;
+}
+
+body.sgd-theme-genshin .sgd-tab-btn:hover {
+  background: rgba(40, 52, 88, 0.85) !important;
+  border-color: #e9b76c !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4) !important;
+}
+
+body.sgd-theme-genshin .sgd-tab-btn.active {
+  background: linear-gradient(135deg, rgba(233, 183, 108, 0.3) 0%, rgba(35, 47, 80, 0.95) 100%) !important;
+  border-color: #e9b76c !important;
+  color: #ffd482 !important;
+  box-shadow: 0 0 15px rgba(233, 183, 108, 0.4) !important;
+}
+
+/* 5. Buttons Styling in Genshin Mode */
+body.sgd-theme-genshin .sgd-btn {
+  border-radius: 8px !important;
+  font-family: var(--font-title) !important;
+  letter-spacing: 0.5px !important;
+  font-weight: 700 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.4) !important;
+}
+
+body.sgd-theme-genshin .sgd-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5) !important;
+}
+
+body.sgd-theme-genshin .sgd-btn-gold {
+  background: linear-gradient(135deg, #fbe2a7 0%, #e9b76c 50%, #c49646 100%) !important;
+  color: #111524 !important;
+  border-color: #fff !important;
+  box-shadow: 0 4px 15px rgba(233, 183, 108, 0.45) !important;
+}
+
+body.sgd-theme-genshin .sgd-btn-blue {
+  background: linear-gradient(135deg, #448aff 0%, #1e5dd6 100%) !important;
+  border-color: #82b1ff !important;
+  box-shadow: 0 4px 15px rgba(68, 138, 255, 0.35) !important;
+}
+
+body.sgd-theme-genshin .sgd-btn-red {
+  background: linear-gradient(135deg, #ff5747 0%, #c92c1e 100%) !important;
+  border-color: #ff8a80 !important;
+  box-shadow: 0 4px 15px rgba(255, 87, 71, 0.35) !important;
+}
+
+body.sgd-theme-genshin .sgd-btn-green {
+  background: linear-gradient(135deg, #00e5cc 0%, #009988 100%) !important;
+  color: #0b141e !important;
+  border-color: #b2dfdb !important;
+  box-shadow: 0 4px 15px rgba(0, 229, 204, 0.35) !important;
+}
+
+body.sgd-theme-genshin .sgd-btn-purple {
+  background: linear-gradient(135deg, #ba76fc 0%, #7c3aed 100%) !important;
+  border-color: #e9d5ff !important;
+  box-shadow: 0 4px 15px rgba(186, 118, 252, 0.35) !important;
+}
+
+/* 6. Homepage Banners & Big Menu Cards */
+body.sgd-theme-genshin .sgd-game-header {
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(23, 29, 52, 0.85) 0%, rgba(14, 18, 34, 0.95) 100%);
+  border: 1.5px solid rgba(233, 183, 108, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  padding: 24px;
+}
+
+body.sgd-theme-genshin .sgd-realm-badge {
+  border-radius: 20px;
+  background: rgba(233, 183, 108, 0.15) !important;
+  border: 1px solid #e9b76c !important;
+  color: #ffd482 !important;
+  font-family: var(--font-title);
+  letter-spacing: 1.5px;
+  font-size: 11px;
+}
+
+body.sgd-theme-genshin .sgd-game-title {
+  font-family: var(--font-title) !important;
+  color: #ffe8b3;
+  text-shadow: 0 0 25px rgba(233, 183, 108, 0.5);
+  letter-spacing: 1px;
+}
+
+body.sgd-theme-genshin .sgd-player-summary-bar {
+  border-radius: 10px;
+  background: rgba(14, 18, 32, 0.85);
+  border: 1px solid rgba(233, 183, 108, 0.3);
+  font-family: var(--font-body);
+}
+
+/* Menu Button Cards (Katheryne's Adventurers' Guild Menus) */
+body.sgd-theme-genshin .sgd-wow-menu-btn {
+  border-radius: 14px !important;
+  border: 1.5px solid rgba(233, 183, 108, 0.35) !important;
+  background: linear-gradient(145deg, rgba(25, 33, 58, 0.85) 0%, rgba(16, 21, 38, 0.92) 100%) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+body.sgd-theme-genshin .sgd-wow-menu-btn:hover {
+  transform: translateY(-4px) !important;
+  border-color: rgba(233, 183, 108, 0.8) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(233, 183, 108, 0.25) !important;
+}
+
+body.sgd-theme-genshin .sgd-menu-btn-icon {
+  border-radius: 12px !important;
+  border: 1.5px solid rgba(233, 183, 108, 0.5) !important;
+  background: rgba(14, 18, 32, 0.85) !important;
+  box-shadow: 0 0 12px rgba(233, 183, 108, 0.25) !important;
+}
+
+body.sgd-theme-genshin .sgd-menu-btn-label {
+  font-family: var(--font-title) !important;
+  font-size: 15px !important;
+  letter-spacing: 0.6px !important;
+}
+
+body.sgd-theme-genshin .sgd-menu-btn-desc {
+  font-family: var(--font-body) !important;
+  font-size: 12px !important;
+  color: #9cb1d4 !important;
+}
+
+body.sgd-theme-genshin .sgd-pill-reward {
+  border-radius: 12px !important;
+  font-family: var(--font-body) !important;
+  font-size: 10px !important;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+body.sgd-theme-genshin .sgd-pill-count {
+  border-radius: 12px !important;
+  font-family: var(--font-body) !important;
+  font-size: 10px !important;
+  font-weight: 700;
+}
+
+/* Individual Card Styling in Genshin Mode */
+body.sgd-theme-genshin .sgd-wow-menu-btn.btn-achievement {
+  border-color: rgba(233, 183, 108, 0.5) !important;
+  background: radial-gradient(ellipse at 10% 50%, rgba(233, 183, 108, 0.16) 0%, rgba(20, 26, 46, 0.94) 75%) !important;
+}
+
+body.sgd-theme-genshin .sgd-wow-menu-btn.btn-daily {
+  border-color: rgba(0, 229, 204, 0.45) !important;
+  background: radial-gradient(ellipse at 10% 50%, rgba(0, 229, 204, 0.15) 0%, rgba(18, 25, 45, 0.94) 75%) !important;
+}
+
+body.sgd-theme-genshin .sgd-wow-menu-btn.btn-urgent {
+  border-color: rgba(255, 96, 80, 0.5) !important;
+  background: radial-gradient(ellipse at 10% 50%, rgba(255, 96, 80, 0.16) 0%, rgba(25, 18, 30, 0.94) 75%) !important;
+}
+
+body.sgd-theme-genshin .sgd-wow-menu-btn.btn-cash-shop {
+  border-color: rgba(186, 118, 252, 0.5) !important;
+  background: radial-gradient(ellipse at 10% 50%, rgba(186, 118, 252, 0.16) 0%, rgba(22, 20, 42, 0.94) 75%) !important;
+}
+
+body.sgd-theme-genshin .sgd-wow-menu-btn.btn-leaderboard {
+  border-color: rgba(157, 91, 223, 0.5) !important;
+  background: radial-gradient(ellipse at 10% 50%, rgba(157, 91, 223, 0.18) 0%, rgba(18, 16, 38, 0.94) 75%) !important;
+}
+
+body.sgd-theme-genshin .sgd-wow-menu-btn.btn-wheel {
+  border-color: rgba(255, 212, 102, 0.5) !important;
+  background: radial-gradient(ellipse at 10% 50%, rgba(255, 212, 102, 0.18) 0%, rgba(26, 22, 34, 0.94) 75%) !important;
+}
+
+body.sgd-theme-genshin .sgd-wow-menu-btn.btn-bounties {
+  border-color: rgba(232, 166, 60, 0.5) !important;
+  background: radial-gradient(ellipse at 10% 50%, rgba(232, 166, 60, 0.16) 0%, rgba(24, 20, 32, 0.94) 75%) !important;
+}
+
+/* 7. Quest & Parchment Cards (Adventurer's Commission Cards) */
+body.sgd-theme-genshin .sgd-quest-card,
+body.sgd-theme-genshin .sgd-parchment-card {
+  border-radius: 14px !important;
+  background: linear-gradient(145deg, rgba(26, 34, 60, 0.92) 0%, rgba(18, 23, 42, 0.95) 100%) !important;
+  border: 1.5px solid rgba(233, 183, 108, 0.4) !important;
+  color: #e5ebf5 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(10px);
+}
+
+body.sgd-theme-genshin .sgd-quest-title {
+  font-family: var(--font-title) !important;
+  color: #ffd482 !important;
+  font-size: 18px !important;
+}
+
+body.sgd-theme-genshin .sgd-quest-desc {
+  font-family: var(--font-body) !important;
+  color: #c5d3ea !important;
+  line-height: 1.6;
+}
+
+/* 8. Gilded Achievement Modal (Wonders of the World - Genshin Impact) */
+body.sgd-theme-genshin .sgd-gilded-celebration-backdrop {
+  background: rgba(6, 9, 18, 0.88) !important;
+  backdrop-filter: blur(14px);
+}
+
+body.sgd-theme-genshin .sgd-gilded-achievement-box {
+  background: linear-gradient(145deg, rgba(23, 30, 54, 0.96) 0%, rgba(14, 18, 34, 0.98) 100%) !important;
+  border: 2px solid #e9b76c !important;
+  border-radius: 16px !important;
+  box-shadow: 0 0 45px rgba(233, 183, 108, 0.4), 0 20px 60px rgba(0, 0, 0, 0.85) !important;
+}
+
+body.sgd-theme-genshin .sgd-gilded-badge-header {
+  color: #e9b76c !important;
+  font-family: var(--font-title) !important;
+  letter-spacing: 2px !important;
+  font-size: 11px !important;
+}
+
+body.sgd-theme-genshin .sgd-gilded-main-title {
+  font-family: var(--font-title) !important;
+  color: #ffd482 !important;
+  text-shadow: 0 0 20px rgba(233, 183, 108, 0.6) !important;
+  font-size: 24px !important;
+}
+
+body.sgd-theme-genshin .sgd-gilded-ach-name {
+  font-family: var(--font-title) !important;
+  color: #fff !important;
+}
+
+body.sgd-theme-genshin .sgd-gilded-reward-pill {
+  border-radius: 20px !important;
+  background: rgba(186, 118, 252, 0.15) !important;
+  border: 1.5px solid rgba(186, 118, 252, 0.6) !important;
+  color: #ffd482 !important;
+  font-family: var(--font-title) !important;
+}
+
+body.sgd-theme-genshin .sgd-gilded-claim-btn {
+  background: linear-gradient(135deg, #fbe2a7 0%, #e9b76c 50%, #c49646 100%) !important;
+  color: #111524 !important;
+  border-radius: 10px !important;
+  font-family: var(--font-title) !important;
+  box-shadow: 0 4px 20px rgba(233, 183, 108, 0.5) !important;
+}
+
+/* 9. Modals & Dialogs */
+body.sgd-theme-genshin .sgd-modal-box {
+  border-radius: 16px !important;
+  border: 1.5px solid rgba(233, 183, 108, 0.5) !important;
+  background: linear-gradient(145deg, #182038 0%, #101426 100%) !important;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(233, 183, 108, 0.2) !important;
+}
+
+body.sgd-theme-genshin .sgd-modal-header {
+  border-bottom: 1px solid rgba(233, 183, 108, 0.3) !important;
+}
+
+body.sgd-theme-genshin .sgd-modal-title {
+  font-family: var(--font-title) !important;
+  color: #ffd482 !important;
+}
+
+/* 10. Form Controls, Inputs & Tables */
+body.sgd-theme-genshin .sgd-form-input,
+body.sgd-theme-genshin .sgd-form-select,
+body.sgd-theme-genshin .sgd-form-textarea {
+  border-radius: 8px !important;
+  border: 1px solid rgba(233, 183, 108, 0.35) !important;
+  background: rgba(14, 18, 32, 0.8) !important;
+  color: #fff !important;
+  font-family: var(--font-body) !important;
+}
+
+body.sgd-theme-genshin .sgd-form-input:focus,
+body.sgd-theme-genshin .sgd-form-select:focus,
+body.sgd-theme-genshin .sgd-form-textarea:focus {
+  border-color: #e9b76c !important;
+  box-shadow: 0 0 12px rgba(233, 183, 108, 0.4) !important;
+  outline: none;
+}
+
+body.sgd-theme-genshin .sgd-form-label {
+  font-family: var(--font-title);
+  color: #ffd482;
+  letter-spacing: 0.5px;
+}
+
+body.sgd-theme-genshin .sgd-table {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(233, 183, 108, 0.3) !important;
+}
+
+body.sgd-theme-genshin .sgd-table th {
+  background: #101526 !important;
+  color: #ffd482 !important;
+  font-family: var(--font-title) !important;
+  letter-spacing: 0.5px;
+  border-bottom: 1.5px solid rgba(233, 183, 108, 0.4) !important;
+}
+
+body.sgd-theme-genshin .sgd-table td {
+  border-bottom: 1px solid rgba(233, 183, 108, 0.15) !important;
+  font-family: var(--font-body);
+}
+
+/* 11. Daily Report & Weather Spec Cards in Genshin Mode */
+body.sgd-theme-genshin .sgd-laporan-wrapper .sgd-card,
+body.sgd-theme-genshin .sgd-laporan-spec-card {
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(23, 29, 52, 0.9) 0%, rgba(14, 18, 34, 0.95) 100%);
+  border: 1.5px solid rgba(233, 183, 108, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+body.sgd-theme-genshin .sgd-date-nav-bar {
+  border-radius: 12px;
+  background: rgba(18, 24, 42, 0.85);
+  border: 1px solid rgba(233, 183, 108, 0.3);
+}
+
+body.sgd-theme-genshin .sgd-weather-pill-btn {
+  border-radius: 8px;
+  font-family: var(--font-body);
+}
+
+/* 12. Fortune Wheel (Stella Fortuna Wish) in Genshin Mode */
+body.sgd-theme-genshin .sgd-wheel-wrap {
+  border-radius: 20px;
+  background: radial-gradient(circle, rgba(186, 118, 252, 0.15) 0%, rgba(18, 22, 42, 0.95) 75%);
+  border: 2px solid rgba(233, 183, 108, 0.5);
+  box-shadow: 0 0 35px rgba(233, 183, 108, 0.3);
+}
+
+/* 13. Cash Shop & Souvenir Items */
+body.sgd-theme-genshin .sgd-shop-item-card {
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(25, 32, 56, 0.9) 0%, rgba(16, 20, 36, 0.95) 100%);
+  border: 1.5px solid rgba(233, 183, 108, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s ease;
+}
+
+body.sgd-theme-genshin .sgd-shop-item-card:hover {
+  transform: translateY(-3px);
+  border-color: #e9b76c;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55), 0 0 15px rgba(233, 183, 108, 0.3);
 }

@@ -11,15 +11,24 @@ $urgent_tasks = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE type = 'ur
 <div class="sgd-section-header">
     <div>
         <h1 class="sgd-section-title" style="color:#ff8577;">
-            <span>⚡</span> Urgent Emergency Tasks & Bounties
+            <span>⚡</span> 
+            <span class="sgd-theme-text-wow">Urgent Emergency Tasks & Bounties</span>
+            <span class="sgd-theme-text-genshin">Trounce Domain & Emergency Bounties</span>
         </h1>
         <p style="color:#ffb8b0; font-size:13px; margin-top:4px;">
-            Critical guild emergencies that anyone can take! Click <strong style="color:#ffd700;">"Take Job"</strong> to claim the bounty, then upload photo proof to finish and earn <strong style="color:#00e5ff;">+1,000 Diamonds</strong>!
+            <span class="sgd-theme-text-wow">Critical guild emergencies that anyone can take! Click <strong style="color:#ffd700;">"Take Job"</strong> to claim the bounty, then upload photo proof to finish and earn <strong style="color:#00e5ff;">+1,000 Diamonds</strong>!</span>
+            <span class="sgd-theme-text-genshin">High-priority domain crises across Teyvat! Click <strong style="color:#ffd482;">"Take Job"</strong> to deploy, then submit proof of completion to claim <strong style="color:#ffe8b3;">+1,000 Primogems</strong>!</span>
         </p>
     </div>
     <div style="background:#2a0f0f; border:2px solid #e74c3c; padding:8px 16px; border-radius:6px; box-shadow:0 0 10px rgba(231,76,60,0.3);">
-        <span style="font-family:var(--font-pixel); font-size:9px; color:#ff7675;">EMERGENCY BOUNTY:</span>
-        <strong style="color:#00e5ff; font-family:var(--font-pixel); font-size:14px; margin-left:6px;">+1,000 💎</strong>
+        <span style="font-family:var(--font-pixel); font-size:9px; color:#ff7675;">
+            <span class="sgd-theme-text-wow">EMERGENCY BOUNTY:</span>
+            <span class="sgd-theme-text-genshin">DOMAIN REWARD:</span>
+        </span>
+        <strong style="color:#00e5ff; font-family:var(--font-pixel); font-size:14px; margin-left:6px;">
+            <span class="sgd-theme-text-wow">+1,000 💎</span>
+            <span class="sgd-theme-text-genshin" style="color:#ffe8b3;">+1,000 ✦</span>
+        </strong>
     </div>
 </div>
 

@@ -7,6 +7,7 @@ $user_id = $current_user->ID;
 $user_diamonds = sgd_get_diamonds( $user_id );
 $is_admin = current_user_can( 'administrator' );
 $active_tab = sanitize_text_field( $_GET['sgd_page'] ?? 'home' );
+$active_theme = function_exists( 'sgd_get_current_theme' ) ? sgd_get_current_theme() : ( ( isset( $_COOKIE['sgd_theme'] ) && $_COOKIE['sgd_theme'] === 'genshin' ) ? 'genshin' : 'wow' );
 
 global $wpdb;
 $table_tasks = $wpdb->prefix . 'sgd_tasks';
@@ -29,11 +30,23 @@ $flash = sgd_get_flash();
 <head>
     <meta charset="<?php bloginfo( 'charset' ); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SGD Guild - 16-Bit Gamification Portal & Goblin Treasury</title>
+    <title><?php echo ( $active_theme === 'genshin' ) ? 'SGD Guild - Teyvat Adventurers\' Guild & Primogem Treasury' : 'SGD Guild - 16-Bit Gamification Portal & Goblin Treasury'; ?></title>
+    <script>
+    (function(){
+        try {
+            var m = document.cookie.match(/(^|; )sgd_theme=([^;]+)/);
+            var cTheme = m ? decodeURIComponent(m[2]) : null;
+            var lTheme = localStorage.getItem('sgd_active_theme');
+            var t = lTheme || cTheme || '<?php echo esc_js( $active_theme ); ?>' || 'wow';
+            if (t !== 'genshin' && t !== 'wow') t = 'wow';
+            document.documentElement.setAttribute('data-sgd-theme', t);
+        } catch(e) {}
+    })();
+    </script>
     <link rel="stylesheet" href="<?php echo esc_url( SGD_PLUGIN_URL . '/assets/style.css' ); ?>?v=<?php echo time(); ?>">
     <?php wp_head(); ?>
 </head>
-<body class="sgd-wow-body">
+<body class="sgd-wow-body sgd-body-theme sgd-theme-<?php echo esc_attr( $active_theme ); ?>">
 
 <!-- TOP STATUS HUD BAR -->
 <header class="sgd-top-hud">
@@ -82,12 +95,22 @@ $flash = sgd_get_flash();
                 </div>
             </div>
 
-            <!-- Diamond Wallet Badge -->
+            <!-- Diamond / Primogem Wallet Badge -->
             <div class="sgd-diamond-wallet" title="Your Total Treasury Balance">
-                <span class="sgd-diamond-icon">💎</span>
+                <span class="sgd-diamond-icon">
+                    <span class="sgd-theme-text-wow">💎</span>
+                    <span class="sgd-theme-text-genshin">✦</span>
+                </span>
                 <div class="sgd-diamond-details">
-                    <span class="sgd-diamond-label">Total Diamonds</span>
-                    <span class="sgd-diamond-count"><?php echo number_format( $user_diamonds ); ?> 💎</span>
+                    <span class="sgd-diamond-label">
+                        <span class="sgd-theme-text-wow">Total Diamonds</span>
+                        <span class="sgd-theme-text-genshin">Primogems</span>
+                    </span>
+                    <span class="sgd-diamond-count">
+                        <?php echo number_format( $user_diamonds ); ?> 
+                        <span class="sgd-theme-text-wow">💎</span>
+                        <span class="sgd-theme-text-genshin">✦</span>
+                    </span>
                 </div>
             </div>
 
@@ -138,6 +161,19 @@ $flash = sgd_get_flash();
 
             <!-- Quick Character Switcher & Tools -->
             <div class="sgd-hud-actions">
+                <!-- Realm Theme Switcher -->
+                <div class="sgd-theme-switcher-pill" id="sgd-theme-switcher" title="Switch Theme Realm: World of Warcraft or Genshin Impact">
+                    <span class="sgd-theme-switcher-tag">REALM:</span>
+                    <button type="button" class="sgd-theme-btn <?php echo ( $active_theme === 'wow' ) ? 'active' : ''; ?>" data-theme="wow" title="World of Warcraft (16-Bit Retro Guild)">
+                        <span class="sgd-theme-icon">⚔️</span>
+                        <span class="sgd-theme-name">WoW</span>
+                    </button>
+                    <button type="button" class="sgd-theme-btn <?php echo ( $active_theme === 'genshin' ) ? 'active' : ''; ?>" data-theme="genshin" title="Genshin Impact (Teyvat Celestial)">
+                        <span class="sgd-theme-icon">✦</span>
+                        <span class="sgd-theme-name">Genshin</span>
+                    </button>
+                </div>
+
                 <div class="sgd-sound-ctrl-wrap">
                     <button type="button" class="sgd-sfx-btn" id="sgd-sfx-toggle" title="Click to mute/unmute, or adjust volume">
                         <span id="sgd-sfx-icon">🔊</span>
@@ -179,7 +215,10 @@ $flash = sgd_get_flash();
                 <?php if ( $is_logged_in ): ?>
                     <form method="post" style="display:inline;">
                         <input type="hidden" name="sgd_action" value="sgd_logout">
-                        <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-red" style="font-size:8px;">Hearthstone (Logout)</button>
+                        <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-red" style="font-size:8px;">
+                            <span class="sgd-theme-text-wow">Hearthstone (Logout)</span>
+                            <span class="sgd-theme-text-genshin">Waypoint (Logout)</span>
+                        </button>
                     </form>
                 <?php else: ?>
                     <a href="<?php echo esc_url( sgd_get_portal_url( 'login' ) ); ?>" class="sgd-btn sgd-btn-sm sgd-btn-blue">Log In</a>

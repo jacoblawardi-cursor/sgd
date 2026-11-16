@@ -101,10 +101,13 @@ if ( $filter === 'mine' && ! $is_admin ) {
 <div class="sgd-section-header">
     <div>
         <h1 class="sgd-section-title">
-            <span>📜</span> Daily Assigned Tasks
+            <span>📜</span> 
+            <span class="sgd-theme-text-wow">Daily Assigned Tasks</span>
+            <span class="sgd-theme-text-genshin">Daily Commissions (Katheryne's Guild)</span>
         </h1>
         <p style="color:#9cb3c9; font-size:13px; margin-top:4px;">
-            Complete your assigned daily duties to maintain the guild! Each completed daily task rewards <strong style="color:#00e5ff;">+200 Diamonds</strong>.
+            <span class="sgd-theme-text-wow">Complete your assigned daily duties to maintain the guild! Each completed daily task rewards <strong style="color:#00e5ff;">+200 Diamonds</strong>.</span>
+            <span class="sgd-theme-text-genshin">Ad Astra Abyssosque! Complete your Adventurers' Guild commissions across Teyvat to earn <strong style="color:#ffe8b3;">+200 Primogems</strong>.</span>
         </p>
     </div>
     
@@ -120,8 +123,11 @@ if ( $filter === 'mine' && ! $is_admin ) {
         <?php endif; ?>
 
         <div style="background:#111522; border:2px solid var(--wow-gold); padding:6px 14px; border-radius:6px;">
-            <span style="font-family:var(--font-pixel); font-size:8px; color:#c69b3a;">REWARD RATE:</span>
-            <strong style="color:#00e5ff; font-family:var(--font-pixel); font-size:12px; margin-left:4px;">+200 💎</strong>
+            <span style="font-family:var(--font-pixel); font-size:8px; color:var(--wow-gold);">REWARD RATE:</span>
+            <strong style="color:#00e5ff; font-family:var(--font-pixel); font-size:12px; margin-left:4px;">
+                <span class="sgd-theme-text-wow">+200 💎</span>
+                <span class="sgd-theme-text-genshin" style="color:#ffe8b3;">+200 ✦</span>
+            </strong>
         </div>
     </div>
 </div>
@@ -135,7 +141,10 @@ $page_streak = sgd_get_user_streak( $current_user_id );
         <div class="sgd-streak-tracker-left">
             <span class="sgd-streak-tracker-flame">🔥</span>
             <div>
-                <div class="sgd-streak-tracker-sub">DAILY QUEST CONSISTENCY MULTIPLIER</div>
+                <div class="sgd-streak-tracker-sub">
+                    <span class="sgd-theme-text-wow">DAILY QUEST CONSISTENCY MULTIPLIER</span>
+                    <span class="sgd-theme-text-genshin">COMMISSION STREAK & CONSISTENCY MULTIPLIER</span>
+                </div>
                 <h3 class="sgd-streak-tracker-title">
                     <?php if ( $page_streak['current'] > 0 ): ?>
                         🔥 <?php echo $page_streak['current']; ?>-Day Quest Streak Active! (+<?php echo $page_streak['bonus_percent']; ?>% Bonus)

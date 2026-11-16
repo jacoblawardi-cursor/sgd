@@ -17,24 +17,37 @@ $today_prize = get_user_meta( $current_user_id, 'sgd_last_wheel_reward', true ) 
 ?>
 
 <div class="sgd-wheel-hero">
-    <div style="font-family:var(--font-pixel); font-size:9px; color:#ffd700; letter-spacing:2px; margin-bottom:6px;">
-        💰 STEAMWHEEDLE CASINO & GOBLIN ROULETTE 💰
+    <div style="font-family:var(--font-pixel); font-size:9px; color:var(--wow-gold-light); letter-spacing:2px; margin-bottom:6px;">
+        <span class="sgd-theme-text-wow">💰 STEAMWHEEDLE CASINO & GOBLIN ROULETTE 💰</span>
+        <span class="sgd-theme-text-genshin">✦ CELESTIA WISH & STELLA FORTUNA PRAYER ✦</span>
     </div>
     <h1 style="font-family:var(--font-title); font-size:28px; color:#fff; text-shadow:0 0 18px rgba(255,215,0,0.6); margin:0;">
-        🎰 Goblin Daily Fortune Wheel
+        <span class="sgd-theme-text-wow">🎰 Goblin Daily Fortune Wheel</span>
+        <span class="sgd-theme-text-genshin">✦ Stella Fortuna (Daily Wish Prayer)</span>
     </h1>
     <p style="color:#e0d2b4; max-width:650px; margin:8px auto 0 auto; font-size:14px;">
-        "Step right up, hero! One free spin every morning! Win diamond jackpots, streak shields, coffee tokens, and legendary perks!"
+        <span class="sgd-theme-text-wow">"Step right up, hero! One free spin every morning! Win diamond jackpots, streak shields, coffee tokens, and legendary perks!"</span>
+        <span class="sgd-theme-text-genshin">"May the stars guide your journey, Traveler! One free wish prayer every morning! Win Primogem jackpots, shields, and blessings!"</span>
     </p>
 </div>
 
 <!-- INVENTORY / PERKS STATUS BAR -->
 <div class="sgd-wheel-perks-bar">
     <div class="sgd-wheel-perk-item">
-        <span class="perk-icon">💎</span>
+        <span class="perk-icon">
+            <span class="sgd-theme-text-wow">💎</span>
+            <span class="sgd-theme-text-genshin">✦</span>
+        </span>
         <div>
-            <div class="perk-label">DIAMOND TREASURY</div>
-            <div class="perk-val" style="color:#00e5ff;"><?php echo number_format($diamonds); ?> 💎</div>
+            <div class="perk-label">
+                <span class="sgd-theme-text-wow">DIAMOND TREASURY</span>
+                <span class="sgd-theme-text-genshin">PRIMOGEM TREASURY</span>
+            </div>
+            <div class="perk-val" style="color:#00e5ff;">
+                <?php echo number_format($diamonds); ?> 
+                <span class="sgd-theme-text-wow">💎</span>
+                <span class="sgd-theme-text-genshin">✦</span>
+            </div>
         </div>
     </div>
     <div class="sgd-wheel-perk-item">
