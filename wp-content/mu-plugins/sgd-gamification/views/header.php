@@ -65,25 +65,30 @@ $flash = sgd_get_flash();
             <?php 
             $xp_data = sgd_get_user_xp_data( $user_id );
             $user_login = $current_user ? $current_user->user_login : '';
-            if ( $is_admin ) {
-                $portrait_icon = '👑';
-            } elseif ( $user_login === 'employee2' ) {
-                $portrait_icon = '🧙‍♀️';
-            } elseif ( $is_logged_in ) {
-                $portrait_icon = '⚔️';
-            } else {
-                $portrait_icon = '👤';
-            }
+            $user_avatar = sgd_get_user_avatar( $user_id );
+            $job_class = sgd_get_user_job_class( $user_id );
+            $is_lvl30_plus = ( $xp_data['level'] >= 30 );
+            $lvl30_candidates = $is_admin ? sgd_get_level_30_candidates() : [];
             ?>
             <div class="sgd-unit-frame">
-                <div class="sgd-portrait">
-                    <?php echo $portrait_icon; ?>
-                    <span class="sgd-unit-level" title="Hero Level: <?php echo $xp_data['level']; ?>"><?php echo $xp_data['level']; ?></span>
+                <div class="sgd-portrait sgd-fancy-portrait <?php echo $is_lvl30_plus ? 'sgd-portrait-lvl30' : ''; ?>" title="<?php echo $is_logged_in ? 'Click to Change Avatar' : ''; ?>">
+                    <span class="sgd-portrait-icon"><?php echo $user_avatar; ?></span>
+                    <?php if ( $is_logged_in ): ?>
+                        <button type="button" class="sgd-avatar-modal-trigger" title="Change Hero Avatar">✎</button>
+                    <?php endif; ?>
+                    <span class="sgd-unit-level <?php echo $is_lvl30_plus ? 'sgd-level-gold-crest' : ''; ?>" title="Hero Level: <?php echo $xp_data['level']; ?><?php echo $is_lvl30_plus ? ' (Mythic Level 30+ Paragon!)' : ''; ?>">
+                        <?php echo $xp_data['level']; ?>
+                    </span>
                 </div>
                 <div class="sgd-unit-info">
-                    <span class="sgd-unit-name">
-                        <?php echo $is_logged_in ? esc_html( $current_user->display_name ) : 'Guest Wanderer'; ?>
-                    </span>
+                    <div class="sgd-unit-header-line">
+                        <span class="sgd-unit-name">
+                            <?php echo $is_logged_in ? esc_html( $current_user->display_name ) : 'Guest Wanderer'; ?>
+                        </span>
+                        <span class="sgd-job-class-pill <?php echo strtolower($job_class) === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>" title="Employee Job Class: <?php echo esc_attr( $job_class ); ?>">
+                            <?php echo ( strtolower($job_class) === 'manager' ? '⭐ ' : '🎖️ ' ) . esc_html( $job_class ); ?>
+                        </span>
+                    </div>
                     <span class="sgd-unit-role" title="Squad: <?php echo esc_attr( $xp_data['faction'] ); ?>">
                         <?php if ( $is_logged_in ): ?>
                             <button type="button" class="sgd-title-badge-btn sgd-title-modal-trigger" title="Click to equip or customize your Hero Title">
@@ -94,10 +99,21 @@ $flash = sgd_get_flash();
                         <?php endif; ?>
                         • <span style="color:#c69b3a;"><?php echo esc_html( $xp_data['faction'] ); ?></span>
                     </span>
-                    <div class="sgd-bars">
-                        <div class="sgd-bar" title="Health: 100%"><div class="sgd-bar-hp"></div></div>
-                        <div class="sgd-bar" title="XP Progress: <?php echo number_format($xp_data['xp_in_level']); ?> / <?php echo number_format($xp_data['xp_needed']); ?> XP (<?php echo $xp_data['percent']; ?>%) to Level <?php echo min(60, $xp_data['level'] + 1); ?>">
-                            <div class="sgd-bar-mp" style="width:<?php echo $xp_data['percent']; ?>%; background:linear-gradient(90deg, #9b59b6, #be2edd);"></div>
+                    <!-- FANCY EMPLOYEE XP PROGRESS BAR -->
+                    <div class="sgd-fancy-xp-wrap" title="Experience: <?php echo number_format($xp_data['total_xp']); ?> Total XP • <?php echo number_format($xp_data['xp_in_level']); ?> / <?php echo number_format($xp_data['xp_needed']); ?> XP (<?php echo $xp_data['percent']; ?>%) to Level <?php echo min(60, $xp_data['level'] + 1); ?>">
+                        <div class="sgd-fancy-xp-bar">
+                            <div class="sgd-fancy-xp-fill" style="width:<?php echo $xp_data['percent']; ?>%;">
+                                <span class="sgd-fancy-xp-gloss"></span>
+                                <span class="sgd-fancy-xp-light-sweep"></span>
+                                <span class="sgd-fancy-xp-spark">
+                                    <span class="sgd-spark-star">✦</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="sgd-fancy-xp-text">
+                            <span class="sgd-fancy-xp-lvl">👑 LVL <?php echo $xp_data['level']; ?></span>
+                            <span class="sgd-fancy-xp-mid"><?php echo number_format($xp_data['xp_in_level']); ?> / <?php echo number_format($xp_data['xp_needed']); ?> XP <strong style="color:#ffd700;">(<?php echo $xp_data['percent']; ?>%)</strong></span>
+                            <span class="sgd-fancy-xp-next">NEXT: LVL <?php echo min(60, $xp_data['level'] + 1); ?> ➔</span>
                         </div>
                     </div>
                 </div>
@@ -137,7 +153,7 @@ $flash = sgd_get_flash();
                         <span class="sgd-streak-hud-val">
                             <?php echo $streak_info['current']; ?> <?php echo $streak_info['current'] === 1 ? 'Day' : 'Days'; ?>
                             <?php if ( $streak_info['bonus_percent'] > 0 ): ?>
-                                <span class="sgd-streak-bonus-pill">+<?php echo $streak_info['bonus_percent']; ?>% 💎</span>
+                                <span class="sgd-streak-bonus-pill">+<?php echo $streak_info['bonus_percent']; ?>% XP ⭐</span>
                             <?php endif; ?>
                         </span>
                     </div>
@@ -208,6 +224,14 @@ $flash = sgd_get_flash();
                     </div>
                 </div>
                 
+                <?php if ( $is_admin && ! empty( $lvl30_candidates ) ): ?>
+                    <!-- LEVEL 30 PROMOTION ALERT BEACON FOR ADMIN -->
+                    <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'admin', 'admin_tab' => 'promotion' ], home_url( '/' ) ) ); ?>" class="sgd-lvl30-top-beacon" title="Review Level 30 Heroes for Job Class Promotion">
+                        <span class="sgd-lvl30-beacon-pulse"></span>
+                        👑 <strong>LVL 30 ALERT:</strong> <?php echo count($lvl30_candidates); ?> Hero(es) Ready for Promotion! ➔
+                    </a>
+                <?php endif; ?>
+
                 <div class="sgd-switch-pill" title="Quick 1-Click Role Switch for Demo Testing">
                     <span>DEMO:</span>
                     <form method="post" style="display:inline;">
@@ -224,6 +248,20 @@ $flash = sgd_get_flash();
                         <input type="hidden" name="sgd_action" value="sgd_switch_user">
                         <input type="hidden" name="target_user" value="employee2">
                         <button type="submit" class="sgd-switch-btn <?php echo ( $is_logged_in && $user_login === 'employee2' ) ? 'active' : ''; ?>">🧙‍♀️ Jaina</button>
+                    </form>
+                    <form method="post" style="display:inline;">
+                        <input type="hidden" name="sgd_action" value="sgd_switch_user">
+                        <input type="hidden" name="target_user" value="employee3">
+                        <button type="submit" class="sgd-switch-btn sgd-switch-lvl30 <?php echo ( $is_logged_in && $user_login === 'employee3' ) ? 'active' : ''; ?>" title="Sylvanas (Level 30 Hero - Promotion Trial Eligible)">
+                            🏹 Sylvanas (Lv.30)
+                        </button>
+                    </form>
+                    <form method="post" style="display:inline;">
+                        <input type="hidden" name="sgd_action" value="sgd_switch_user">
+                        <input type="hidden" name="target_user" value="employee4">
+                        <button type="submit" class="sgd-switch-btn <?php echo ( $is_logged_in && $user_login === 'employee4' ) ? 'active' : ''; ?>" title="Thrall (Staff Hero)">
+                            ⚡ Thrall
+                        </button>
                     </form>
                 </div>
 
@@ -356,4 +394,75 @@ $flash = sgd_get_flash();
                 </form>
             </div>
         </div>
+
+        <!-- HERO AVATAR WARDROBE MODAL (FOR EMPLOYEES) -->
+        <div id="sgd-avatar-modal" class="sgd-modal" style="display:none;">
+            <div class="sgd-modal-dialog" style="max-width:480px;">
+                <div class="sgd-modal-header">
+                    <h3 class="sgd-modal-title">🎨 Hero Avatar Wardrobe</h3>
+                    <button type="button" class="sgd-modal-close" id="sgd-avatar-modal-close">&times;</button>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="sgd_action" value="sgd_change_avatar">
+                    <div class="sgd-modal-body">
+                        <p style="font-size:13px; color:#c8d1e0; line-height:1.5; margin-bottom:14px;">
+                            Choose your signature RPG hero portrait and crest to represent you on the quest board and leaderboard:
+                        </p>
+
+                        <div class="sgd-avatar-grid">
+                            <?php 
+                            $avatar_options = sgd_get_avatar_options();
+                            $cur_avatar = sgd_get_user_avatar( $user_id );
+                            foreach ( $avatar_options as $av_icon => $av_label ):
+                                $is_active_av = ( $cur_avatar === $av_icon );
+                            ?>
+                                <label class="sgd-avatar-option-card <?php echo $is_active_av ? 'active' : ''; ?>">
+                                    <input type="radio" name="avatar_icon" value="<?php echo esc_attr( $av_icon ); ?>" <?php checked( $is_active_av ); ?> style="display:none;">
+                                    <span class="sgd-avatar-big-icon"><?php echo $av_icon; ?></span>
+                                    <span class="sgd-avatar-opt-title"><?php echo esc_html( $av_label ); ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="sgd-modal-footer">
+                        <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="sgd-avatar-modal-cancel">Cancel</button>
+                        <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-gold">🎨 Equip Hero Avatar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Avatar Modal Controls
+            var avTriggers = document.querySelectorAll('.sgd-avatar-modal-trigger, .sgd-fancy-portrait');
+            var avModal = document.getElementById('sgd-avatar-modal');
+            var avClose = document.getElementById('sgd-avatar-modal-close');
+            var avCancel = document.getElementById('sgd-avatar-modal-cancel');
+            
+            if (avModal) {
+                avTriggers.forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        avModal.style.display = 'flex';
+                    });
+                });
+                if (avClose) avClose.addEventListener('click', function() { avModal.style.display = 'none'; });
+                if (avCancel) avCancel.addEventListener('click', function() { avModal.style.display = 'none'; });
+                avModal.addEventListener('click', function(e) {
+                    if (e.target === avModal) avModal.style.display = 'none';
+                });
+                // Highlight selected card
+                var avCards = document.querySelectorAll('.sgd-avatar-option-card');
+                avCards.forEach(function(card) {
+                    card.addEventListener('click', function() {
+                        avCards.forEach(function(c) { c.classList.remove('active'); });
+                        card.classList.add('active');
+                        var rad = card.querySelector('input[type="radio"]');
+                        if (rad) rad.checked = true;
+                    });
+                });
+            }
+        });
+        </script>
     <?php endif; ?>

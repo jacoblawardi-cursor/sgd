@@ -91,8 +91,8 @@ $all_users = get_users();
                         <input type="text" name="title" class="sgd-form-input" placeholder="e.g. Bug Master, Fast Delivery" required>
                     </div>
                     <div>
-                        <label class="sgd-form-label">Diamond Reward</label>
-                        <input type="number" name="reward_diamonds" class="sgd-form-input" value="150" required>
+                        <label class="sgd-form-label">XP Reward</label>
+                        <input type="number" name="reward_xp" class="sgd-form-input" value="200" required>
                     </div>
                 </div>
                 <div class="sgd-form-group" style="margin-top:10px;">
@@ -163,7 +163,7 @@ $all_users = get_users();
 <div style="background:#0d111d; border:2px solid var(--wow-gold); border-radius:8px; padding:16px 20px; margin-bottom:25px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
     <div>
         <div style="font-family:var(--font-pixel); font-size:9px; color:var(--wow-gold-light);">QUEST BOARD ACTIONS & MORALE SUITE:</div>
-        <div style="font-size:13px; color:#a8b6cc; margin-top:3px;">Earn diamonds by conquering Daily Duties (+200 💎) or Urgent Bounties (+1,000 💎)! Unlocking achievements triggers the gilded celebration!</div>
+        <div style="font-size:13px; color:#a8b6cc; margin-top:3px;">Earn XP by conquering Daily Duties (+200 XP ⭐) and unlocking glorious Feats of Strength to level up toward promotion!</div>
     </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
         <!-- 1-Click Gilded Celebration Fanfare Test / Demo -->
@@ -176,7 +176,7 @@ $all_users = get_users();
         </form>
 
         <a href="<?php echo esc_url( sgd_get_portal_url( 'daily' ) ); ?>" class="sgd-btn sgd-btn-blue">
-            📜 DAILY TASK (+200 💎)
+            📜 DAILY TASK (+200 XP ⭐)
         </a>
         <a href="<?php echo esc_url( sgd_get_portal_url( 'urgent' ) ); ?>" class="sgd-btn sgd-btn-red">
             ⚡ URGENT TASK (+1,000 💎)
@@ -192,6 +192,7 @@ $all_users = get_users();
     <?php foreach ( $all_achievements as $ach ): 
         $is_unlocked = isset( $unlocked_map[ $ach->id ] );
         $unlock_date = $is_unlocked ? $unlocked_map[ $ach->id ] : null;
+        $ach_xp = ! empty( $ach->reward_xp ) ? (int) $ach->reward_xp : ( ! empty( $ach->reward_diamonds ) ? (int) $ach->reward_diamonds : 200 );
     ?>
         <div class="sgd-ach-card <?php echo $is_unlocked ? 'unlocked' : 'locked'; ?>">
             <div class="sgd-ach-icon">
@@ -202,8 +203,8 @@ $all_users = get_users();
                 <div class="sgd-ach-desc"><?php echo esc_html( $ach->description ); ?></div>
                 
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:6px;">
-                    <span style="font-family:var(--font-pixel); font-size:8px; color:#00e5ff;">
-                        Reward: +<?php echo (int) $ach->reward_diamonds; ?> 💎
+                    <span style="font-family:var(--font-pixel); font-size:8px; color:#ffd700;">
+                        Reward: +<?php echo $ach_xp; ?> XP ⭐
                     </span>
                     <?php if ( $is_unlocked ): ?>
                         <span class="sgd-ach-badge">

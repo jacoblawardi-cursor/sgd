@@ -50,10 +50,15 @@ foreach ( $leaderboard as $hero ) {
             <div class="sgd-podium-card podium-silver">
                 <div class="sgd-podium-rank-badge">🥈 2ND PLACE</div>
                 <div class="sgd-podium-avatar">
-                    <?php echo $second['user_login'] === 'admin' ? '👑' : ( $second['user_login'] === 'employee2' ? '🧙‍♀️' : '⚔️' ); ?>
+                    <?php echo $second['avatar'] ?? sgd_get_user_avatar( $second['user_id'] ); ?>
                 </div>
                 <div class="sgd-podium-name"><?php echo esc_html( $second['display_name'] ); ?></div>
-                <div class="sgd-podium-faction"><?php echo esc_html( $second['faction'] ); ?></div>
+                <div class="sgd-podium-faction">
+                    <span class="sgd-job-class-pill <?php echo strtolower($second['job_class'] ?? '') === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>" style="font-size:7px; padding:1px 6px;">
+                        <?php echo esc_html( $second['job_class'] ?? 'Staff' ); ?>
+                    </span>
+                    <?php echo esc_html( $second['faction'] ); ?>
+                </div>
                 <div class="sgd-podium-level">Level <?php echo $second['level']; ?> Champion</div>
                 <div class="sgd-podium-stats">
                     <span style="color:#00e5ff; font-weight:bold;">💎 <?php echo number_format( $second['diamonds'] ); ?></span>
@@ -71,10 +76,15 @@ foreach ( $leaderboard as $hero ) {
                 <div class="sgd-podium-crown">👑</div>
                 <div class="sgd-podium-rank-badge gold-badge">🥇 GRAND CHAMPION</div>
                 <div class="sgd-podium-avatar gold-avatar">
-                    <?php echo $first['user_login'] === 'admin' ? '👑' : ( $first['user_login'] === 'employee2' ? '🧙‍♀️' : '⚔️' ); ?>
+                    <?php echo $first['avatar'] ?? sgd_get_user_avatar( $first['user_id'] ); ?>
                 </div>
                 <div class="sgd-podium-name" style="font-size:18px; color:#ffd700;"><?php echo esc_html( $first['display_name'] ); ?></div>
-                <div class="sgd-podium-faction" style="color:#ffeaa7;"><?php echo esc_html( $first['faction'] ); ?></div>
+                <div class="sgd-podium-faction" style="color:#ffeaa7;">
+                    <span class="sgd-job-class-pill <?php echo strtolower($first['job_class'] ?? '') === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>" style="font-size:7px; padding:1px 6px;">
+                        <?php echo esc_html( $first['job_class'] ?? 'Staff' ); ?>
+                    </span>
+                    <?php echo esc_html( $first['faction'] ); ?>
+                </div>
                 <div class="sgd-podium-level" style="color:#fff;">★ Level <?php echo $first['level']; ?> Paragon ★</div>
                 <div class="sgd-podium-stats">
                     <span style="color:#00e5ff; font-weight:bold; font-size:14px;">💎 <?php echo number_format( $first['diamonds'] ); ?></span>
@@ -91,7 +101,14 @@ foreach ( $leaderboard as $hero ) {
             <div class="sgd-podium-card podium-bronze">
                 <div class="sgd-podium-rank-badge">🥉 3RD PLACE</div>
                 <div class="sgd-podium-avatar">
-                    <?php echo $third['user_login'] === 'admin' ? '👑' : ( $third['user_login'] === 'employee2' ? '🧙‍♀️' : '⚔️' ); ?>
+                    <?php echo $third['avatar'] ?? sgd_get_user_avatar( $third['user_id'] ); ?>
+                </div>
+                <div class="sgd-podium-name"><?php echo esc_html( $third['display_name'] ); ?></div>
+                <div class="sgd-podium-faction">
+                    <span class="sgd-job-class-pill <?php echo strtolower($third['job_class'] ?? '') === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>" style="font-size:7px; padding:1px 6px;">
+                        <?php echo esc_html( $third['job_class'] ?? 'Staff' ); ?>
+                    </span>
+                    <?php echo esc_html( $third['faction'] ); ?>
                 </div>
                 <div class="sgd-podium-name"><?php echo esc_html( $third['display_name'] ); ?></div>
                 <div class="sgd-podium-faction"><?php echo esc_html( $third['faction'] ); ?></div>
@@ -135,7 +152,8 @@ foreach ( $leaderboard as $hero ) {
             $rank = 1;
             foreach ( $leaderboard as $hero ): 
                 $is_me = ( $hero['user_id'] == $current_user_id );
-                $avatar_icon = $hero['user_login'] === 'admin' ? '👑' : ( $hero['user_login'] === 'employee2' ? '🧙‍♀️' : '⚔️' );
+                $avatar_icon = $hero['avatar'] ?? sgd_get_user_avatar( $hero['user_id'] );
+                $hero_class = $hero['job_class'] ?? sgd_get_user_job_class( $hero['user_id'] );
             ?>
                 <tr class="<?php echo $is_me ? 'row-highlight-me' : ''; ?>">
                     <td style="text-align:center;">
@@ -153,8 +171,11 @@ foreach ( $leaderboard as $hero ) {
                         <div style="display:flex; align-items:center; gap:10px;">
                             <span style="font-size:24px;"><?php echo $avatar_icon; ?></span>
                             <div>
-                                <div style="font-weight:bold; color:#fff; font-size:14px; display:flex; align-items:center; gap:6px;">
+                                <div style="font-weight:bold; color:#fff; font-size:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                     <?php echo esc_html( $hero['display_name'] ); ?>
+                                    <span class="sgd-job-class-pill <?php echo strtolower($hero_class) === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>" style="font-size:8px; padding:2px 8px;">
+                                        <?php echo ( strtolower($hero_class) === 'manager' ? '⭐ ' : '🎖️ ' ) . esc_html($hero_class); ?>
+                                    </span>
                                     <?php if ( $is_me ): ?>
                                         <span class="sgd-status-badge" style="background:#2ecc71; color:#000; font-size:6px; padding:1px 4px;">YOU</span>
                                     <?php endif; ?>

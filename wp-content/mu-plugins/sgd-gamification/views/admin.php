@@ -30,7 +30,8 @@ $completed_proofs = $wpdb->get_results(
 if ( empty( $completed_proofs ) ) {
     $completed_proofs = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE status = 'completed' AND proof_image_url IS NOT NULL AND proof_image_url != '' ORDER BY completed_time DESC" );
 }
-$admin_tab = sanitize_text_field( $_GET['tab'] ?? '' );
+$admin_tab = sanitize_text_field( $_GET['admin_tab'] ?? ( $_GET['tab'] ?? '' ) );
+$lvl30_candidates = sgd_get_level_30_candidates();
 
 // Cash Shop Redemptions
 $all_orders = $wpdb->get_results( "SELECT * FROM $table_redemptions ORDER BY id DESC" );
@@ -92,20 +93,23 @@ foreach ( $emp_unlocked_raw as $eu ) {
     
     <!-- SUBTAB NAV -->
     <div class="sgd-admin-tab-nav">
-        <button type="button" class="sgd-admin-subtab <?php echo ( ! $edit_task && ! $edit_ach && $admin_tab !== 'proofs' && ! empty( $sos_requests ) ) ? 'active' : ''; ?>" data-target="admin-sec-sos">
+        <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'promotion' || ( empty( $admin_tab ) && ! empty( $lvl30_candidates ) && ! $edit_task && ! $edit_ach ) ) ? 'active' : ''; ?>" data-target="admin-sec-promotion" style="color:#ffd700; border-color:#ffd700;">
+            👑 Level 30 Promotions (<?php echo count($lvl30_candidates); ?>)
+        </button>
+        <button type="button" class="sgd-admin-subtab <?php echo ( ! $edit_task && ! $edit_ach && $admin_tab !== 'proofs' && $admin_tab !== 'promotion' && ! empty( $sos_requests ) && empty( $lvl30_candidates ) ) ? 'active' : ''; ?>" data-target="admin-sec-sos">
             🚨 SOS Help Dispatch (<?php echo count( $sos_requests ); ?>)
         </button>
         <button type="button" class="sgd-admin-subtab <?php echo ( $edit_task ) ? 'active' : ''; ?>" data-target="admin-sec-tasks">
             📜 Manage Quests (Add / Edit / Delete)
         </button>
-        <button type="button" class="sgd-admin-subtab <?php echo ( $edit_ach || isset($_GET['view_employee']) || ( empty( $sos_requests ) && ! $edit_task && $admin_tab !== 'proofs' ) ) ? 'active' : ''; ?>" data-target="admin-sec-achievements">
+        <button type="button" class="sgd-admin-subtab <?php echo ( $edit_ach || isset($_GET['view_employee']) || ( empty( $sos_requests ) && empty( $lvl30_candidates ) && ! $edit_task && $admin_tab !== 'proofs' && $admin_tab !== 'promotion' ) ) ? 'active' : ''; ?>" data-target="admin-sec-achievements">
             🏆 Employee Achievements Manager
         </button>
         <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'orders' ) ? 'active' : ''; ?>" data-target="admin-sec-orders">
             🎁 Cash Shop Orders (<?php echo $pending_orders_count; ?>)
         </button>
         <button type="button" class="sgd-admin-subtab" data-target="admin-sec-users">
-            💎 Diamonds Treasury
+            💎 Diamonds Treasury & XP
         </button>
         <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'proofs' ) ? 'active' : ''; ?>" data-target="admin-sec-proofs">
             📸 Submitted Photo Proofs (<?php echo count( $completed_proofs ); ?>)
@@ -121,8 +125,299 @@ foreach ( $emp_unlocked_raw as $eu ) {
         </a>
     </div>
 
+    <!-- 0. LEVEL 30 PROMOTION CENTER & EMPLOYEE JOB CLASS ADVANCEMENT -->
+    <div id="admin-sec-promotion" class="sgd-admin-section" style="<?php echo ( $admin_tab === 'promotion' || ( empty( $admin_tab ) && ! empty( $lvl30_candidates ) && ! $edit_task && ! $edit_ach ) ) ? 'display:block;' : 'display:none;'; ?>">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+            <div>
+                <h3 style="font-family:var(--font-title); font-size:20px; color:#ffd700; margin:0; display:flex; align-items:center; gap:8px;">
+                    <span>👑</span> Level 30 Employee Promotions & Job Class Advancement
+                </h3>
+                <p style="color:#c8d6e5; font-size:13px; margin:4px 0 0 0;">
+                    When an employee reaches Level 30, evaluate their leadership with a Special Custom Promotion Task. Once they submit verified proof, officially upgrade their Employee Job Class (e.g. from <strong>Staff</strong> to <strong>Manager</strong>)!
+                </p>
+            </div>
+            <span style="background:#111522; border:2px solid #ffd700; padding:6px 14px; border-radius:6px; font-family:var(--font-pixel); font-size:9px; color:#ffd700;">
+                ⭐ ELIGIBLE HEROES: <?php echo count( $lvl30_candidates ); ?>
+            </span>
+        </div>
+
+        <?php if ( empty( $lvl30_candidates ) ): ?>
+            <div style="background:#161c28; border:1px solid #2f3c55; padding:35px; text-align:center; border-radius:8px; color:#8fa0bd;">
+                🛡️ No employees have reached Level 30 yet. As heroes complete daily tasks and achievements, their XP rises toward Level 30!
+            </div>
+        <?php else: ?>
+            <div style="display:flex; flex-direction:column; gap:20px; margin-bottom:30px;">
+                <?php foreach ( $lvl30_candidates as $cand ): 
+                    $cand_user_id = $cand['user_id'];
+                    $promo_status = $cand['promotion_status'];
+                    $promo_task_id = $cand['promotion_task_id'];
+                    $promo_task = $promo_task_id ? $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_tasks WHERE id = %d", $promo_task_id ) ) : null;
+                    $is_manager = ( strtolower( $cand['job_class'] ) === 'manager' );
+                ?>
+                    <div class="sgd-promo-candidate-card <?php echo $is_manager ? 'promoted-card' : ''; ?>" style="background:#141724; border:2px solid #ffd700; border-radius:10px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,0.6);">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:15px; border-bottom:1px solid #2d3852; padding-bottom:16px; margin-bottom:18px;">
+                            <div style="display:flex; align-items:center; gap:16px;">
+                                <div style="width:58px; height:58px; border-radius:50%; border:3px solid #ffd700; background:#0b0d14; display:flex; align-items:center; justify-content:center; font-size:32px; box-shadow:0 0 15px rgba(255,215,0,0.5); position:relative;">
+                                    <?php echo esc_html( $cand['avatar'] ); ?>
+                                    <span style="position:absolute; bottom:-4px; right:-4px; background:#ffd700; color:#000; font-family:var(--font-pixel); font-size:8px; font-weight:bold; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #000;">
+                                        30
+                                    </span>
+                                </div>
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                        <h4 style="font-family:var(--font-title); font-size:18px; color:#fff; margin:0;">
+                                            <?php echo esc_html( $cand['display_name'] ); ?>
+                                        </h4>
+                                        <span class="sgd-job-class-pill <?php echo $is_manager ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>">
+                                            <?php echo ( $is_manager ? '⭐ ' : '🎖️ ' ) . esc_html( $cand['job_class'] ); ?>
+                                        </span>
+                                    </div>
+                                    <div style="font-size:12px; color:#8fa0bd; margin-top:4px;">
+                                        Username: <code><?php echo esc_html( $cand['user_login'] ); ?></code> • Total XP: <strong style="color:#00e5ff;"><?php echo number_format( $cand['total_xp'] ); ?> XP</strong> (Level <?php echo $cand['level']; ?>)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PIPELINE BADGE -->
+                            <div>
+                                <?php if ( $is_manager || $promo_status === 'promoted' ): ?>
+                                    <span class="sgd-status-badge" style="background:#27ae60; color:#fff; font-size:9px; padding:6px 12px;">
+                                        ✅ PROMOTED TO MANAGER
+                                    </span>
+                                <?php elseif ( $promo_status === 'task_completed' ): ?>
+                                    <span class="sgd-status-badge" style="background:#be2edd; color:#fff; font-size:9px; padding:6px 12px; animation:pulse-urgent 1.5s infinite;">
+                                        🌟 PROMOTION TRIAL COMPLETED (READY TO PROMOTE!)
+                                    </span>
+                                <?php elseif ( $promo_status === 'task_assigned' ): ?>
+                                    <span class="sgd-status-badge" style="background:#e67e22; color:#fff; font-size:9px; padding:6px 12px;">
+                                        ⏳ SPECIAL TASK IN PROGRESS
+                                    </span>
+                                <?php else: ?>
+                                    <span class="sgd-status-badge" style="background:#ffd700; color:#000; font-size:9px; font-weight:bold; padding:6px 12px;">
+                                        🎓 LEVEL 30 REACHED: ASSIGN TRIAL
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- STAGE 1: ASSIGN SPECIAL CUSTOM TASK -->
+                        <?php if ( $promo_status === 'eligible' || ! $promo_task_id ): ?>
+                            <div style="background:#0c0f18; border:1px solid #2d3852; border-radius:8px; padding:18px;">
+                                <div style="font-family:var(--font-pixel); font-size:9px; color:#ffd700; margin-bottom:8px;">
+                                    📝 STEP 1: ASSIGN SPECIAL LEVEL 30 PROMOTION TASK TO <?php echo strtoupper(esc_html($cand['display_name'])); ?>
+                                </div>
+                                <p style="font-size:12px; color:#aaa; margin-bottom:14px;">
+                                    Give this employee a special leadership or audit task. When they finish and upload photo proof, you will be able to promote them to Manager.
+                                </p>
+
+                                <form method="post">
+                                    <input type="hidden" name="sgd_action" value="sgd_admin_assign_promotion_task">
+                                    <input type="hidden" name="target_user_id" value="<?php echo $cand_user_id; ?>">
+
+                                    <div style="display:grid; grid-template-columns:1fr 180px; gap:15px; margin-bottom:12px;">
+                                        <div class="sgd-form-group" style="margin:0;">
+                                            <label class="sgd-form-label">Special Promotion Quest Title *</label>
+                                            <input type="text" name="title" class="sgd-form-input" value="Special Promotion Trial: Lead Departmental Sprint Review & Quality Audit" required>
+                                        </div>
+                                        <div class="sgd-form-group" style="margin:0;">
+                                            <label class="sgd-form-label">XP Reward</label>
+                                            <input type="number" name="reward_xp" class="sgd-form-input" value="1000" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="sgd-form-group">
+                                        <label class="sgd-form-label">Task Deliverables & Leadership Criteria *</label>
+                                        <textarea name="description" rows="2" class="sgd-form-textarea" required>Lead the departmental sprint review, audit documentation quality, coordinate deliverables across the squad, and upload photo/screenshot proof of verified completion.</textarea>
+                                    </div>
+
+                                    <button type="submit" class="sgd-btn sgd-btn-gold">
+                                        🚀 Dispatch Special Level 30 Promotion Task
+                                    </button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- STAGE 2: SPECIAL TASK IN PROGRESS -->
+                        <?php if ( $promo_status === 'task_assigned' && $promo_task && $promo_task->status !== 'completed' ): ?>
+                            <div style="background:#0c0f18; border:1px solid #e67e22; border-radius:8px; padding:18px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                                    <div style="font-family:var(--font-pixel); font-size:9px; color:#e67e22;">
+                                        ⏳ STEP 2: SPECIAL TRIAL IN PROGRESS (AWAITING EMPLOYEE SUBMISSION)
+                                    </div>
+                                    <span style="font-size:11px; color:#aaa;">Task ID: #<?php echo $promo_task->id; ?></span>
+                                </div>
+                                <div style="font-size:14px; font-weight:bold; color:#fff;"><?php echo esc_html( $promo_task->title ); ?></div>
+                                <div style="font-size:12px; color:#aaa; margin-top:4px;"><?php echo nl2br( esc_html( $promo_task->description ) ); ?></div>
+                                <div style="margin-top:12px; font-size:12px; color:#ffd700;">
+                                    Reward: <strong>+<?php echo (int) $promo_task->reward_xp; ?> XP ⭐</strong> • Status: <span style="color:#e67e22;">Open (Employee must upload photo proof on their quest board)</span>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- STAGE 3: SPECIAL TASK COMPLETED -> PROMOTE EMPLOYEE TO MANAGER -->
+                        <?php if ( ( $promo_status === 'task_completed' || ( $promo_task && $promo_task->status === 'completed' ) ) && ! $is_manager ): ?>
+                            <div style="background:#0c101a; border:2px solid #2ecc71; border-radius:8px; padding:20px; box-shadow:0 0 15px rgba(46,204,113,0.3);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                                    <div style="font-family:var(--font-pixel); font-size:9px; color:#2ecc71;">
+                                        🎉 STEP 3: TRIAL FINISHED WITH VERIFIED PROOF! PROMOTE TO MANAGER:
+                                    </div>
+                                    <span class="sgd-status-badge" style="background:#27ae60; color:#fff;">✅ PROOF VERIFIED</span>
+                                </div>
+
+                                <?php if ( $promo_task && ! empty( $promo_task->proof_image_url ) ): ?>
+                                    <div style="background:#111522; border:1px solid #28334a; border-radius:6px; padding:12px; margin-bottom:16px; display:flex; gap:14px; align-items:center;">
+                                        <a href="<?php echo esc_url( $promo_task->proof_image_url ); ?>" target="_blank" title="View Full Proof Photo">
+                                            <img src="<?php echo esc_url( $promo_task->proof_image_url ); ?>" alt="Proof" style="width:70px; height:70px; object-fit:cover; border-radius:4px; border:1px solid #ffd700;">
+                                        </a>
+                                        <div>
+                                            <div style="font-size:13px; font-weight:bold; color:#fff;">Submitted Photo Proof & Notes:</div>
+                                            <div style="font-size:12px; color:#aaa; font-style:italic; margin-top:2px;">
+                                                "<?php echo esc_html( $promo_task->proof_notes ?: 'Task finished successfully.' ); ?>"
+                                            </div>
+                                            <a href="<?php echo esc_url( $promo_task->proof_image_url ); ?>" target="_blank" style="font-size:11px; color:#00e5ff; text-decoration:none; display:inline-block; margin-top:4px;">
+                                                🔍 View Full Resolution Proof Photo ➔
+                                            </a>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- PROMOTION FORM -->
+                                <form method="post" onsubmit="return confirm('Promote <?php echo esc_js($cand['display_name']); ?> and update their Employee Job Class?');">
+                                    <input type="hidden" name="sgd_action" value="sgd_admin_change_job_class">
+                                    <input type="hidden" name="target_user_id" value="<?php echo $cand_user_id; ?>">
+
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+                                        <div class="sgd-form-group" style="margin:0;">
+                                            <label class="sgd-form-label">Promote to Job Class (Select Role) *</label>
+                                            <select name="new_job_class_select" class="sgd-form-select">
+                                                <option value="Manager" selected>⭐ Manager (Recommended - Full Department Leadership)</option>
+                                                <option value="Senior Manager">👑 Senior Manager (Executive Strategist)</option>
+                                                <option value="Team Lead">⚡ Team Lead (Squad Commander)</option>
+                                                <option value="Assistant Manager">🎖️ Assistant Manager (Junior Officer)</option>
+                                                <option value="Director">🛡️ Director / Guild Marshal</option>
+                                                <option value="Senior Staff">Senior Staff</option>
+                                                <option value="Staff">Staff</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="sgd-form-group" style="margin:0;">
+                                            <label class="sgd-form-label">Custom Job Class Title (Optional Override)</label>
+                                            <input type="text" name="custom_job_class" class="sgd-form-input" placeholder="e.g. Operations Manager, Engineering Lead">
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="sgd-btn sgd-btn-gold sgd-btn-lg" style="box-shadow:0 0 15px rgba(255,215,0,0.5);">
+                                        👑 Promote Employee & Change Job Class to Manager
+                                    </button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- STAGE 4: ALREADY PROMOTED TO MANAGER -->
+                        <?php if ( $is_manager || $promo_status === 'promoted' ): ?>
+                            <div style="background:#09120c; border:1px solid #27ae60; border-radius:8px; padding:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <div style="color:#2ecc71; font-weight:bold; font-size:14px;">
+                                        👑 Promoted to <?php echo esc_html( $cand['job_class'] ); ?>!
+                                    </div>
+                                    <div style="font-size:12px; color:#8fa0bd; margin-top:2px;">
+                                        This employee has mastered Level 30 and holds official Manager job class standing.
+                                    </div>
+                                </div>
+                                
+                                <!-- Fast Job Class Re-adjustment -->
+                                <form method="post" style="display:flex; gap:8px; align-items:center;">
+                                    <input type="hidden" name="sgd_action" value="sgd_admin_change_job_class">
+                                    <input type="hidden" name="target_user_id" value="<?php echo $cand_user_id; ?>">
+                                    <select name="new_job_class_select" class="sgd-form-select" style="width:160px; font-size:11px; padding:4px 8px;">
+                                        <option value="Manager" <?php selected( $cand['job_class'], 'Manager' ); ?>>Manager</option>
+                                        <option value="Senior Manager" <?php selected( $cand['job_class'], 'Senior Manager' ); ?>>Senior Manager</option>
+                                        <option value="Team Lead" <?php selected( $cand['job_class'], 'Team Lead' ); ?>>Team Lead</option>
+                                        <option value="Staff" <?php selected( $cand['job_class'], 'Staff' ); ?>>Staff</option>
+                                    </select>
+                                    <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-blue">Update Class</button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
+
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- ALL EMPLOYEES JOB CLASS REGISTRY TABLE -->
+        <h3 style="font-family:var(--font-title); font-size:18px; color:var(--wow-gold-light); margin:25px 0 12px 0;">
+            📋 All Company Employees & Job Class Registry
+        </h3>
+        <div style="background:#111420; border:2px solid var(--wow-gold-border); border-radius:8px; overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                <thead>
+                    <tr style="background:#090b12; border-bottom:2px solid var(--wow-gold); font-family:var(--font-pixel); font-size:8px; color:var(--wow-gold-light);">
+                        <th style="padding:10px 14px;">HERO</th>
+                        <th style="padding:10px 14px;">LEVEL & XP</th>
+                        <th style="padding:10px 14px;">CURRENT JOB CLASS</th>
+                        <th style="padding:10px 14px;">LEVEL 30 STATUS</th>
+                        <th style="padding:10px 14px; text-align:right;">ADMIN CHANGE CLASS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $users as $u ): 
+                        $u_xp = sgd_get_user_xp_data( $u->ID );
+                        $u_class = sgd_get_user_job_class( $u->ID );
+                        $u_avatar = sgd_get_user_avatar( $u->ID );
+                        $u_pstatus = get_user_meta( $u->ID, 'sgd_promotion_status', true ) ?: ( $u_xp['level'] >= 30 ? 'eligible' : 'none' );
+                    ?>
+                        <tr style="border-bottom:1px solid #1f2538;">
+                            <td style="padding:10px 14px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:22px;"><?php echo $u_avatar; ?></span>
+                                    <div>
+                                        <div style="font-weight:bold; color:#fff;"><?php echo esc_html( $u->display_name ); ?></div>
+                                        <div style="font-size:11px; color:#8fa0bd;"><?php echo esc_html( $u->user_login ); ?></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="padding:10px 14px;">
+                                <strong style="color:#ffd700;">Level <?php echo $u_xp['level']; ?></strong>
+                                <div style="font-size:11px; color:#00e5ff;"><?php echo number_format($u_xp['total_xp']); ?> XP</div>
+                            </td>
+                            <td style="padding:10px 14px;">
+                                <span class="sgd-job-class-pill <?php echo strtolower($u_class) === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>">
+                                    <?php echo ( strtolower($u_class) === 'manager' ? '⭐ ' : '🎖️ ' ) . esc_html( $u_class ); ?>
+                                </span>
+                            </td>
+                            <td style="padding:10px 14px;">
+                                <?php if ( $u_xp['level'] >= 30 ): ?>
+                                    <span style="color:#ffd700; font-weight:bold; font-size:12px;">★ Level 30 Master</span>
+                                    <div style="font-size:10px; color:#8fa0bd;">Status: <?php echo esc_html($u_pstatus); ?></div>
+                                <?php else: ?>
+                                    <span style="color:#8fa0bd; font-size:11px;">Level <?php echo $u_xp['level']; ?> / 30</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="padding:10px 14px; text-align:right;">
+                                <form method="post" style="display:inline-flex; gap:6px; align-items:center;">
+                                    <input type="hidden" name="sgd_action" value="sgd_admin_change_job_class">
+                                    <input type="hidden" name="target_user_id" value="<?php echo $u->ID; ?>">
+                                    <select name="new_job_class_select" class="sgd-form-select" style="font-size:11px; padding:4px 6px; width:130px;">
+                                        <option value="Staff" <?php selected( $u_class, 'Staff' ); ?>>Staff</option>
+                                        <option value="Senior Staff" <?php selected( $u_class, 'Senior Staff' ); ?>>Senior Staff</option>
+                                        <option value="Team Lead" <?php selected( $u_class, 'Team Lead' ); ?>>Team Lead</option>
+                                        <option value="Assistant Manager" <?php selected( $u_class, 'Assistant Manager' ); ?>>Assistant Manager</option>
+                                        <option value="Manager" <?php selected( $u_class, 'Manager' ); ?>>Manager</option>
+                                        <option value="Director" <?php selected( $u_class, 'Director' ); ?>>Director</option>
+                                    </select>
+                                    <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-blue" style="font-size:8px; padding:4px 8px;">Update</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- 1. SOS HELP DISPATCH BOARD -->
-    <div id="admin-sec-sos" class="sgd-admin-section" style="<?php echo ( ! $edit_task && ! $edit_ach && ! empty( $sos_requests ) ) ? 'display:block;' : 'display:none;'; ?>">
+    <div id="admin-sec-sos" class="sgd-admin-section" style="<?php echo ( ! $edit_task && ! $edit_ach && ! empty( $sos_requests ) && empty( $lvl30_candidates ) && $admin_tab !== 'promotion' ) ? 'display:block;' : 'display:none;'; ?>">
         <h3 style="font-family:var(--font-title); font-size:18px; color:#ff7675; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
             <span>🚨</span> Emergency Reinforcements Dispatch Board
         </h3>
@@ -622,9 +917,39 @@ foreach ( $emp_unlocked_raw as $eu ) {
                     </div>
 
                     <div class="sgd-form-group">
-                        <label class="sgd-form-label">Amount</label>
-                        <input type="number" name="diamond_amount" class="sgd-form-input" value="500" min="0">
+                        <label class="sgd-form-label">Diamond Amount</label>
+                        <input type="number" name="diamond_amount" class="sgd-form-input" value="0" min="0">
                     </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:10px; border-top:1px dashed #2f3b55; padding-top:10px;">
+                    <div class="sgd-form-group">
+                        <label class="sgd-form-label">⭐ XP Adjustment Action</label>
+                        <select name="xp_mode" class="sgd-form-select">
+                            <option value="add">➕ Add XP</option>
+                            <option value="deduct">➖ Deduct XP</option>
+                            <option value="set">⚙️ Set Exact XP</option>
+                        </select>
+                    </div>
+
+                    <div class="sgd-form-group">
+                        <label class="sgd-form-label">XP Amount (Level 30 floor = 10,092 XP)</label>
+                        <input type="number" name="xp_amount" class="sgd-form-input" value="0" min="0">
+                    </div>
+                </div>
+
+                <div class="sgd-form-group" style="margin-top:10px; border-top:1px dashed #2f3b55; padding-top:10px;">
+                    <label class="sgd-form-label">🎖️ Change Employee Job Class</label>
+                    <select name="job_class" class="sgd-form-select">
+                        <option value="">-- Keep Current Job Class --</option>
+                        <option value="Staff">Staff</option>
+                        <option value="Senior Staff">Senior Staff</option>
+                        <option value="Team Lead">Team Lead</option>
+                        <option value="Assistant Manager">Assistant Manager</option>
+                        <option value="Manager">⭐ Manager</option>
+                        <option value="Senior Manager">Senior Manager</option>
+                        <option value="Director">Director</option>
+                    </select>
                 </div>
 
                 <button type="submit" class="sgd-btn sgd-btn-gold">

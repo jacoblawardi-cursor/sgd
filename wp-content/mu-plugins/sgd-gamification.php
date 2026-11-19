@@ -58,6 +58,13 @@ function sgd_install_database() {
         $wpdb->query( "ALTER TABLE `$table_tasks` ADD COLUMN `external_url` VARCHAR(255) DEFAULT NULL AFTER `is_recurring`" );
     }
 
+    // Ensure reward_xp column exists for tasks
+    $has_xp_col = $wpdb->get_results( "SHOW COLUMNS FROM `$table_tasks` LIKE 'reward_xp'" );
+    if ( empty( $has_xp_col ) ) {
+        $wpdb->query( "ALTER TABLE `$table_tasks` ADD COLUMN `reward_xp` INT NOT NULL DEFAULT 200 AFTER `reward_diamonds`" );
+        $wpdb->query( "UPDATE `$table_tasks` SET `reward_xp` = `reward_diamonds` WHERE `reward_xp` = 0 OR `reward_xp` IS NULL" );
+    }
+
     // Task completions & photo proof log table (preserves photo submissions across recurring daily resets)
     $table_task_logs = $wpdb->prefix . 'sgd_task_logs';
     $sql_task_logs = "CREATE TABLE IF NOT EXISTS $table_task_logs (
@@ -67,6 +74,7 @@ function sgd_install_database() {
         task_type VARCHAR(20) NOT NULL DEFAULT 'daily',
         user_id BIGINT UNSIGNED NOT NULL,
         diamonds_awarded INT NOT NULL DEFAULT 0,
+        xp_awarded INT NOT NULL DEFAULT 0,
         streak_count INT NOT NULL DEFAULT 0,
         streak_bonus INT NOT NULL DEFAULT 0,
         proof_image_url TEXT DEFAULT NULL,
@@ -75,6 +83,12 @@ function sgd_install_database() {
         PRIMARY KEY (id)
     ) $charset_collate;";
     dbDelta( $sql_task_logs );
+
+    // Ensure xp_awarded column exists on task logs
+    $has_log_xp = $wpdb->get_results( "SHOW COLUMNS FROM `$table_task_logs` LIKE 'xp_awarded'" );
+    if ( empty( $has_log_xp ) ) {
+        $wpdb->query( "ALTER TABLE `$table_task_logs` ADD COLUMN `xp_awarded` INT NOT NULL DEFAULT 0 AFTER `diamonds_awarded`" );
+    }
 
     // Backfill historical completed tasks with proofs if log table is empty
     $existing_log_count = $wpdb->get_var( "SELECT COUNT(*) FROM $table_task_logs" );
@@ -107,10 +121,18 @@ function sgd_install_database() {
         description TEXT NOT NULL,
         icon VARCHAR(64) NOT NULL DEFAULT '🏆',
         reward_diamonds INT NOT NULL DEFAULT 100,
+        reward_xp INT NOT NULL DEFAULT 200,
         category VARCHAR(50) NOT NULL DEFAULT 'General',
         PRIMARY KEY (id)
     ) $charset_collate;";
     dbDelta( $sql_achievements );
+
+    // Ensure reward_xp column exists on achievements
+    $has_ach_xp = $wpdb->get_results( "SHOW COLUMNS FROM `$table_achievements` LIKE 'reward_xp'" );
+    if ( empty( $has_ach_xp ) ) {
+        $wpdb->query( "ALTER TABLE `$table_achievements` ADD COLUMN `reward_xp` INT NOT NULL DEFAULT 200 AFTER `reward_diamonds`" );
+        $wpdb->query( "UPDATE `$table_achievements` SET `reward_xp` = `reward_diamonds` WHERE `reward_xp` = 0 OR `reward_xp` IS NULL" );
+    }
 
     // User Achievements table
     $table_user_achievements = $wpdb->prefix . 'sgd_user_achievements';
@@ -289,6 +311,104 @@ function sgd_seed_default_data() {
         if ( ! get_user_meta( $admin_id, 'sgd_faction', true ) ) {
             update_user_meta( $admin_id, 'sgd_faction', 'High Command' );
             update_user_meta( $admin_id, 'sgd_hero_title', 'Grand Marshal Admin' );
+        }
+        if ( ! get_user_meta( $admin_id, 'sgd_job_class', true ) ) {
+            update_user_meta( $admin_id, 'sgd_job_class', 'Administrator' );
+        }
+        if ( ! get_user_meta( $admin_id, 'sgd_avatar', true ) ) {
+            update_user_meta( $admin_id, 'sgd_avatar', '👑' );
+        }
+    }
+
+    // Default metadata for employee 1 (Arthas)
+    if ( $emp_id && ! is_wp_error( $emp_id ) ) {
+        if ( ! get_user_meta( $emp_id, 'sgd_job_class', true ) ) {
+            update_user_meta( $emp_id, 'sgd_job_class', 'Staff' );
+        }
+        if ( ! get_user_meta( $emp_id, 'sgd_avatar', true ) ) {
+            update_user_meta( $emp_id, 'sgd_avatar', '⚔️' );
+        }
+    }
+
+    // Default metadata for employee 2 (Jaina)
+    if ( $emp2_id && ! is_wp_error( $emp2_id ) ) {
+        if ( ! get_user_meta( $emp2_id, 'sgd_job_class', true ) ) {
+            update_user_meta( $emp2_id, 'sgd_job_class', 'Staff' );
+        }
+        if ( ! get_user_meta( $emp2_id, 'sgd_avatar', true ) ) {
+            update_user_meta( $emp2_id, 'sgd_avatar', '🧙‍♀️' );
+        }
+    }
+
+    // Third Demo Employee: Sylvanas the Ranger General (LEVEL 30 HERO)
+    $emp3_email = 'employee3@example.com';
+    $emp3_id = email_exists( $emp3_email );
+    if ( ! $emp3_id ) {
+        $emp3_id = wp_insert_user( [
+            'user_login'    => 'employee3',
+            'user_pass'     => 'Emp123!',
+            'user_email'    => $emp3_email,
+            'role'          => 'employee',
+            'display_name'  => 'Sylvanas the Ranger General',
+        ] );
+    }
+    if ( $emp3_id && ! is_wp_error( $emp3_id ) ) {
+        if ( ! get_user_meta( $emp3_id, 'sgd_diamonds', true ) ) {
+            update_user_meta( $emp3_id, 'sgd_diamonds', 3200 );
+        }
+        // Level 30 XP requirement: sqrt(xp / 12) = 29 -> 29^2 * 12 = 10,092. Set to 10,350 XP.
+        if ( ! get_user_meta( $emp3_id, 'sgd_xp', true ) ) {
+            update_user_meta( $emp3_id, 'sgd_xp', 10350 );
+        }
+        if ( ! get_user_meta( $emp3_id, 'sgd_job_class', true ) ) {
+            update_user_meta( $emp3_id, 'sgd_job_class', 'Staff' );
+        }
+        if ( ! get_user_meta( $emp3_id, 'sgd_avatar', true ) ) {
+            update_user_meta( $emp3_id, 'sgd_avatar', '🏹' );
+        }
+        if ( ! get_user_meta( $emp3_id, 'sgd_promotion_status', true ) ) {
+            update_user_meta( $emp3_id, 'sgd_promotion_status', 'eligible' );
+        }
+        if ( ! get_user_meta( $emp3_id, 'sgd_faction', true ) ) {
+            update_user_meta( $emp3_id, 'sgd_faction', 'Forsaken Vanguard' );
+            update_user_meta( $emp3_id, 'sgd_hero_title', 'Ranger-General of the Guild' );
+            update_user_meta( $emp3_id, 'sgd_daily_streak', 6 );
+            update_user_meta( $emp3_id, 'sgd_best_streak', 9 );
+            update_user_meta( $emp3_id, 'sgd_last_task_date', current_time( 'Y-m-d' ) );
+        }
+    }
+
+    // Fourth Demo Employee: Thrall the Earth Warder
+    $emp4_email = 'employee4@example.com';
+    $emp4_id = email_exists( $emp4_email );
+    if ( ! $emp4_id ) {
+        $emp4_id = wp_insert_user( [
+            'user_login'    => 'employee4',
+            'user_pass'     => 'Emp123!',
+            'user_email'    => $emp4_email,
+            'role'          => 'employee',
+            'display_name'  => 'Thrall the Earth Warder',
+        ] );
+    }
+    if ( $emp4_id && ! is_wp_error( $emp4_id ) ) {
+        if ( ! get_user_meta( $emp4_id, 'sgd_diamonds', true ) ) {
+            update_user_meta( $emp4_id, 'sgd_diamonds', 850 );
+        }
+        if ( ! get_user_meta( $emp4_id, 'sgd_xp', true ) ) {
+            update_user_meta( $emp4_id, 'sgd_xp', 400 ); // Level 5
+        }
+        if ( ! get_user_meta( $emp4_id, 'sgd_job_class', true ) ) {
+            update_user_meta( $emp4_id, 'sgd_job_class', 'Staff' );
+        }
+        if ( ! get_user_meta( $emp4_id, 'sgd_avatar', true ) ) {
+            update_user_meta( $emp4_id, 'sgd_avatar', '⚡' );
+        }
+        if ( ! get_user_meta( $emp4_id, 'sgd_faction', true ) ) {
+            update_user_meta( $emp4_id, 'sgd_faction', 'Earthen Ring Logistics' );
+            update_user_meta( $emp4_id, 'sgd_hero_title', 'Shaman of the Elements' );
+            update_user_meta( $emp4_id, 'sgd_daily_streak', 1 );
+            update_user_meta( $emp4_id, 'sgd_best_streak', 3 );
+            update_user_meta( $emp4_id, 'sgd_last_task_date', current_time( 'Y-m-d' ) );
         }
     }
 
@@ -816,13 +936,13 @@ function sgd_get_user_xp_data( $user_id = null ) {
     $streak_info = sgd_get_user_streak( $user_id );
 
     // XP breakdown
+    $user_stored_xp = (int) get_user_meta( $user_id, 'sgd_xp', true );
     $xp_quests = ( $daily_done * 150 ) + ( $urgent_done * 500 );
     $xp_achs   = $ach_count * 200;
     $xp_kudos  = $kudos_received * 75;
     $xp_streak = $streak_info['current'] * 50;
-    $xp_wealth = min( 2500, (int) round( $diamonds * 0.15 ) );
 
-    $total_xp = max( 150, $xp_quests + $xp_achs + $xp_kudos + $xp_streak + $xp_wealth );
+    $total_xp = max( 150, $user_stored_xp + $xp_quests + $xp_achs + $xp_kudos + $xp_streak );
 
     // Calculate level (1 to 60)
     // Formula: level = floor( sqrt( total_xp / 12 ) ) + 1
@@ -834,6 +954,15 @@ function sgd_get_user_xp_data( $user_id = null ) {
     $xp_range         = max( 50, $xp_next_ceil - $xp_current_floor );
     $xp_in_level      = max( 0, $total_xp - $xp_current_floor );
     $percent          = min( 100, max( 8, (int) round( ( $xp_in_level / $xp_range ) * 100 ) ) );
+
+    // Check Level 30 milestone trigger
+    if ( $level >= 30 ) {
+        $p_status = get_user_meta( $user_id, 'sgd_promotion_status', true );
+        if ( empty( $p_status ) ) {
+            update_user_meta( $user_id, 'sgd_promotion_status', 'eligible' );
+            update_user_meta( $user_id, 'sgd_lvl30_reached_at', current_time( 'mysql' ) );
+        }
+    }
 
     $faction = get_user_meta( $user_id, 'sgd_faction', true );
     if ( empty( $faction ) ) {
@@ -858,6 +987,134 @@ function sgd_get_user_xp_data( $user_id = null ) {
         'ach_count'      => $ach_count,
         'kudos_received' => $kudos_received,
     ];
+}
+
+// User Stored XP Helpers
+function sgd_get_user_xp( $user_id = null ) {
+    if ( ! $user_id ) $user_id = get_current_user_id();
+    return (int) get_user_meta( $user_id, 'sgd_xp', true );
+}
+
+function sgd_set_xp( $user_id, $amount ) {
+    update_user_meta( $user_id, 'sgd_xp', max( 0, (int) $amount ) );
+}
+
+function sgd_add_xp( $user_id, $amount ) {
+    $current = sgd_get_user_xp( $user_id );
+    $new = $current + (int) $amount;
+    sgd_set_xp( $user_id, $new );
+
+    // Check if hero crossed Level 30 milestone
+    $xp_data = sgd_get_user_xp_data( $user_id );
+    if ( $xp_data['level'] >= 30 ) {
+        $status = get_user_meta( $user_id, 'sgd_promotion_status', true );
+        if ( empty( $status ) || $status === 'none' ) {
+            update_user_meta( $user_id, 'sgd_promotion_status', 'eligible' );
+            update_user_meta( $user_id, 'sgd_lvl30_reached_at', current_time( 'mysql' ) );
+        }
+    }
+    return $new;
+}
+
+// Employee Job Class Helpers (e.g. Staff -> Manager)
+function sgd_get_user_job_class( $user_id = null ) {
+    if ( ! $user_id ) $user_id = get_current_user_id();
+    $class = get_user_meta( $user_id, 'sgd_job_class', true );
+    if ( empty( $class ) ) {
+        if ( user_can( $user_id, 'administrator' ) ) {
+            return 'Administrator';
+        }
+        return 'Staff';
+    }
+    return $class;
+}
+
+function sgd_set_user_job_class( $user_id, $class ) {
+    return update_user_meta( $user_id, 'sgd_job_class', sanitize_text_field( $class ) );
+}
+
+// Employee Avatar & Crest Helpers
+function sgd_get_user_avatar( $user_id = null ) {
+    if ( ! $user_id ) $user_id = get_current_user_id();
+    $avatar = get_user_meta( $user_id, 'sgd_avatar', true );
+    if ( ! empty( $avatar ) ) {
+        return $avatar;
+    }
+    $user = get_userdata( $user_id );
+    $login = $user ? $user->user_login : '';
+    if ( user_can( $user_id, 'administrator' ) || $login === 'admin' ) {
+        return '👑';
+    }
+    if ( $login === 'employee2' ) {
+        return '🧙‍♀️';
+    }
+    if ( $login === 'employee3' ) {
+        return '🏹';
+    }
+    if ( $login === 'employee4' ) {
+        return '⚡';
+    }
+    return '⚔️';
+}
+
+function sgd_set_user_avatar( $user_id, $avatar ) {
+    return update_user_meta( $user_id, 'sgd_avatar', sanitize_text_field( $avatar ) );
+}
+
+function sgd_get_avatar_options() {
+    return [
+        '🏹' => '🏹 Sylvanas / Ranger General (Elven Marksman)',
+        '⚡' => '⚡ Thrall / Shaman of the Elements (Stormcaller)',
+        '⚔️' => '⚔️ Arthas / Paladin Knight (Holy Crusader)',
+        '🧙‍♀️' => '🧙‍♀️ Jaina / Kirin Tor Archmage (Arcane Sorceress)',
+        '🛡️' => '🛡️ Muradin / Mountain King (Ironforge Guardian)',
+        '🗡️' => '🗡️ Illidan / Demon Hunter (Shadow Blade)',
+        '👑' => '👑 Grand Marshal / High Commander',
+        '💼' => '💼 Corporate Lead / Guild Manager',
+        '🐉' => '🐉 Dragon Aspect / Mythic Paragon',
+        '🔥' => '🔥 Flamekeeper / Senior Specialist',
+    ];
+}
+
+function sgd_get_available_job_classes() {
+    return [
+        'Staff'             => 'Staff (Entry Hero)',
+        'Senior Staff'      => 'Senior Staff (Experienced Specialist)',
+        'Team Lead'         => 'Team Lead (Squad Commander)',
+        'Assistant Manager' => 'Assistant Manager (Junior Officer)',
+        'Manager'           => 'Manager (Full Department Leader)',
+        'Senior Manager'    => 'Senior Manager (Executive Strategist)',
+        'Director'          => 'Director / Guild Marshal',
+    ];
+}
+
+// Query Level 30 Candidates for Admin Promotion Review
+function sgd_get_level_30_candidates() {
+    $employees = get_users( [ 'role' => 'employee' ] );
+    $candidates = [];
+    foreach ( $employees as $emp ) {
+        $xp_data = sgd_get_user_xp_data( $emp->ID );
+        if ( $xp_data['level'] >= 30 ) {
+            $status = get_user_meta( $emp->ID, 'sgd_promotion_status', true );
+            if ( empty( $status ) ) {
+                $status = 'eligible';
+                update_user_meta( $emp->ID, 'sgd_promotion_status', 'eligible' );
+            }
+            $task_id = (int) get_user_meta( $emp->ID, 'sgd_promotion_task_id', true );
+            $candidates[] = [
+                'user_id'           => $emp->ID,
+                'user_login'        => $emp->user_login,
+                'display_name'      => $emp->display_name,
+                'level'             => $xp_data['level'],
+                'total_xp'          => $xp_data['total_xp'],
+                'job_class'         => sgd_get_user_job_class( $emp->ID ),
+                'avatar'            => sgd_get_user_avatar( $emp->ID ),
+                'promotion_status'  => $status,
+                'promotion_task_id' => $task_id,
+            ];
+        }
+    }
+    return $candidates;
 }
 
 // Get all titles unlocked/available for a hero
@@ -931,6 +1188,8 @@ function sgd_get_leaderboard_data() {
             'diamonds'     => $diamonds,
             'level'        => $xp_data['level'],
             'total_xp'     => $xp_data['total_xp'],
+            'job_class'    => sgd_get_user_job_class( $u->ID ),
+            'avatar'       => sgd_get_user_avatar( $u->ID ),
             'faction'      => $xp_data['faction'],
             'title'        => $xp_data['title'],
             'daily_done'   => $xp_data['daily_done'],
@@ -1094,7 +1353,7 @@ function sgd_check_achievements( $user_id ) {
     }
 
     foreach ( $to_unlock as $slug ) {
-        $ach = $wpdb->get_row( $wpdb->prepare( "SELECT id, reward_diamonds FROM $table_ach WHERE slug = %s", $slug ) );
+        $ach = $wpdb->get_row( $wpdb->prepare( "SELECT id, reward_diamonds, reward_xp FROM $table_ach WHERE slug = %s", $slug ) );
         if ( $ach ) {
             $already = $wpdb->get_var( $wpdb->prepare(
                 "SELECT COUNT(*) FROM $table_user_ach WHERE user_id = %d AND achievement_id = %d",
@@ -1106,9 +1365,10 @@ function sgd_check_achievements( $user_id ) {
                     'achievement_id' => $ach->id,
                     'unlocked_at'    => current_time( 'mysql' ),
                 ] );
-                // Award achievement bonus
-                if ( $ach->reward_diamonds > 0 ) {
-                    sgd_add_diamonds( $user_id, $ach->reward_diamonds );
+                // Award achievement bonus as XP (instead of diamond/primogem)
+                $bonus_xp = ! empty( $ach->reward_xp ) ? (int) $ach->reward_xp : ( ! empty( $ach->reward_diamonds ) ? (int) $ach->reward_diamonds : 200 );
+                if ( $bonus_xp > 0 ) {
+                    sgd_add_xp( $user_id, $bonus_xp );
                 }
                 // Queue gilded achievement unlocked notification for the employee
                 sgd_queue_achievement_alert( $user_id, $ach->id );
@@ -1228,11 +1488,31 @@ function sgd_handle_form_actions() {
             $user = get_user_by( 'login', 'employee' );
         } elseif ( $target === 'employee2' ) {
             $user = get_user_by( 'login', 'employee2' );
+        } elseif ( $target === 'employee3' ) {
+            $user = get_user_by( 'login', 'employee3' );
+        } elseif ( $target === 'employee4' ) {
+            $user = get_user_by( 'login', 'employee4' );
+        } else {
+            $user = get_user_by( 'login', $target );
+            if ( ! $user && is_numeric( $target ) ) {
+                $user = get_user_by( 'id', (int) $target );
+            }
         }
         if ( isset( $user ) && $user ) {
             wp_set_current_user( $user->ID );
             wp_set_auth_cookie( $user->ID );
             sgd_set_flash( 'success', 'Switched character to: ' . esc_html( $user->display_name ) );
+        }
+        wp_safe_redirect( sgd_get_portal_url() );
+        exit;
+    }
+
+    // Change Hero Avatar Action
+    if ( $action === 'sgd_change_avatar' ) {
+        $avatar_icon = sanitize_text_field( $_POST['avatar_icon'] ?? '⚔️' );
+        if ( ! empty( $avatar_icon ) ) {
+            sgd_set_user_avatar( $current_user_id, $avatar_icon );
+            sgd_set_flash( 'success', '🎨 Hero Avatar updated to: ' . esc_html( $avatar_icon ) );
         }
         wp_safe_redirect( sgd_get_portal_url() );
         exit;
@@ -1763,23 +2043,45 @@ function sgd_handle_form_actions() {
             exit;
         }
 
-        // Reward & Streak calculation
-        $base_reward = (int) $task->reward_diamonds;
-        if ( $base_reward <= 0 ) {
-            $base_reward = ( $task->type === 'urgent' ) ? 1000 : 200;
-        }
-
+        // Reward & Streak calculation: Reward XP for daily tasks and special promotion tasks!
+        $base_xp = ! empty( $task->reward_xp ) ? (int) $task->reward_xp : ( ! empty( $task->reward_diamonds ) ? (int) $task->reward_diamonds : 200 );
         $streak_count = 0;
         $streak_bonus = 0;
-        $total_diamonds = $base_reward;
+        $total_xp_awarded = $base_xp;
+        $total_diamonds = 0;
+
+        $is_promo_trial = false;
+        $promo_task_id = (int) get_user_meta( $current_user_id, 'sgd_promotion_task_id', true );
+        if ( ( $promo_task_id && $promo_task_id === (int) $task_id ) || ( isset( $task->category ) && $task->category === 'Promotion Evaluation' ) ) {
+            $is_promo_trial = true;
+        }
 
         if ( $task->type === 'daily' ) {
             $streak_data = sgd_record_user_daily_completion( $current_user_id );
             $streak_count = $streak_data['current'];
             if ( $streak_data['bonus_percent'] > 0 ) {
-                $streak_bonus = (int) round( $base_reward * ( $streak_data['bonus_percent'] / 100 ) );
-                $total_diamonds = $base_reward + $streak_bonus;
+                $streak_bonus = (int) round( $base_xp * ( $streak_data['bonus_percent'] / 100 ) );
+                $total_xp_awarded = $base_xp + $streak_bonus;
             }
+            // Reward XP instead of diamonds
+            sgd_add_xp( $current_user_id, $total_xp_awarded );
+        } elseif ( $is_promo_trial ) {
+            // Special Level 30 promotion task
+            sgd_add_xp( $current_user_id, $total_xp_awarded );
+            update_user_meta( $current_user_id, 'sgd_promotion_status', 'task_completed' );
+            update_user_meta( $current_user_id, 'sgd_promotion_task_completed_at', current_time( 'mysql' ) );
+        } elseif ( $task->type === 'urgent' ) {
+            // Urgent emergency bounty rewards diamonds & XP
+            $total_diamonds = (int) ( $task->reward_diamonds ?: 1000 );
+            sgd_add_diamonds( $current_user_id, $total_diamonds );
+            sgd_add_xp( $current_user_id, $total_xp_awarded );
+        } else {
+            sgd_add_xp( $current_user_id, $total_xp_awarded );
+        }
+
+        if ( $is_promo_trial ) {
+            update_user_meta( $current_user_id, 'sgd_promotion_status', 'task_completed' );
+            update_user_meta( $current_user_id, 'sgd_promotion_task_completed_at', current_time( 'mysql' ) );
         }
 
         // Mark task completed
@@ -1800,6 +2102,7 @@ function sgd_handle_form_actions() {
             'task_type'        => $task->type,
             'user_id'          => $current_user_id,
             'diamonds_awarded' => $total_diamonds,
+            'xp_awarded'       => $total_xp_awarded,
             'streak_count'     => $streak_count,
             'streak_bonus'     => $streak_bonus,
             'proof_image_url'  => $photo_url,
@@ -1807,18 +2110,21 @@ function sgd_handle_form_actions() {
             'completed_time'   => current_time( 'mysql' ),
         ] );
 
-        // Award total diamonds (base + streak bonus)
-        sgd_add_diamonds( $current_user_id, $total_diamonds );
-
         // Check and award automatic achievements (and queue gilded alerts)
         sgd_check_achievements( $current_user_id );
 
-        if ( $streak_bonus > 0 ) {
-            sgd_set_flash( 'celebration', "🔥 {$streak_count}-DAY STREAK! (+{$streak_bonus} 💎 Streak Bonus!) Quest completed for +{$total_diamonds} Total Diamonds! 💎" );
-        } elseif ( $streak_count === 1 ) {
-            sgd_set_flash( 'celebration', "🔥 STREAK STARTED (Day 1)! You earned +{$total_diamonds} Diamonds! Return tomorrow to ignite your bonus multiplier! 💎" );
+        if ( $is_promo_trial ) {
+            sgd_set_flash( 'celebration', "🌟 PROMOTION TRIAL COMPLETED! (+{$total_xp_awarded} XP!) Grand Marshal Admin has been notified to upgrade your Employee Job Class to Manager! 👑" );
+        } elseif ( $task->type === 'daily' ) {
+            if ( $streak_bonus > 0 ) {
+                sgd_set_flash( 'celebration', "🔥 {$streak_count}-DAY STREAK! (+{$streak_bonus} XP ⭐ Streak Bonus!) Daily Duty accomplished for +{$total_xp_awarded} Total XP! ⭐" );
+            } elseif ( $streak_count === 1 ) {
+                sgd_set_flash( 'celebration', "🔥 STREAK STARTED (Day 1)! You earned +{$total_xp_awarded} XP! Return tomorrow for streak bonuses! ⭐" );
+            } else {
+                sgd_set_flash( 'celebration', "🏆 DAILY QUEST ACCOMPLISHED! You delivered proof of honor and earned +{$total_xp_awarded} XP! ⭐" );
+            }
         } else {
-            sgd_set_flash( 'celebration', "🏆 QUEST ACCOMPLISHED! You delivered proof of honor and earned +{$total_diamonds} Diamonds! 💎" );
+            sgd_set_flash( 'celebration', "🏆 QUEST ACCOMPLISHED! You delivered proof of honor and earned +{$total_xp_awarded} XP! ⭐" );
         }
         $redirect_tab = ( $task->type === 'urgent' ) ? 'urgent' : 'daily';
         wp_safe_redirect( sgd_get_portal_url( $redirect_tab ) );
@@ -1900,6 +2206,7 @@ function sgd_handle_form_actions() {
             $description = sanitize_textarea_field( $_POST['description'] ?? '' );
             $category = sanitize_text_field( $_POST['category'] ?? 'General' );
             $reward = (int) ( $_POST['reward_diamonds'] ?? ( $type === 'urgent' ? 1000 : 200 ) );
+            $reward_xp = (int) ( $_POST['reward_xp'] ?? ( ! empty($_POST['reward_diamonds']) ? $_POST['reward_diamonds'] : 200 ) );
             $assigned_to = (int) ( $_POST['assigned_to'] ?? 0 );
             $is_recurring = ( isset( $_POST['is_recurring'] ) || ( ! isset( $_POST['task_id'] ) && $type === 'daily' ) ) ? 1 : 0;
 
@@ -1912,6 +2219,7 @@ function sgd_handle_form_actions() {
                     'description'     => $description,
                     'category'        => $category,
                     'reward_diamonds' => $reward,
+                    'reward_xp'       => $reward_xp,
                     'assigned_to'     => $assigned_to,
                     'is_recurring'    => $is_recurring,
                 ];
@@ -1927,7 +2235,7 @@ function sgd_handle_form_actions() {
                     if ( $assigned_to > 0 ) {
                         $target_hero = get_user_by( 'id', $assigned_to );
                         $hero_name = $target_hero ? $target_hero->display_name : 'Employee';
-                        sgd_set_flash( 'success', "🎯 Custom Daily Task assigned specifically to {$hero_name}!" );
+                        sgd_set_flash( 'success', "🎯 Custom Task assigned specifically to {$hero_name}!" );
                     } else {
                         sgd_set_flash( 'success', 'New quest posted to the bulletin board!' );
                     }
@@ -1935,6 +2243,61 @@ function sgd_handle_form_actions() {
             }
             $redirect_page = sanitize_text_field( $_POST['redirect_to'] ?? 'admin' );
             wp_safe_redirect( sgd_get_portal_url( $redirect_page ) );
+            exit;
+        }
+
+        // Admin Assign Special Level 30 Promotion Task
+        if ( $action === 'sgd_admin_assign_promotion_task' ) {
+            $target_user_id = (int) ( $_POST['target_user_id'] ?? 0 );
+            $title = sanitize_text_field( $_POST['title'] ?? 'Level 30 Promotion Trial: Leadership Audit & Sprint Review' );
+            $desc  = sanitize_textarea_field( $_POST['description'] ?? 'Lead departmental audit, coordinate cross-team deliverables, and submit leadership verification report with photo proof.' );
+            $reward_xp = max( 100, (int) ( $_POST['reward_xp'] ?? 1000 ) );
+
+            if ( $target_user_id ) {
+                $wpdb->insert( $table_tasks, [
+                    'type'            => 'urgent',
+                    'title'           => $title,
+                    'description'     => $desc,
+                    'category'        => 'Promotion Evaluation',
+                    'reward_diamonds' => 200,
+                    'reward_xp'       => $reward_xp,
+                    'assigned_to'     => $target_user_id,
+                    'status'          => 'open',
+                    'is_recurring'    => 0,
+                    'created_at'      => current_time( 'mysql' ),
+                ] );
+                $new_task_id = $wpdb->insert_id;
+
+                update_user_meta( $target_user_id, 'sgd_promotion_status', 'task_assigned' );
+                update_user_meta( $target_user_id, 'sgd_promotion_task_id', $new_task_id );
+
+                $target_user = get_userdata( $target_user_id );
+                $target_name = $target_user ? $target_user->display_name : 'Employee';
+                sgd_set_flash( 'celebration', "⭐ SPECIAL PROMOTION TASK DISPATCHED! Assigned to {$target_name}. Once completed, you can change their Job Class to Manager! 👑" );
+            }
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'admin', 'admin_tab' => 'promotion' ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // Admin Change Employee Job Class (e.g. from Staff to Manager)
+        if ( $action === 'sgd_admin_change_job_class' ) {
+            $target_user_id = (int) ( $_POST['target_user_id'] ?? 0 );
+            $new_class_select = sanitize_text_field( $_POST['new_job_class_select'] ?? '' );
+            $custom_class = sanitize_text_field( $_POST['custom_job_class'] ?? '' );
+            $new_class = ! empty( $custom_class ) ? $custom_class : $new_class_select;
+
+            if ( $target_user_id && ! empty( $new_class ) ) {
+                $old_class = sgd_get_user_job_class( $target_user_id );
+                sgd_set_user_job_class( $target_user_id, $new_class );
+                update_user_meta( $target_user_id, 'sgd_promotion_status', 'promoted' );
+                update_user_meta( $target_user_id, 'sgd_promoted_at', current_time( 'mysql' ) );
+                update_user_meta( $target_user_id, 'sgd_pending_promotion_notice', $new_class );
+
+                $target_user = get_userdata( $target_user_id );
+                $target_name = $target_user ? $target_user->display_name : 'Employee';
+                sgd_set_flash( 'celebration', "👑 PROMOTION COMPLETE! {$target_name} is now promoted from {$old_class} to {$new_class}! 🎖️" );
+            }
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'admin', 'admin_tab' => 'promotion' ], home_url( '/' ) ) );
             exit;
         }
 
@@ -1969,19 +2332,40 @@ function sgd_handle_form_actions() {
             exit;
         }
 
-        // Admin Update Employee Diamonds or Achievements
+        // Admin Update Employee Diamonds, XP, Job Class, or Achievements
         if ( $action === 'sgd_admin_update_user' ) {
             $target_user_id = (int) ( $_POST['target_user_id'] ?? 0 );
             $diamond_change = (int) ( $_POST['diamond_amount'] ?? 0 );
             $change_mode = sanitize_text_field( $_POST['change_mode'] ?? 'add' );
 
             if ( $target_user_id ) {
-                if ( $change_mode === 'set' ) {
-                    sgd_set_diamonds( $target_user_id, $diamond_change );
-                } elseif ( $change_mode === 'add' ) {
-                    sgd_add_diamonds( $target_user_id, $diamond_change );
-                } else {
-                    sgd_deduct_diamonds( $target_user_id, $diamond_change );
+                if ( $diamond_change > 0 || $change_mode === 'set' ) {
+                    if ( $change_mode === 'set' ) {
+                        sgd_set_diamonds( $target_user_id, $diamond_change );
+                    } elseif ( $change_mode === 'add' ) {
+                        sgd_add_diamonds( $target_user_id, $diamond_change );
+                    } else {
+                        sgd_deduct_diamonds( $target_user_id, $diamond_change );
+                    }
+                }
+
+                // XP Adjustment
+                if ( isset( $_POST['xp_amount'] ) && is_numeric( $_POST['xp_amount'] ) ) {
+                    $xp_amount = (int) $_POST['xp_amount'];
+                    $xp_mode = sanitize_text_field( $_POST['xp_mode'] ?? 'add' );
+                    if ( $xp_mode === 'set' ) {
+                        sgd_set_xp( $target_user_id, $xp_amount );
+                    } elseif ( $xp_mode === 'add' ) {
+                        sgd_add_xp( $target_user_id, $xp_amount );
+                    } else {
+                        $curr_xp = sgd_get_user_xp( $target_user_id );
+                        sgd_set_xp( $target_user_id, max( 0, $curr_xp - $xp_amount ) );
+                    }
+                }
+
+                // Job Class Adjustment
+                if ( ! empty( $_POST['job_class'] ) ) {
+                    sgd_set_user_job_class( $target_user_id, sanitize_text_field( $_POST['job_class'] ) );
                 }
 
                 // Grant custom achievement if selected
@@ -1997,7 +2381,7 @@ function sgd_handle_form_actions() {
                     sgd_queue_achievement_alert( $target_user_id, $grant_ach );
                 }
 
-                sgd_set_flash( 'success', 'Hero record & Treasury balance updated.' );
+                sgd_set_flash( 'success', 'Hero record, Job Class & Balances updated.' );
             }
             wp_safe_redirect( sgd_get_portal_url( 'admin' ) );
             exit;
@@ -2011,6 +2395,7 @@ function sgd_handle_form_actions() {
             $description = sanitize_textarea_field( $_POST['description'] ?? '' );
             $icon = sanitize_text_field( $_POST['icon'] ?? '🏆' );
             $reward = (int) ( $_POST['reward_diamonds'] ?? 100 );
+            $reward_xp = (int) ( $_POST['reward_xp'] ?? ( ! empty($_POST['reward_diamonds']) ? $_POST['reward_diamonds'] : 200 ) );
             $category = sanitize_text_field( $_POST['category'] ?? 'General' );
 
             if ( empty( $title ) ) {
@@ -2022,6 +2407,7 @@ function sgd_handle_form_actions() {
                     'description'     => $description,
                     'icon'            => $icon,
                     'reward_diamonds' => $reward,
+                    'reward_xp'       => $reward_xp,
                     'category'        => $category,
                 ];
 
@@ -2071,9 +2457,12 @@ function sgd_handle_form_actions() {
                         'achievement_id' => $ach_id,
                         'unlocked_at'    => current_time( 'mysql' ),
                     ] );
-                    // Optionally award reward diamonds
-                    if ( isset( $_POST['award_bonus'] ) && $_POST['award_bonus'] === 'yes' && $ach && $ach->reward_diamonds > 0 ) {
-                        sgd_add_diamonds( $target_user_id, $ach->reward_diamonds );
+                    // Optionally award reward XP (instead of diamonds)
+                    if ( isset( $_POST['award_bonus'] ) && $_POST['award_bonus'] === 'yes' && $ach ) {
+                        $ach_xp = ! empty( $ach->reward_xp ) ? (int) $ach->reward_xp : ( ! empty( $ach->reward_diamonds ) ? (int) $ach->reward_diamonds : 200 );
+                        if ( $ach_xp > 0 ) {
+                            sgd_add_xp( $target_user_id, $ach_xp );
+                        }
                     }
                     // Queue gilded celebration for employee
                     sgd_queue_achievement_alert( $target_user_id, $ach_id );
@@ -2259,14 +2648,14 @@ function sgd_handle_form_actions() {
             exit;
         }
 
-        // Award daily report completion diamonds
-        $reward = 150;
+        // Award daily report completion XP (instead of diamonds)
+        $reward_xp = 200;
         if ( $current_user_id ) {
-            sgd_add_diamonds( $current_user_id, $reward );
+            sgd_add_xp( $current_user_id, $reward_xp );
         }
 
         $engine_label = ( $parsed_engine === 'gemini' ) ? 'Google Gemini AI ✨' : ( ( $parsed_engine === 'openai' ) ? 'OpenAI GPT ✨' : 'Smart Construction NLP ⚡' );
-        sgd_set_flash( 'celebration', "📋 LAPORAN HARIAN BERHASIL DIKIRIM! Berhasil di-decipher oleh {$engine_label} dan Anda memperoleh +{$reward} 💎!" );
+        sgd_set_flash( 'celebration', "📋 LAPORAN HARIAN BERHASIL DIKIRIM! Berhasil di-decipher oleh {$engine_label} dan Anda memperoleh +{$reward_xp} XP ⭐!" );
 
         wp_safe_redirect( add_query_arg( [
             'sgd_page'    => 'laporan-harian',

@@ -68,8 +68,8 @@ if ( $filter === 'mine' && ! $is_admin ) {
                     </div>
 
                     <div class="sgd-form-group">
-                        <label class="sgd-form-label">Diamond Reward</label>
-                        <input type="number" name="reward_diamonds" class="sgd-form-input" value="200" required>
+                        <label class="sgd-form-label">XP Reward (e.g. 200)</label>
+                        <input type="number" name="reward_xp" class="sgd-form-input" value="200" required>
                     </div>
                 </div>
 
@@ -91,7 +91,7 @@ if ( $filter === 'mine' && ! $is_admin ) {
                 </div>
 
                 <button type="submit" class="sgd-btn sgd-btn-gold">
-                    🎯 Assign Custom Daily Task (+200 💎)
+                    🎯 Assign Custom Daily Task (+200 XP ⭐)
                 </button>
             </form>
         </details>
@@ -107,9 +107,9 @@ if ( $filter === 'mine' && ! $is_admin ) {
             <span class="sgd-theme-text-hearthstone">Tavern Quest Log & Innkeeper's Duties</span>
         </h1>
         <p style="color:#9cb3c9; font-size:13px; margin-top:4px;">
-            <span class="sgd-theme-text-wow">Complete your assigned daily duties to maintain the guild! Each completed daily task rewards <strong style="color:#00e5ff;">+200 Diamonds</strong>.</span>
-            <span class="sgd-theme-text-genshin">Ad Astra Abyssosque! Complete your Adventurers' Guild commissions across Teyvat to earn <strong style="color:#ffe8b3;">+200 Primogems</strong>.</span>
-            <span class="sgd-theme-text-hearthstone">Pull up a chair by the hearth! Complete your daily tavern duties to earn <strong style="color:#74b9ff;">+200 Arcane Mana</strong>.</span>
+            <span class="sgd-theme-text-wow">Complete your assigned daily duties to level up your hero! Each completed daily task rewards <strong style="color:#ffd700;">+200 XP ⭐</strong> toward rank promotion.</span>
+            <span class="sgd-theme-text-genshin">Ad Astra Abyssosque! Complete your Adventurers' Guild commissions across Teyvat to earn <strong style="color:#ffd700;">+200 Adventure EXP ⭐</strong>.</span>
+            <span class="sgd-theme-text-hearthstone">Pull up a chair by the hearth! Complete your daily tavern duties to earn <strong style="color:#ffd700;">+200 Tavern XP ⭐</strong>.</span>
         </p>
     </div>
     
@@ -126,10 +126,8 @@ if ( $filter === 'mine' && ! $is_admin ) {
 
         <div style="background:#111522; border:2px solid var(--wow-gold); padding:6px 14px; border-radius:6px;">
             <span style="font-family:var(--font-pixel); font-size:8px; color:var(--wow-gold);">REWARD RATE:</span>
-            <strong style="color:#00e5ff; font-family:var(--font-pixel); font-size:12px; margin-left:4px;">
-                <span class="sgd-theme-text-wow">+200 💎</span>
-                <span class="sgd-theme-text-genshin" style="color:#ffe8b3;">+200 ✦</span>
-                <span class="sgd-theme-text-hearthstone" style="color:#74b9ff;">+200 💠</span>
+            <strong style="color:#ffd700; font-family:var(--font-pixel); font-size:12px; margin-left:4px;">
+                +200 XP ⭐
             </strong>
         </div>
     </div>
@@ -171,11 +169,11 @@ $page_streak = sgd_get_user_streak( $current_user_id );
     <div class="sgd-streak-milestones">
         <?php 
         $milestones = [
-            1 => [ 'label' => 'Day 1', 'bonus' => 'Base (+200 💎)', 'desc' => 'Ignite Flame' ],
-            2 => [ 'label' => 'Day 2', 'bonus' => '+10% Bonus (+220 💎)', 'desc' => 'Kindle' ],
-            3 => [ 'label' => 'Day 3', 'bonus' => '+20% Bonus (+240 💎)', 'desc' => 'Blaze' ],
-            4 => [ 'label' => 'Day 4', 'bonus' => '+30% Bonus (+260 💎)', 'desc' => 'Inferno' ],
-            5 => [ 'label' => 'Day 5+', 'bonus' => '+50% Bonus (+300 💎)', 'desc' => '🔥 MAX FIRE' ],
+            1 => [ 'label' => 'Day 1', 'bonus' => 'Base (+200 XP ⭐)', 'desc' => 'Ignite Flame' ],
+            2 => [ 'label' => 'Day 2', 'bonus' => '+10% Bonus (+220 XP ⭐)', 'desc' => 'Kindle' ],
+            3 => [ 'label' => 'Day 3', 'bonus' => '+20% Bonus (+240 XP ⭐)', 'desc' => 'Blaze' ],
+            4 => [ 'label' => 'Day 4', 'bonus' => '+30% Bonus (+260 XP ⭐)', 'desc' => 'Inferno' ],
+            5 => [ 'label' => 'Day 5+', 'bonus' => '+50% Bonus (+300 XP ⭐)', 'desc' => '🔥 MAX FIRE' ],
         ];
         foreach ( $milestones as $step => $m ): 
             $is_active_step = ( $page_streak['current'] >= $step );
@@ -198,19 +196,24 @@ $page_streak = sgd_get_user_streak( $current_user_id );
     <?php else: ?>
         <?php foreach ( $daily_tasks as $task ): 
             $is_completed = ( $task->status === 'completed' );
-            $reward = $task->reward_diamonds ? $task->reward_diamonds : 200;
+            $reward_xp = ! empty( $task->reward_xp ) ? (int) $task->reward_xp : ( ! empty( $task->reward_diamonds ) ? (int) $task->reward_diamonds : 200 );
             $is_assigned = ( $task->assigned_to > 0 );
             $assigned_user = $is_assigned ? get_user_by( 'id', $task->assigned_to ) : null;
             $is_assigned_to_me = ( $is_assigned && $task->assigned_to == $current_user_id );
             $can_work_on_it = ( ! $is_assigned || $is_assigned_to_me || $is_admin );
+            $is_promo = ( isset( $task->category ) && $task->category === 'Promotion Evaluation' );
         ?>
-            <div class="sgd-quest-card <?php echo $is_completed ? 'completed-border' : ''; ?>" style="<?php echo $is_assigned_to_me ? 'border:3px solid #8e44ad; box-shadow:0 0 15px rgba(142,68,173,0.3);' : ''; ?>">
+            <div class="sgd-quest-card <?php echo $is_completed ? 'completed-border' : ''; ?> <?php echo $is_promo ? 'sgd-promo-trial-card' : ''; ?>" style="<?php echo $is_assigned_to_me ? 'border:3px solid #8e44ad; box-shadow:0 0 15px rgba(142,68,173,0.3);' : ''; ?>">
                 <div class="sgd-quest-top">
                     <div class="sgd-quest-header-left">
-                        <span class="sgd-quest-exclamation"><?php echo $is_completed ? '✅' : '❗'; ?></span>
+                        <span class="sgd-quest-exclamation"><?php echo $is_completed ? '✅' : ( $is_promo ? '👑' : '❗' ); ?></span>
                         <div>
                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
-                                <span class="sgd-quest-type-tag sgd-tag-daily">📜 Daily Duty</span>
+                                <?php if ( $is_promo ): ?>
+                                    <span class="sgd-quest-type-tag" style="background:#ffd700; color:#000; font-weight:bold;">👑 LEVEL 30 PROMOTION TRIAL</span>
+                                <?php else: ?>
+                                    <span class="sgd-quest-type-tag sgd-tag-daily">📜 Daily Duty</span>
+                                <?php endif; ?>
                                 <?php if ( ! empty( $task->is_recurring ) ): ?>
                                     <span class="sgd-status-badge" style="background:#1b3a24; border:1px solid #2ecc71; color:#2ecc71; font-size:7px;">🔄 Recurring Daily</span>
                                 <?php endif; ?>
@@ -241,7 +244,7 @@ $page_streak = sgd_get_user_streak( $current_user_id );
                     </div>
                     <div class="sgd-quest-reward-box">
                         <span>REWARD</span>
-                        <span class="sgd-quest-reward-num">+<?php echo $reward; ?> 💎</span>
+                        <span class="sgd-quest-reward-num">+<?php echo $reward_xp; ?> XP ⭐</span>
                     </div>
                 </div>
 
@@ -319,7 +322,7 @@ $page_streak = sgd_get_user_streak( $current_user_id );
                 <!-- Action Buttons: Need Help & Finish Job -->
                 <div class="sgd-quest-actions">
                     <?php if ( $is_completed ): ?>
-                        <span class="sgd-status-badge sgd-status-completed">✅ COMPLETED (+<?php echo $reward; ?> 💎 AWARDED)</span>
+                        <span class="sgd-status-badge sgd-status-completed">✅ COMPLETED (+<?php echo $reward_xp; ?> XP AWARDED)</span>
                     <?php else: ?>
                         <?php if ( $can_work_on_it ): ?>
                             <!-- FINISH JOB (PHOTO PROOF UPLOAD) -->
@@ -327,7 +330,7 @@ $page_streak = sgd_get_user_streak( $current_user_id );
                                     class="sgd-btn sgd-btn-green sgd-btn-finish-trigger"
                                     data-task-id="<?php echo $task->id; ?>"
                                     data-task-title="<?php echo esc_attr( $task->title ); ?>"
-                                    data-task-reward="<?php echo $reward; ?>">
+                                    data-task-reward="<?php echo $reward_xp; ?>">
                                 📸 Finish Job (Upload Photo Proof)
                             </button>
 

@@ -32,7 +32,7 @@ function sgd_create_sample_users() {
             'display_name' => 'Demo Admin',
         ] );
     }
-    // Employee account
+    // Employee account 1
     $emp_email = 'employee@example.com';
     if ( ! email_exists( $emp_email ) ) {
         wp_insert_user( [
@@ -42,6 +42,50 @@ function sgd_create_sample_users() {
             'role'       => 'employee',
             'display_name' => 'Demo Employee',
         ] );
+    }
+    // Employee account 2 (Jaina)
+    $emp2_email = 'employee2@example.com';
+    if ( ! email_exists( $emp2_email ) ) {
+        wp_insert_user( [
+            'user_login' => 'employee2',
+            'user_pass'  => 'Emp123!',
+            'user_email' => $emp2_email,
+            'role'       => 'employee',
+            'display_name' => 'Jaina the Archmage',
+        ] );
+    }
+    // Employee account 3 (Sylvanas - Level 30 Hero)
+    $emp3_email = 'employee3@example.com';
+    if ( ! email_exists( $emp3_email ) ) {
+        $u3 = wp_insert_user( [
+            'user_login' => 'employee3',
+            'user_pass'  => 'Emp123!',
+            'user_email' => $emp3_email,
+            'role'       => 'employee',
+            'display_name' => 'Sylvanas the Ranger General',
+        ] );
+        if ( $u3 && ! is_wp_error( $u3 ) ) {
+            update_user_meta( $u3, 'sgd_xp', 10350 ); // Level 30
+            update_user_meta( $u3, 'sgd_job_class', 'Staff' );
+            update_user_meta( $u3, 'sgd_avatar', '🏹' );
+            update_user_meta( $u3, 'sgd_promotion_status', 'eligible' );
+        }
+    }
+    // Employee account 4 (Thrall)
+    $emp4_email = 'employee4@example.com';
+    if ( ! email_exists( $emp4_email ) ) {
+        $u4 = wp_insert_user( [
+            'user_login' => 'employee4',
+            'user_pass'  => 'Emp123!',
+            'user_email' => $emp4_email,
+            'role'       => 'employee',
+            'display_name' => 'Thrall the Earth Warder',
+        ] );
+        if ( $u4 && ! is_wp_error( $u4 ) ) {
+            update_user_meta( $u4, 'sgd_xp', 400 );
+            update_user_meta( $u4, 'sgd_job_class', 'Staff' );
+            update_user_meta( $u4, 'sgd_avatar', '⚡' );
+        }
     }
 }
 

@@ -77,7 +77,7 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                     🏗️ SITE CONSTRUCTION & FIELD DAILY LOG
                 </span>
                 <span class="sgd-streak-bonus-pill" style="background:#00e5ff; color:#091428; font-weight:bold;">
-                    +150 💎 QUEST REWARD
+                    +200 XP ⭐ QUEST REWARD
                 </span>
             </div>
             <h1 class="sgd-section-title" style="color:#00e5ff; text-shadow:0 0 15px rgba(0,229,255,0.4);">
@@ -272,7 +272,7 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                     </div>
                 </div>
                 <div class="sgd-badge-reward-pill">
-                    🎁 +150 💎 Quest
+                    ⭐ +200 XP Quest
                 </div>
             </div>
 
@@ -475,7 +475,7 @@ $active_ai_provider = function_exists( 'sgd_get_active_ai_provider' ) ? sgd_get_
                         ⚡ Sistem akan memproses dan mengurai laporan secara otomatis setelah tombol diklik.
                     </div>
                     <button type="submit" id="sgd-submit-report-btn" class="sgd-btn sgd-btn-gold" style="font-size:14px; padding:12px 28px;">
-                        🚀 PROSES & KIRIM LAPORAN HARIAN (+150 💎)
+                        🚀 PROSES & KIRIM LAPORAN HARIAN (+200 XP ⭐)
                     </button>
                 </div>
             </form>

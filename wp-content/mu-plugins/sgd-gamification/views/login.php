@@ -110,6 +110,26 @@ $is_logged_in = is_user_logged_in();
                         <span style="font-size:8px; opacity:0.8;">[employee2 / Emp123!]</span>
                     </button>
                 </form>
+
+                <!-- Switch to Employee 3: Sylvanas (Level 30 Hero) -->
+                <form method="post">
+                    <input type="hidden" name="sgd_action" value="sgd_switch_user">
+                    <input type="hidden" name="target_user" value="employee3">
+                    <button type="submit" class="sgd-btn sgd-btn-gold" style="width:100%; justify-content:space-between; background:linear-gradient(90deg, #b8860b, #daa520); border-color:#ffd700; color:#fff; box-shadow:0 0 12px rgba(255,215,0,0.5);">
+                        <span>🏹 Play as Sylvanas (Employee 3 • LEVEL 30 MASTER)</span>
+                        <span style="font-size:8px; opacity:0.9; font-weight:bold;">[employee3 / Emp123!] ★ LVL 30</span>
+                    </button>
+                </form>
+
+                <!-- Switch to Employee 4: Thrall -->
+                <form method="post">
+                    <input type="hidden" name="sgd_action" value="sgd_switch_user">
+                    <input type="hidden" name="target_user" value="employee4">
+                    <button type="submit" class="sgd-btn sgd-btn-blue" style="width:100%; justify-content:space-between; background:#1b3a4b; border-color:#00e5ff; color:#fff;">
+                        <span>⚡ Play as Thrall (Employee 4)</span>
+                        <span style="font-size:8px; opacity:0.8;">[employee4 / Emp123!]</span>
+                    </button>
+                </form>
             </div>
         </div>
 

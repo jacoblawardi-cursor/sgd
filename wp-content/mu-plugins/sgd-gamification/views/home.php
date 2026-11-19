@@ -40,12 +40,18 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
             <?php 
             $home_xp = sgd_get_user_xp_data( $user_id ); 
             $home_streak = sgd_get_user_streak( $user_id );
+            $home_job_class = sgd_get_user_job_class( $user_id );
+            $home_avatar = sgd_get_user_avatar( $user_id );
+            $lvl30_candidates = $is_admin ? sgd_get_level_30_candidates() : [];
             ?>
             <span>
                 <span class="sgd-theme-text-wow">PLAYER:</span>
                 <span class="sgd-theme-text-genshin">TRAVELER:</span> 
                 <span class="sgd-theme-text-hearthstone">CHALLENGER:</span>
                 <strong style="color:#fff;"><?php echo $is_logged_in ? esc_html($current_user->display_name) : 'GUEST'; ?></strong>
+                <span class="sgd-job-class-pill <?php echo strtolower($home_job_class) === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>" style="margin-left:6px;">
+                    <?php echo ( strtolower($home_job_class) === 'manager' ? '⭐ ' : '🎖️ ' ) . esc_html($home_job_class); ?>
+                </span>
             </span>
             <span style="color:#ffd700;">
                 ★ LEVEL <?php echo $home_xp['level']; ?> 
@@ -60,7 +66,7 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
             <span style="color:#ff9f43;">
                 🔥 <span class="sgd-theme-text-wow">STREAK:</span><span class="sgd-theme-text-genshin">COMMISSION STREAK:</span><span class="sgd-theme-text-hearthstone">WIN STREAK:</span> 
                 <strong style="color:#fff;"><?php echo $home_streak['current']; ?> DAYS</strong>
-                <?php if ( $home_streak['bonus_percent'] > 0 ) echo ' <span style="background:rgba(255,159,67,0.25); border:1px solid #ff9f43; padding:1px 6px; border-radius:3px; font-size:9px; color:#ffc048;">+' . $home_streak['bonus_percent'] . '% BONUS</span>'; ?>
+                <?php if ( $home_streak['bonus_percent'] > 0 ) echo ' <span style="background:rgba(255,159,67,0.25); border:1px solid #ff9f43; padding:1px 6px; border-radius:3px; font-size:9px; color:#ffc048;">+' . $home_streak['bonus_percent'] . '% XP BONUS ⭐</span>'; ?>
             </span>
         </div>
     </div>
@@ -86,6 +92,106 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
             <a href="<?php echo esc_url( sgd_get_portal_url('admin') ); ?>" class="sgd-btn sgd-btn-sm sgd-btn-gold" style="white-space:nowrap;">
                 🛡️ Open SOS Dispatch Board ➔
             </a>
+        </div>
+    <?php endif; ?>
+
+    <!-- LEVEL 30 PROMOTION ALERT BANNER (FOR ADMIN) -->
+    <?php if ( $is_admin && ! empty( $lvl30_candidates ) ): ?>
+        <div class="sgd-lvl30-home-banner" style="background:radial-gradient(circle at 50% 20%, #2e240a 0%, #151105 100%); border:3px solid #ffd700; border-radius:8px; padding:16px 20px; margin-bottom:20px; box-shadow:0 0 25px rgba(255,215,0,0.5); animation:pulse-urgent 2s infinite; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="display:flex; align-items:center; gap:14px;">
+                <span style="font-size:34px;">👑</span>
+                <div>
+                    <div style="font-family:var(--font-pixel); font-size:9px; color:#ffd700; letter-spacing:1px; text-transform:uppercase;">
+                        ⭐ LEVEL 30 PROMOTION NOTICE: <?php echo count($lvl30_candidates); ?> HERO(ES) REACHED LEVEL 30!
+                    </div>
+                    <div style="font-size:13px; color:#fff; margin-top:3px;">
+                        <?php 
+                        $names_list = [];
+                        foreach ( $lvl30_candidates as $c ) {
+                            $names_list[] = '<strong>' . esc_html($c['display_name']) . '</strong> (' . esc_html($c['job_class']) . ')';
+                        }
+                        echo implode(', ', $names_list);
+                        ?> reached Level 30! Assign special custom task and promote them from Staff to Manager.
+                    </div>
+                </div>
+            </div>
+            <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'admin', 'admin_tab' => 'promotion' ], home_url( '/' ) ) ); ?>" class="sgd-btn sgd-btn-sm sgd-btn-gold" style="white-space:nowrap;">
+                👑 Open Promotion Hall ➔
+            </a>
+        </div>
+    <?php endif; ?>
+
+    <!-- FANCY HERO PROGRESSION & XP SHOWCASE WIDGET (FOR EMPLOYEES) -->
+    <?php if ( $is_logged_in && ! $is_admin ): 
+        $p_status = get_user_meta( $user_id, 'sgd_promotion_status', true );
+        $is_lvl30 = ( $home_xp['level'] >= 30 );
+    ?>
+        <div class="sgd-employee-hero-showcase <?php echo $is_lvl30 ? 'sgd-hero-lvl30-active' : ''; ?>">
+            <div class="sgd-showcase-left">
+                <div class="sgd-showcase-avatar-ring <?php echo $is_lvl30 ? 'ring-gold-mythic' : ''; ?>">
+                    <span class="sgd-showcase-avatar-icon"><?php echo $home_avatar; ?></span>
+                    <span class="sgd-showcase-lvl-badge <?php echo $is_lvl30 ? 'badge-gold-30' : ''; ?>">
+                        <?php echo $home_xp['level']; ?>
+                    </span>
+                </div>
+                <div class="sgd-showcase-meta">
+                    <div class="sgd-showcase-name-row">
+                        <span class="sgd-showcase-name"><?php echo esc_html( $current_user->display_name ); ?></span>
+                        <span class="sgd-job-class-pill <?php echo strtolower($home_job_class) === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>">
+                            <?php echo ( strtolower($home_job_class) === 'manager' ? '⭐ MANAGER' : '🎖️ STAFF' ); ?>
+                        </span>
+                        <?php if ( $is_lvl30 ): ?>
+                            <span class="sgd-status-badge" style="background:#ffd700; color:#000; font-weight:bold; font-size:7px;">
+                                👑 LEVEL 30 MASTER
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="sgd-showcase-title-row">
+                        <span style="color:#ffd700; font-family:var(--font-title); font-size:13px;">👑 <?php echo esc_html( $home_xp['title'] ); ?></span>
+                        <span style="color:#7f8fa6;">• <?php echo esc_html( $home_xp['faction'] ); ?></span>
+                    </div>
+
+                    <!-- Level 30 Promotion Status Notice for Employee -->
+                    <?php if ( $is_lvl30 ): ?>
+                        <div class="sgd-promo-status-banner">
+                            <?php if ( strtolower($home_job_class) === 'manager' || $p_status === 'promoted' ): ?>
+                                <span style="color:#2ecc71;">🎉 <strong>PROMOTED TO MANAGER!</strong> You have successfully earned executive guild status!</span>
+                            <?php elseif ( $p_status === 'task_completed' ): ?>
+                                <span style="color:#ffd700;">✨ <strong>SPECIAL PROMOTION TRIAL SUBMITTED!</strong> Grand Marshal Admin is reviewing your leadership proof for Manager promotion.</span>
+                            <?php elseif ( $p_status === 'task_assigned' ): ?>
+                                <span style="color:#00e5ff;">🌟 <strong>SPECIAL PROMOTION TRIAL ASSIGNED!</strong> Complete your custom task on the Daily Tasks board to qualify for Manager!</span>
+                            <?php else: ?>
+                                <span style="color:#f39c12;">🎓 <strong>LEVEL 30 MILESTONE REACHED!</strong> Grand Marshal Admin notified for your Manager promotion evaluation.</span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- FANCY ANIMATED GOLDEN XP BAR -->
+            <div class="sgd-showcase-xp-block">
+                <div class="sgd-showcase-xp-top">
+                    <span class="sgd-showcase-xp-tag">👑 HERO EXPERIENCE PROGRESSION (GOLDEN PATH):</span>
+                    <strong class="sgd-showcase-xp-ratio">
+                        <?php echo number_format($home_xp['xp_in_level']); ?> / <?php echo number_format($home_xp['xp_needed']); ?> XP 
+                        <span class="sgd-gold-xp-pill"><?php echo $home_xp['percent']; ?>%</span>
+                    </strong>
+                </div>
+                <div class="sgd-showcase-xp-bar-outer">
+                    <div class="sgd-showcase-xp-bar-fill" style="width:<?php echo $home_xp['percent']; ?>%;">
+                        <span class="sgd-showcase-xp-gloss"></span>
+                        <span class="sgd-showcase-xp-light-sweep"></span>
+                        <span class="sgd-showcase-xp-spark">
+                            <span class="sgd-spark-star">✦</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="sgd-showcase-xp-bottom">
+                    <span>Current Floor: <strong>Level <?php echo $home_xp['level']; ?></strong></span>
+                    <span class="sgd-total-xp-counter">✨ <?php echo number_format($home_xp['total_xp']); ?> Total XP Earned</span>
+                    <span>Target: <strong>Level <?php echo min(60, $home_xp['level'] + 1); ?></strong> ➔</span>
+                </div>
+            </div>
         </div>
     <?php endif; ?>
 
@@ -121,9 +227,9 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                         <span class="sgd-theme-text-hearthstone">📜 TAVERN QUEST LOG</span>
                     </span>
                     <span class="sgd-pill-reward">
-                        <span class="sgd-theme-text-wow">+200 💎 REWARD</span>
-                        <span class="sgd-theme-text-genshin">+200 ✦ PRIMOGEMS</span>
-                        <span class="sgd-theme-text-hearthstone">+200 💠 MANA</span>
+                        <span class="sgd-theme-text-wow">+200 XP ⭐ REWARD</span>
+                        <span class="sgd-theme-text-genshin">+200 XP ⭐ REWARD</span>
+                        <span class="sgd-theme-text-hearthstone">+200 XP ⭐ REWARD</span>
                     </span>
                     <?php if ( $daily_count > 0 ): ?>
                         <span class="sgd-pill-count"><?php echo $daily_count; ?> Available</span>
@@ -131,8 +237,8 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                 </div>
                 <span class="sgd-menu-btn-desc">
                     <span class="sgd-theme-text-wow">Contains jobs to do • "Need Help" & "Finish Job" with photo proof</span>
-                    <span class="sgd-theme-text-genshin">Katheryne's Guild • Complete daily commissions & claim Primogems</span>
-                    <span class="sgd-theme-text-hearthstone">Daily tavern duties • Complete quests to refill your Mana Crystals</span>
+                    <span class="sgd-theme-text-genshin">Katheryne's Guild • Complete daily commissions & claim XP</span>
+                    <span class="sgd-theme-text-hearthstone">Daily tavern duties • Complete quests to earn experience & level up</span>
                 </span>
             </div>
             <span class="sgd-menu-btn-arrow">➔</span>
@@ -149,9 +255,9 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                         <span class="sgd-theme-text-hearthstone">📋 INNKEEPER'S DAILY CHRONICLE</span>
                     </span>
                     <span class="sgd-pill-reward" style="background:rgba(0,229,255,0.2); border-color:#00e5ff; color:#00e5ff;">
-                        <span class="sgd-theme-text-wow">+150 💎 REWARD</span>
-                        <span class="sgd-theme-text-genshin">+150 ✦ PRIMOGEMS</span>
-                        <span class="sgd-theme-text-hearthstone">+150 💠 MANA</span>
+                        <span class="sgd-theme-text-wow">+200 XP ⭐ REWARD</span>
+                        <span class="sgd-theme-text-genshin">+200 XP ⭐ REWARD</span>
+                        <span class="sgd-theme-text-hearthstone">+200 XP ⭐ REWARD</span>
                     </span>
                     <span style="font-family:var(--font-pixel); font-size:8px; background:#70a1ff; color:#0b1933; padding:2px 6px; border-radius:3px;">🎙️ VOICE & AI DECIPHER</span>
                 </div>
