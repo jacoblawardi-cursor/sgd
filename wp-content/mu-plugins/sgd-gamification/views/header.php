@@ -324,6 +324,9 @@ $flash = sgd_get_flash();
                     <span class="sgd-badge-count" style="background:#ff4444;"><?php echo $urgent_count; ?></span>
                 <?php endif; ?>
             </a>
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'quests' ) ? 'active' : ''; ?>" style="border-color:#00e5ff; color:#00e5ff;">
+                🎯 QUESTS (KANBAN)
+            </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'shop' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'shop' ) ? 'active' : ''; ?>">
                 <span class="sgd-theme-text-wow">💎</span><span class="sgd-theme-text-genshin">✦</span><span class="sgd-theme-text-hearthstone">💠</span> CASH SHOP
             </a>
@@ -337,7 +340,7 @@ $flash = sgd_get_flash();
                 🔑 <?php echo $is_logged_in ? 'MY ACCOUNT' : 'LOG IN'; ?>
             </a>
             <?php if ( $is_admin ): ?>
-                <a href="<?php echo esc_url( sgd_get_portal_url( 'admin' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'admin' ) ? 'active' : ''; ?>" style="border-color:#ffcc00; margin-left:auto;">
+                <a href="<?php echo esc_url( sgd_get_portal_url( 'admin' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'admin' ) ? 'active' : ''; ?>" style="border-color:#ffcc00;">
                     🛡️ ADMIN COMMAND
                     <?php if ( $sos_count > 0 ): ?>
                         <span class="sgd-badge-count" style="background:#d63031; animation:pulse-urgent 1s infinite;">SOS: <?php echo $sos_count; ?></span>

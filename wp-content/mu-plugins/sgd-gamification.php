@@ -228,6 +228,102 @@ function sgd_install_database() {
         $wpdb->query( $sql_daily_reports );
     }
 
+    // Cicle Kanban: Task groups / Teams table (HQ, Tim, Proyek)
+    $table_quest_teams = $wpdb->prefix . 'sgd_quest_teams';
+    $sql_quest_teams = "CREATE TABLE IF NOT EXISTS $table_quest_teams (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        name VARCHAR(255) NOT NULL,
+        type VARCHAR(20) NOT NULL DEFAULT 'tim',
+        description TEXT DEFAULT NULL,
+        manager_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        member_ids TEXT DEFAULT NULL,
+        created_by BIGINT UNSIGNED NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY  (id),
+        KEY type_idx (type)
+    ) $charset_collate;";
+    dbDelta( $sql_quest_teams );
+    if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_quest_teams'" ) != $table_quest_teams ) {
+        $wpdb->query( $sql_quest_teams );
+    }
+
+    // Cicle Kanban: Tasks table (To do list, Dikerjakan, Selesai, Batal)
+    $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+    $sql_quest_tasks = "CREATE TABLE IF NOT EXISTS $table_quest_tasks (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        team_id BIGINT UNSIGNED NOT NULL,
+        column_name VARCHAR(50) NOT NULL DEFAULT 'To do list',
+        title VARCHAR(255) NOT NULL,
+        description LONGTEXT DEFAULT NULL,
+        deadline DATETIME DEFAULT NULL,
+        assigned_members TEXT DEFAULT NULL,
+        labels TEXT DEFAULT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_by BIGINT UNSIGNED NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY  (id),
+        KEY team_col_idx (team_id, column_name)
+    ) $charset_collate;";
+    dbDelta( $sql_quest_tasks );
+    if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_quest_tasks'" ) != $table_quest_tasks ) {
+        $wpdb->query( $sql_quest_tasks );
+    }
+
+    // Ensure labels column exists on tasks table for tags
+    $has_labels_col = $wpdb->get_results( "SHOW COLUMNS FROM `$table_quest_tasks` LIKE 'labels'" );
+    if ( empty( $has_labels_col ) ) {
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `labels` TEXT DEFAULT NULL AFTER `assigned_members`" );
+    }
+
+    // Ensure quest_level & reward columns exist on tasks table
+    $has_ql_col = $wpdb->get_results( "SHOW COLUMNS FROM `$table_quest_tasks` LIKE 'quest_level'" );
+    if ( empty( $has_ql_col ) ) {
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `quest_level` INT NOT NULL DEFAULT 1 AFTER `sort_order`" );
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `reward_type` VARCHAR(20) NOT NULL DEFAULT 'both' AFTER `quest_level`" );
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `reward_xp` INT NOT NULL DEFAULT 200 AFTER `reward_type`" );
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `reward_gold` INT NOT NULL DEFAULT 50 AFTER `reward_xp`" );
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `reward_awarded` TINYINT(1) NOT NULL DEFAULT 0 AFTER `reward_gold`" );
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `completed_by` BIGINT UNSIGNED DEFAULT 0 AFTER `reward_awarded`" );
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `completed_time` DATETIME DEFAULT NULL AFTER `completed_by`" );
+    }
+
+    // Cicle Kanban: Task Comments table
+    $table_quest_comments = $wpdb->prefix . 'sgd_quest_comments';
+    $sql_quest_comments = "CREATE TABLE IF NOT EXISTS $table_quest_comments (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        task_id BIGINT UNSIGNED NOT NULL,
+        user_id BIGINT UNSIGNED NOT NULL,
+        comment TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY  (id),
+        KEY task_idx (task_id)
+    ) $charset_collate;";
+    dbDelta( $sql_quest_comments );
+    if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_quest_comments'" ) != $table_quest_comments ) {
+        $wpdb->query( $sql_quest_comments );
+    }
+
+    // Cicle Kanban: Task Attachments table
+    $table_quest_attachments = $wpdb->prefix . 'sgd_quest_attachments';
+    $sql_quest_attachments = "CREATE TABLE IF NOT EXISTS $table_quest_attachments (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        task_id BIGINT UNSIGNED NOT NULL,
+        user_id BIGINT UNSIGNED NOT NULL,
+        file_url TEXT NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        file_size BIGINT UNSIGNED DEFAULT 0,
+        file_type VARCHAR(100) DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY  (id),
+        KEY task_idx (task_id)
+    ) $charset_collate;";
+    dbDelta( $sql_quest_attachments );
+    if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_quest_attachments'" ) != $table_quest_attachments ) {
+        $wpdb->query( $sql_quest_attachments );
+    }
+
     // Ensure employee role exists
     if ( ! get_role( 'employee' ) ) {
         $sub = get_role( 'subscriber' );
@@ -714,6 +810,142 @@ function sgd_seed_default_data() {
             'created_at'             => current_time( 'mysql' ),
             'updated_at'             => current_time( 'mysql' ),
         ] );
+    }
+
+    // 5. Seed Cicle Kanban task groups (HQ, Tim, Proyek) & initial tasks if empty
+    $table_quest_teams = $wpdb->prefix . 'sgd_quest_teams';
+    $existing_team_count = $wpdb->get_var( "SELECT COUNT(*) FROM $table_quest_teams" );
+    if ( ! $existing_team_count ) {
+        $adm_uid = ( isset( $admin_id ) && $admin_id && ! is_wp_error( $admin_id ) ) ? $admin_id : 1;
+        $emp1_uid = ( isset( $emp_id ) && $emp_id && ! is_wp_error( $emp_id ) ) ? $emp_id : 2;
+        $emp2_uid = ( isset( $emp2_id ) && $emp2_id && ! is_wp_error( $emp2_id ) ) ? $emp2_id : 3;
+        $emp3_uid = ( isset( $emp3_id ) && $emp3_id && ! is_wp_error( $emp3_id ) ) ? $emp3_id : 4;
+        $emp4_uid = ( isset( $emp4_id ) && $emp4_id && ! is_wp_error( $emp4_id ) ) ? $emp4_id : 5;
+
+        // Group 1: HQ (Markas Besar)
+        $wpdb->insert( $table_quest_teams, [
+            'name'        => 'HQ Grand Operations',
+            'type'        => 'hq',
+            'description' => 'Markas komando tertinggi: koordinasi strategi organisasi, evaluasi kinerja serikat, dan kebijakan umum perusahaan.',
+            'manager_id'  => $adm_uid,
+            'member_ids'  => implode( ',', [ $adm_uid, $emp1_uid, $emp2_uid, $emp3_uid, $emp4_uid ] ),
+            'created_by'  => $adm_uid,
+            'created_at'  => current_time( 'mysql' ),
+            'updated_at'  => current_time( 'mysql' ),
+        ] );
+        $team_hq_id = $wpdb->insert_id;
+
+        // Group 2: Tim (Regu Kerja / Divisi)
+        $wpdb->insert( $table_quest_teams, [
+            'name'        => 'Tim Frontend & Gamification',
+            'type'        => 'tim',
+            'description' => 'Divisi pengembangan fitur interaktif, optimasi Kanban board, sistem reward gamifikasi, dan integrasi visual Cicle.',
+            'manager_id'  => $emp2_uid, // Jaina
+            'member_ids'  => implode( ',', [ $adm_uid, $emp1_uid, $emp2_uid, $emp3_uid ] ),
+            'created_by'  => $adm_uid,
+            'created_at'  => current_time( 'mysql' ),
+            'updated_at'  => current_time( 'mysql' ),
+        ] );
+        $team_tim_id = $wpdb->insert_id;
+
+        // Group 3: Proyek (Inisiatif Lapangan)
+        $wpdb->insert( $table_quest_teams, [
+            'name'        => 'Proyek Revitalisasi Konstruksi Alpha',
+            'type'        => 'proyek',
+            'description' => 'Inisiatif proyek lapangan: renovasi infrastruktur, pengecoran pondasi zona inti, dan keselamatan kerja K3.',
+            'manager_id'  => $emp4_uid, // Thrall
+            'member_ids'  => implode( ',', [ $adm_uid, $emp1_uid, $emp3_uid, $emp4_uid ] ),
+            'created_by'  => $adm_uid,
+            'created_at'  => current_time( 'mysql' ),
+            'updated_at'  => current_time( 'mysql' ),
+        ] );
+        $team_proyek_id = $wpdb->insert_id;
+
+        // Seed sample tasks across the 4 columns for Team Tim
+        $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+        $now = current_time( 'timestamp' );
+
+        $sample_cicle_tasks = [
+            [
+                'team_id'          => $team_tim_id,
+                'column_name'      => 'To do list',
+                'title'            => 'Audit UI Responsive & Drag-Drop Kanban di Layar Sentuh',
+                'description'      => '<h3>Spesifikasi Pengerjaan:</h3><p>Verifikasi bahwa kolom kartu Kanban dapat digeser mulus menggunakan touch event pada perangkat tablet dan mobile.</p><ul><li>Uji pada viewport 768px dan 1024px</li><li>Pastikan tombol <em>+ Tambah tugas</em> mudah diakses</li><li>Periksa transisi animasi kartu</li></ul>',
+                'deadline'         => date( 'Y-m-d H:i:s', $now + 86400 * 3 ),
+                'assigned_members' => implode( ',', [ $emp1_uid, $emp3_uid ] ),
+                'sort_order'       => 1,
+            ],
+            [
+                'team_id'          => $team_tim_id,
+                'column_name'      => 'Dikerjakan',
+                'title'            => 'Integrasi WYSIWYG Editor & File Attachment Uploader',
+                'description'      => '<h3>Status Saat Ini:</h3><p>Editor WYSIWYG besar sedang dipasang pada modal kartu tugas dengan toolbar lengkap (Bold, Italic, List, Quote, Code, Color).</p><blockquote>Fitur unggah file mendukung dokumen PDF, gambar JPEG/PNG, dan arsip ZIP untuk memfasilitasi koordinasi tim.</blockquote>',
+                'deadline'         => date( 'Y-m-d H:i:s', $now + 86400 * 1 ),
+                'assigned_members' => implode( ',', [ $emp2_uid, $adm_uid ] ),
+                'sort_order'       => 1,
+            ],
+            [
+                'team_id'          => $team_tim_id,
+                'column_name'      => 'Selesai',
+                'title'            => 'Perancangan Tata Letak 4 Kolom: To do list, Dikerjakan, Selesai, Batal',
+                'description'      => '<p>Papan Kanban dengan 4 kontainer utama telah selesai diimplementasikan sesuai acuan Cicle dengan warna aksen tematik.</p>',
+                'deadline'         => date( 'Y-m-d H:i:s', $now - 86400 * 2 ),
+                'assigned_members' => implode( ',', [ $emp2_uid ] ),
+                'sort_order'       => 1,
+            ],
+            [
+                'team_id'          => $team_tim_id,
+                'column_name'      => 'Batal',
+                'title'            => 'Rencana Penggunaan Library External CDN yang Berat',
+                'description'      => '<p>Dibatalkan demi menjamin sistem bekerja sepenuhnya offline, cepat, dan aman tanpa ketergantungan koneksi internet pihak ketiga.</p>',
+                'deadline'         => null,
+                'assigned_members' => implode( ',', [ $adm_uid ] ),
+                'sort_order'       => 1,
+            ],
+            // Additional task in To do list
+            [
+                'team_id'          => $team_tim_id,
+                'column_name'      => 'To do list',
+                'title'            => 'Sistem Duplikasi Tugas (Clone Task) 1-Klik',
+                'description'      => '<p>Memastikan admin dan manager dapat menduplikasi tugas yang berulang lengkap beserta rincian deskripsi, tenggat waktu, dan anggota yang ditugaskan.</p>',
+                'deadline'         => date( 'Y-m-d H:i:s', $now + 86400 * 5 ),
+                'assigned_members' => implode( ',', [ $emp1_uid ] ),
+                'sort_order'       => 2,
+            ],
+        ];
+
+        foreach ( $sample_cicle_tasks as $sct ) {
+            $wpdb->insert( $table_quest_tasks, [
+                'team_id'          => $sct['team_id'],
+                'column_name'      => $sct['column_name'],
+                'title'            => $sct['title'],
+                'description'      => $sct['description'],
+                'deadline'         => $sct['deadline'],
+                'assigned_members' => $sct['assigned_members'],
+                'sort_order'       => $sct['sort_order'],
+                'created_by'       => $adm_uid,
+                'created_at'       => current_time( 'mysql' ),
+                'updated_at'       => current_time( 'mysql' ),
+            ] );
+            $first_task_id = $wpdb->insert_id;
+        }
+
+        // Seed a sample comment on the working task
+        if ( isset( $first_task_id ) ) {
+            $table_quest_comments = $wpdb->prefix . 'sgd_quest_comments';
+            $wpdb->insert( $table_quest_comments, [
+                'task_id'    => $first_task_id - 3, // The 'Dikerjakan' task
+                'user_id'    => $emp2_uid,
+                'comment'    => 'Editor WYSIWYG dan fitur upload file berjalan sangat baik. Siap direview oleh Grand Marshal!',
+                'created_at' => current_time( 'mysql' ),
+            ] );
+            $wpdb->insert( $table_quest_comments, [
+                'task_id'    => $first_task_id - 3,
+                'user_id'    => $adm_uid,
+                'comment'    => 'Bagus sekali! Pastikan juga tombol clone task dan filter 4 kolom terhubung sempurna.',
+                'created_at' => current_time( 'mysql' ),
+            ] );
+        }
     }
 }
 
@@ -1449,6 +1681,371 @@ function sgd_get_current_theme() {
         }
     }
     return 'wow';
+}
+
+// ========================================================
+// Cicle Kanban Quest System - Helper Functions
+// ========================================================
+function sgd_user_can_access_quests( $user_id = 0 ) {
+    return true;
+}
+
+function sgd_user_can_manage_quest( $team = null, $user_id = 0 ) {
+    if ( current_user_can( 'administrator' ) ) {
+        return true;
+    }
+    if ( ! $user_id ) {
+        $user_id = get_current_user_id();
+    }
+    if ( ! $user_id ) {
+        return false;
+    }
+    if ( $team ) {
+        $mgr_id = is_object( $team ) ? (int) $team->manager_id : (int) ( $team['manager_id'] ?? 0 );
+        if ( $mgr_id === (int) $user_id ) {
+            return true;
+        }
+    }
+    $job_class = get_user_meta( $user_id, 'sgd_job_class', true );
+    if ( strtolower( $job_class ) === 'manager' ) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Calculate the reward ratio based on level difference between Employee Level and Quest Level.
+ *
+ * Mechanism:
+ * - Difference <= 2 (At-Level or Under-Level Challenge): 100% full reward
+ * - Difference 3 to 5 (Moderate / Easy): 70% portion
+ * - Difference 6 to 9 (Low Challenge / Beginner): 40% portion
+ * - Difference >= 10 (Over-Leveled / Trivial): 15% portion (minimum baseline)
+ */
+function sgd_calculate_quest_reward_ratio( $quest_level = 1, $user_level = 1 ) {
+    $quest_level = max( 1, (int) $quest_level );
+    $user_level = max( 1, (int) $user_level );
+    $diff = $user_level - $quest_level;
+
+    if ( $diff <= 2 ) {
+        return [
+            'ratio'      => 1.0,
+            'percent'    => 100,
+            'difficulty' => ( $diff < 0 ) ? 'challenging' : 'normal',
+            'label'      => ( $diff < 0 ) ? 'Challenging (100% Hadiah Penuh)' : 'Tepat Level (100% Hadiah Penuh)',
+            'color'      => ( $diff < 0 ) ? '#ff4444' : '#ffd700',
+        ];
+    } elseif ( $diff <= 5 ) {
+        return [
+            'ratio'      => 0.70,
+            'percent'    => 70,
+            'difficulty' => 'easy',
+            'label'      => 'Tugas Mudah (70% Porsi Hadiah)',
+            'color'      => '#2ecc71',
+        ];
+    } elseif ( $diff <= 9 ) {
+        return [
+            'ratio'      => 0.40,
+            'percent'    => 40,
+            'difficulty' => 'low',
+            'label'      => 'Tantangan Rendah (40% Porsi Hadiah)',
+            'color'      => '#a4b0be',
+        ];
+    } else {
+        return [
+            'ratio'      => 0.15,
+            'percent'    => 15,
+            'difficulty' => 'trivial',
+            'label'      => 'Tugas Trivial / Abu-abu (15% Porsi Hadiah)',
+            'color'      => '#747d8c',
+        ];
+    }
+}
+
+/**
+ * Distribute quest rewards to assigned members when a task is finished.
+ * Scales XP and Gold portions dynamically according to employee level vs quest level.
+ */
+function sgd_complete_quest_task( $task_id, $actor_user_id = 0 ) {
+    global $wpdb;
+    $table = $wpdb->prefix . 'sgd_quest_tasks';
+    $task = sgd_get_quest_task( $task_id );
+    if ( ! $task ) return false;
+
+    // Do not double-reward if already awarded
+    if ( ! empty( $task->reward_awarded ) ) {
+        return false;
+    }
+
+    $assigned_ids = array_filter( array_map( 'intval', explode( ',', $task->assigned_members ?? '' ) ) );
+    if ( empty( $assigned_ids ) && $actor_user_id ) {
+        $assigned_ids = [ (int) $actor_user_id ];
+    }
+
+    $quest_level = max( 1, (int) ( $task->quest_level ?? 1 ) );
+    $reward_type = $task->reward_type ?? 'both';
+    $base_xp = (int) ( $task->reward_xp ?? 200 );
+    $base_gold = (int) ( $task->reward_gold ?? 50 );
+
+    $award_summary = [];
+
+    foreach ( $assigned_ids as $uid ) {
+        $u = get_user_by( 'id', $uid );
+        if ( ! $u ) continue;
+
+        $xp_data = sgd_get_user_xp_data( $uid );
+        $user_level = max( 1, (int) $xp_data['level'] );
+        $scaling = sgd_calculate_quest_reward_ratio( $quest_level, $user_level );
+        $ratio = $scaling['ratio'];
+
+        $awarded_xp = 0;
+        $awarded_gold = 0;
+
+        if ( in_array( $reward_type, [ 'xp', 'both' ], true ) && $base_xp > 0 ) {
+            $awarded_xp = max( 10, (int) round( $base_xp * $ratio ) );
+            sgd_add_xp( $uid, $awarded_xp );
+        }
+
+        if ( in_array( $reward_type, [ 'gold', 'both' ], true ) && $base_gold > 0 ) {
+            $awarded_gold = max( 1, (int) round( $base_gold * $ratio ) );
+            sgd_add_diamonds( $uid, $awarded_gold );
+        }
+
+        $award_summary[] = [
+            'user_id'      => $uid,
+            'user_name'    => $u->display_name,
+            'user_level'   => $user_level,
+            'quest_level'  => $quest_level,
+            'percent'      => $scaling['percent'],
+            'difficulty'   => $scaling['difficulty'],
+            'label'        => $scaling['label'],
+            'awarded_xp'   => $awarded_xp,
+            'awarded_gold' => $awarded_gold,
+        ];
+    }
+
+    // Mark task as completed & reward awarded
+    $wpdb->update(
+        $table,
+        [
+            'column_name'    => 'Selesai',
+            'reward_awarded' => 1,
+            'completed_by'   => $actor_user_id ?: get_current_user_id(),
+            'completed_time' => current_time( 'mysql' ),
+            'updated_at'     => current_time( 'mysql' ),
+        ],
+        [ 'id' => $task_id ]
+    );
+
+    return $award_summary;
+}
+
+function sgd_get_quest_teams( $type = '' ) {
+    global $wpdb;
+    $table = $wpdb->prefix . 'sgd_quest_teams';
+    $table_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+
+    if ( $type && in_array( $type, [ 'hq', 'tim', 'proyek' ], true ) ) {
+        $teams = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table WHERE type = %s ORDER BY id ASC", $type ) );
+    } else {
+        $teams = $wpdb->get_results( "SELECT * FROM $table ORDER BY id ASC" );
+    }
+    if ( empty( $teams ) ) {
+        return [];
+    }
+
+    foreach ( $teams as &$team ) {
+        $member_ids = array_filter( array_map( 'intval', explode( ',', $team->member_ids ?? '' ) ) );
+        $team->members = [];
+        foreach ( $member_ids as $mid ) {
+            $u = get_user_by( 'id', $mid );
+            if ( $u ) {
+                $team->members[] = [
+                    'id'           => $u->ID,
+                    'display_name' => $u->display_name,
+                    'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $u->ID ) : '👤',
+                    'job_class'    => function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $u->ID ) : 'Staff',
+                ];
+            }
+        }
+        $manager = get_user_by( 'id', $team->manager_id );
+        $team->manager_name = $manager ? $manager->display_name : 'Belum Ditugaskan';
+        $team->manager_avatar = ( $manager && function_exists('sgd_get_user_avatar') ) ? sgd_get_user_avatar( $manager->ID ) : '⭐';
+        $team->manager_class = ( $manager && function_exists('sgd_get_user_job_class') ) ? sgd_get_user_job_class( $manager->ID ) : 'Manager';
+
+        // Count tasks per column
+        $stats = $wpdb->get_results( $wpdb->prepare(
+            "SELECT column_name, COUNT(*) as cnt FROM $table_tasks WHERE team_id = %d GROUP BY column_name",
+            $team->id
+        ), OBJECT_K );
+
+        $team->counts = [
+            'total'       => 0,
+            'To do list'  => isset( $stats['To do list'] ) ? (int) $stats['To do list']->cnt : 0,
+            'Dikerjakan'  => isset( $stats['Dikerjakan'] ) ? (int) $stats['Dikerjakan']->cnt : 0,
+            'Selesai'     => isset( $stats['Selesai'] ) ? (int) $stats['Selesai']->cnt : 0,
+            'Batal'       => isset( $stats['Batal'] ) ? (int) $stats['Batal']->cnt : 0,
+        ];
+        $team->counts['total'] = $team->counts['To do list'] + $team->counts['Dikerjakan'] + $team->counts['Selesai'] + $team->counts['Batal'];
+    }
+    return $teams;
+}
+
+function sgd_get_quest_team( $team_id ) {
+    global $wpdb;
+    $table = $wpdb->prefix . 'sgd_quest_teams';
+    $team = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $team_id ) );
+    if ( ! $team ) return null;
+
+    $member_ids = array_filter( array_map( 'intval', explode( ',', $team->member_ids ?? '' ) ) );
+    $team->members = [];
+    foreach ( $member_ids as $mid ) {
+        $u = get_user_by( 'id', $mid );
+        if ( $u ) {
+            $team->members[] = [
+                'id'           => $u->ID,
+                'display_name' => $u->display_name,
+                'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $u->ID ) : '👤',
+                'job_class'    => function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $u->ID ) : 'Staff',
+            ];
+        }
+    }
+    $manager = get_user_by( 'id', $team->manager_id );
+    $team->manager_name = $manager ? $manager->display_name : 'Belum Ditugaskan';
+    $team->manager_avatar = ( $manager && function_exists('sgd_get_user_avatar') ) ? sgd_get_user_avatar( $manager->ID ) : '⭐';
+    $team->manager_class = ( $manager && function_exists('sgd_get_user_job_class') ) ? sgd_get_user_job_class( $manager->ID ) : 'Manager';
+
+    return $team;
+}
+
+function sgd_get_quest_tasks( $team_id, $column_name = '' ) {
+    global $wpdb;
+    $table = $wpdb->prefix . 'sgd_quest_tasks';
+    $table_comm = $wpdb->prefix . 'sgd_quest_comments';
+    $table_att = $wpdb->prefix . 'sgd_quest_attachments';
+
+    if ( $column_name ) {
+        $tasks = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $table WHERE team_id = %d AND column_name = %s ORDER BY sort_order ASC, id ASC",
+            $team_id, $column_name
+        ) );
+    } else {
+        $tasks = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $table WHERE team_id = %d ORDER BY sort_order ASC, id ASC",
+            $team_id
+        ) );
+    }
+
+    if ( empty( $tasks ) ) return [];
+
+    foreach ( $tasks as &$t ) {
+        $assigned_ids = array_filter( array_map( 'intval', explode( ',', $t->assigned_members ?? '' ) ) );
+        $t->members = [];
+        foreach ( $assigned_ids as $uid ) {
+            $u = get_user_by( 'id', $uid );
+            if ( $u ) {
+                $t->members[] = [
+                    'id'           => $u->ID,
+                    'display_name' => $u->display_name,
+                    'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $u->ID ) : '👤',
+                ];
+            }
+        }
+        $t->comment_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_comm WHERE task_id = %d", $t->id ) );
+        $t->attachment_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_att WHERE task_id = %d", $t->id ) );
+
+        // Parse labels / tags JSON
+        $t->tags = [];
+        if ( ! empty( $t->labels ) ) {
+            $parsed_tags = json_decode( $t->labels, true );
+            if ( is_array( $parsed_tags ) ) {
+                $t->tags = $parsed_tags;
+            }
+        }
+
+        // Quest Level & Rewards defaults
+        $t->quest_level = max( 1, (int) ( $t->quest_level ?? 1 ) );
+        $t->reward_type = $t->reward_type ?? 'both';
+        $t->reward_xp = isset( $t->reward_xp ) ? (int) $t->reward_xp : 200;
+        $t->reward_gold = isset( $t->reward_gold ) ? (int) $t->reward_gold : 50;
+        $t->reward_awarded = (int) ( $t->reward_awarded ?? 0 );
+    }
+    return $tasks;
+}
+
+function sgd_get_quest_task( $task_id ) {
+    global $wpdb;
+    $table = $wpdb->prefix . 'sgd_quest_tasks';
+    $task = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $task_id ) );
+    if ( ! $task ) return null;
+
+    $assigned_ids = array_filter( array_map( 'intval', explode( ',', $task->assigned_members ?? '' ) ) );
+    $task->members = [];
+    foreach ( $assigned_ids as $uid ) {
+        $u = get_user_by( 'id', $uid );
+        if ( $u ) {
+            $task->members[] = [
+                'id'           => $u->ID,
+                'display_name' => $u->display_name,
+                'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $u->ID ) : '👤',
+                'job_class'    => function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $u->ID ) : 'Staff',
+            ];
+        }
+    }
+    $task->tags = [];
+    if ( ! empty( $task->labels ) ) {
+        $parsed_tags = json_decode( $task->labels, true );
+        if ( is_array( $parsed_tags ) ) {
+            $task->tags = $parsed_tags;
+        }
+    }
+
+    // Quest Level & Rewards defaults
+    $task->quest_level = max( 1, (int) ( $task->quest_level ?? 1 ) );
+    $task->reward_type = $task->reward_type ?? 'both';
+    $task->reward_xp = isset( $task->reward_xp ) ? (int) $task->reward_xp : 200;
+    $task->reward_gold = isset( $task->reward_gold ) ? (int) $task->reward_gold : 50;
+    $task->reward_awarded = (int) ( $task->reward_awarded ?? 0 );
+
+    $task->comments = sgd_get_quest_comments( $task->id );
+    $task->attachments = sgd_get_quest_attachments( $task->id );
+    $task->team = sgd_get_quest_team( $task->team_id );
+
+    return $task;
+}
+
+function sgd_get_quest_comments( $task_id ) {
+    global $wpdb;
+    $table = $wpdb->prefix . 'sgd_quest_comments';
+    $comments = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM $table WHERE task_id = %d ORDER BY created_at ASC",
+        $task_id
+    ) );
+    if ( empty( $comments ) ) return [];
+
+    foreach ( $comments as &$c ) {
+        $u = get_user_by( 'id', $c->user_id );
+        $c->user_name = $u ? $u->display_name : 'Anggota';
+        $c->user_avatar = ( $u && function_exists('sgd_get_user_avatar') ) ? sgd_get_user_avatar( $u->ID ) : '👤';
+        $c->user_role = ( $u && function_exists('sgd_get_user_job_class') ) ? sgd_get_user_job_class( $u->ID ) : 'Staff';
+    }
+    return $comments;
+}
+
+function sgd_get_quest_attachments( $task_id ) {
+    global $wpdb;
+    $table = $wpdb->prefix . 'sgd_quest_attachments';
+    $attachments = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM $table WHERE task_id = %d ORDER BY created_at DESC",
+        $task_id
+    ) );
+    if ( empty( $attachments ) ) return [];
+
+    foreach ( $attachments as &$att ) {
+        $u = get_user_by( 'id', $att->user_id );
+        $att->uploader_name = $u ? $u->display_name : 'Staff';
+    }
+    return $attachments;
 }
 
 // 2. Action Handlers (Form Submissions)
@@ -2891,6 +3488,602 @@ function sgd_handle_form_actions() {
             wp_safe_redirect( add_query_arg( 'sgd_page', 'laporan-harian', home_url( '/' ) ) );
             exit;
         }
+
+        // ========================================================
+        // CICLE KANBAN QUEST SYSTEM ACTIONS
+        // ========================================================
+
+        // 6. Create Task Group (HQ, Tim, Proyek)
+        if ( $action === 'sgd_create_quest_team' ) {
+            if ( ! current_user_can( 'administrator' ) ) {
+                sgd_set_flash( 'error', '⛔ Akses Ditolak: Hanya Administrator yang dapat membuat Task Group.' );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            $name = sanitize_text_field( $_POST['team_name'] ?? '' );
+            $type = sanitize_text_field( $_POST['team_type'] ?? 'tim' );
+            if ( ! in_array( $type, [ 'hq', 'tim', 'proyek' ], true ) ) {
+                $type = 'tim';
+            }
+            $description = sanitize_textarea_field( $_POST['team_description'] ?? '' );
+            $manager_id = (int) ( $_POST['manager_id'] ?? $current_user_id );
+            
+            $raw_members = $_POST['member_ids'] ?? [];
+            if ( is_string( $raw_members ) ) {
+                $raw_members = explode( ',', $raw_members );
+            }
+            $clean_members = array_filter( array_map( 'intval', (array) $raw_members ) );
+            // Ensure manager is in members
+            if ( $manager_id && ! in_array( $manager_id, $clean_members, true ) ) {
+                $clean_members[] = $manager_id;
+            }
+            $member_ids_str = implode( ',', $clean_members );
+
+            if ( empty( $name ) ) {
+                sgd_set_flash( 'error', '⚠️ Nama Tim / Task Group (TimName) wajib diisi!' );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            $table_quest_teams = $wpdb->prefix . 'sgd_quest_teams';
+            $wpdb->insert( $table_quest_teams, [
+                'name'        => $name,
+                'type'        => $type,
+                'description' => $description,
+                'manager_id'  => $manager_id,
+                'member_ids'  => $member_ids_str,
+                'created_by'  => $current_user_id,
+                'created_at'  => current_time( 'mysql' ),
+                'updated_at'  => current_time( 'mysql' ),
+            ] );
+            $new_team_id = $wpdb->insert_id;
+
+            $type_label = strtoupper( $type );
+            sgd_set_flash( 'celebration', "🎉 Task Group [{$type_label}] '{$name}' berhasil dibuat!" );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $new_team_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 7. Update Task Group
+        if ( $action === 'sgd_update_quest_team' ) {
+            if ( ! current_user_can( 'administrator' ) ) {
+                sgd_set_flash( 'error', '⛔ Akses Ditolak: Hanya Administrator yang dapat mengubah Task Group.' );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            $team_id = (int) ( $_POST['team_id'] ?? 0 );
+            $name = sanitize_text_field( $_POST['team_name'] ?? '' );
+            $type = sanitize_text_field( $_POST['team_type'] ?? 'tim' );
+            if ( ! in_array( $type, [ 'hq', 'tim', 'proyek' ], true ) ) {
+                $type = 'tim';
+            }
+            $description = sanitize_textarea_field( $_POST['team_description'] ?? '' );
+            $manager_id = (int) ( $_POST['manager_id'] ?? $current_user_id );
+            
+            $raw_members = $_POST['member_ids'] ?? [];
+            if ( is_string( $raw_members ) ) {
+                $raw_members = explode( ',', $raw_members );
+            }
+            $clean_members = array_filter( array_map( 'intval', (array) $raw_members ) );
+            if ( $manager_id && ! in_array( $manager_id, $clean_members, true ) ) {
+                $clean_members[] = $manager_id;
+            }
+            $member_ids_str = implode( ',', $clean_members );
+
+            if ( empty( $name ) ) {
+                sgd_set_flash( 'error', '⚠️ Nama Tim tidak boleh kosong!' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $team_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $table_quest_teams = $wpdb->prefix . 'sgd_quest_teams';
+            $wpdb->update(
+                $table_quest_teams,
+                [
+                    'name'        => $name,
+                    'type'        => $type,
+                    'description' => $description,
+                    'manager_id'  => $manager_id,
+                    'member_ids'  => $member_ids_str,
+                    'updated_at'  => current_time( 'mysql' ),
+                ],
+                [ 'id' => $team_id ]
+            );
+
+            sgd_set_flash( 'celebration', "✅ Pengaturan Task Group '{$name}' berhasil diperbarui!" );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $team_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 8. Delete Task Group
+        if ( $action === 'sgd_delete_quest_team' ) {
+            if ( ! current_user_can( 'administrator' ) ) {
+                sgd_set_flash( 'error', '⛔ Akses Ditolak: Hanya Administrator yang dapat menghapus Task Group.' );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            $team_id = (int) ( $_POST['team_id'] ?? 0 );
+            $table_quest_teams = $wpdb->prefix . 'sgd_quest_teams';
+            $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+            $table_quest_comments = $wpdb->prefix . 'sgd_quest_comments';
+            $table_quest_attachments = $wpdb->prefix . 'sgd_quest_attachments';
+
+            // Find tasks to delete related comments/attachments
+            $team_tasks = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM $table_quest_tasks WHERE team_id = %d", $team_id ) );
+            if ( ! empty( $team_tasks ) ) {
+                $task_ids_str = implode( ',', array_map( 'intval', $team_tasks ) );
+                $wpdb->query( "DELETE FROM $table_quest_comments WHERE task_id IN ($task_ids_str)" );
+                $wpdb->query( "DELETE FROM $table_quest_attachments WHERE task_id IN ($task_ids_str)" );
+                $wpdb->query( "DELETE FROM $table_quest_tasks WHERE team_id = $team_id" );
+            }
+            $wpdb->delete( $table_quest_teams, [ 'id' => $team_id ] );
+
+            sgd_set_flash( 'celebration', '🗑️ Task Group dan seluruh tugas di dalamnya berhasil dihapus.' );
+            wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+            exit;
+        }
+
+        // 9. Create New Task (Tugas) in a Column
+        if ( $action === 'sgd_create_quest_task' ) {
+            $team_id = (int) ( $_POST['team_id'] ?? 0 );
+            $team = sgd_get_quest_team( $team_id );
+            if ( ! $team ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) {
+                    wp_send_json_error( [ 'message' => 'Task Group tidak ditemukan.' ] );
+                }
+                sgd_set_flash( 'error', '⚠️ Task Group tidak ditemukan.' );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) {
+                    wp_send_json_error( [ 'message' => 'Hanya Manager Tim atau Administrator yang dapat membuat tugas.' ] );
+                }
+                sgd_set_flash( 'error', '⛔ Hanya Manager Tim atau Administrator yang dapat membuat tugas.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $team_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $allowed_columns = [ 'To do list', 'Dikerjakan', 'Selesai', 'Batal' ];
+            $column_name = sanitize_text_field( $_POST['column_name'] ?? 'To do list' );
+            if ( ! in_array( $column_name, $allowed_columns, true ) ) {
+                $column_name = 'To do list';
+            }
+
+            $title = sanitize_text_field( $_POST['task_title'] ?? '' );
+            if ( empty( $title ) ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) {
+                    wp_send_json_error( [ 'message' => 'Nama tugas wajib diisi!' ] );
+                }
+                sgd_set_flash( 'error', '⚠️ Nama tugas (ask name) wajib diisi!' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $team_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+            $max_order = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT MAX(sort_order) FROM $table_quest_tasks WHERE team_id = %d AND column_name = %s",
+                $team_id, $column_name
+            ) );
+
+            $quest_level = max( 1, min( 50, (int) ( $_POST['quest_level'] ?? 1 ) ) );
+            $reward_type = sanitize_text_field( $_POST['reward_type'] ?? 'both' );
+            if ( ! in_array( $reward_type, [ 'both', 'xp', 'gold', 'none' ], true ) ) {
+                $reward_type = 'both';
+            }
+            $reward_xp = isset( $_POST['reward_xp'] ) ? max( 0, (int) $_POST['reward_xp'] ) : 200;
+            $reward_gold = isset( $_POST['reward_gold'] ) ? max( 0, (int) $_POST['reward_gold'] ) : 50;
+
+            $wpdb->insert( $table_quest_tasks, [
+                'team_id'          => $team_id,
+                'column_name'      => $column_name,
+                'title'            => $title,
+                'description'      => '',
+                'deadline'         => null,
+                'assigned_members' => (string) $current_user_id,
+                'sort_order'       => $max_order + 1,
+                'quest_level'      => $quest_level,
+                'reward_type'      => $reward_type,
+                'reward_xp'        => $reward_xp,
+                'reward_gold'      => $reward_gold,
+                'created_by'       => $current_user_id,
+                'created_at'       => current_time( 'mysql' ),
+                'updated_at'       => current_time( 'mysql' ),
+            ] );
+            $new_task_id = $wpdb->insert_id;
+
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                $task = sgd_get_quest_task( $new_task_id );
+                wp_send_json_success( [
+                    'message' => "Tugas '{$title}' berhasil dibuat!",
+                    'task'    => $task,
+                ] );
+            }
+
+            sgd_set_flash( 'celebration', "✅ Tugas baru '{$title}' berhasil dibuat di kolom {$column_name}!" );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $team_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 10. Update Task (Title, Column, Deadline, Members, WYSIWYG Description)
+        if ( $action === 'sgd_update_quest_task' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) {
+                    wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+                }
+                sgd_set_flash( 'error', '⚠️ Tugas tidak ditemukan.' );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            $team = sgd_get_quest_team( $task->team_id );
+            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) {
+                    wp_send_json_error( [ 'message' => 'Hanya Manager Tim atau Administrator yang dapat mengubah tugas.' ] );
+                }
+                sgd_set_flash( 'error', '⛔ Hanya Manager Tim atau Administrator yang dapat mengubah tugas.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $title = sanitize_text_field( $_POST['task_title'] ?? $task->title );
+            $allowed_columns = [ 'To do list', 'Dikerjakan', 'Selesai', 'Batal' ];
+            $column_name = sanitize_text_field( $_POST['column_name'] ?? $task->column_name );
+            if ( ! in_array( $column_name, $allowed_columns, true ) ) {
+                $column_name = $task->column_name;
+            }
+
+            // Big WYSIWYG editor description: preserve rich HTML formatting safely
+            $description = wp_kses_post( wp_unslash( $_POST['description'] ?? '' ) );
+
+            // Deadline
+            $deadline_raw = sanitize_text_field( $_POST['deadline'] ?? '' );
+            $deadline = null;
+            if ( ! empty( $deadline_raw ) ) {
+                $deadline_ts = strtotime( $deadline_raw );
+                if ( $deadline_ts ) {
+                    $deadline = date( 'Y-m-d H:i:s', $deadline_ts );
+                }
+            }
+
+            // Assigned members
+            $raw_members = $_POST['assigned_members'] ?? [];
+            if ( is_string( $raw_members ) ) {
+                $raw_members = explode( ',', $raw_members );
+            }
+            $clean_members = array_filter( array_map( 'intval', (array) $raw_members ) );
+            $assigned_str = implode( ',', $clean_members );
+
+            // Labels / Tags (JSON array of {name, color})
+            $raw_labels = $_POST['labels'] ?? '';
+            $labels_json = null;
+            if ( ! empty( $raw_labels ) ) {
+                $decoded = json_decode( stripslashes( $raw_labels ), true );
+                if ( is_array( $decoded ) ) {
+                    $clean_labels = [];
+                    foreach ( $decoded as $lbl ) {
+                        $lname = sanitize_text_field( $lbl['name'] ?? '' );
+                        $lcolor = sanitize_hex_color( $lbl['color'] ?? '#00e5ff' ) ?: '#00e5ff';
+                        if ( ! empty( $lname ) ) {
+                            $clean_labels[] = [ 'name' => $lname, 'color' => $lcolor ];
+                        }
+                    }
+                    $labels_json = wp_json_encode( $clean_labels );
+                }
+            }
+
+            // Quest Level & Rewards
+            $quest_level = max( 1, min( 50, (int) ( $_POST['quest_level'] ?? ( $task->quest_level ?? 1 ) ) ) );
+            $reward_type = sanitize_text_field( $_POST['reward_type'] ?? ( $task->reward_type ?? 'both' ) );
+            if ( ! in_array( $reward_type, [ 'both', 'xp', 'gold', 'none' ], true ) ) {
+                $reward_type = 'both';
+            }
+            $reward_xp = isset( $_POST['reward_xp'] ) ? max( 0, (int) $_POST['reward_xp'] ) : ( $task->reward_xp ?? 200 );
+            $reward_gold = isset( $_POST['reward_gold'] ) ? max( 0, (int) $_POST['reward_gold'] ) : ( $task->reward_gold ?? 50 );
+
+            $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+            $wpdb->update(
+                $table_quest_tasks,
+                [
+                    'title'            => $title,
+                    'column_name'      => $column_name,
+                    'description'      => $description,
+                    'deadline'         => $deadline,
+                    'assigned_members' => $assigned_str,
+                    'labels'           => $labels_json,
+                    'quest_level'      => $quest_level,
+                    'reward_type'      => $reward_type,
+                    'reward_xp'        => $reward_xp,
+                    'reward_gold'      => $reward_gold,
+                    'updated_at'       => current_time( 'mysql' ),
+                ],
+                [ 'id' => $task_id ]
+            );
+
+            // If column is Selesai, trigger reward distribution
+            $reward_msg = '';
+            if ( $column_name === 'Selesai' ) {
+                $award_result = sgd_complete_quest_task( $task_id, $current_user_id );
+                if ( ! empty( $award_result ) ) {
+                    $parts = [];
+                    foreach ( $award_result as $ar ) {
+                        $parts[] = "{$ar['user_name']} ({$ar['percent']}% porsi = +{$ar['awarded_xp']} XP, +{$ar['awarded_gold']} 💎)";
+                    }
+                    $reward_msg = ' Hadiah dibagikan: ' . implode( ', ', $parts );
+                }
+            }
+
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                wp_send_json_success( [
+                    'message'    => 'Tugas berhasil diperbarui!' . ( $reward_msg ? " 🎉 $reward_msg" : '' ),
+                    'task'       => sgd_get_quest_task( $task_id ),
+                    'reward_msg' => $reward_msg,
+                ] );
+            }
+
+            sgd_set_flash( 'celebration', "💾 Tugas '{$title}' berhasil disimpan!" . ( $reward_msg ? " 🎉 $reward_msg" : '' ) );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 11. Clone Task (Duplikat Tugas)
+        if ( $action === 'sgd_clone_quest_task' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                sgd_set_flash( 'error', '⚠️ Tugas tidak ditemukan untuk diduplikasi.' );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            $team = sgd_get_quest_team( $task->team_id );
+            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+                sgd_set_flash( 'error', '⛔ Akses Ditolak: Hanya Manager Tim atau Administrator yang dapat menduplikasi tugas.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+            $cloned_title = '📋 (Copy) ' . $task->title;
+
+            $max_order = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT MAX(sort_order) FROM $table_quest_tasks WHERE team_id = %d AND column_name = %s",
+                $task->team_id, $task->column_name
+            ) );
+
+            $wpdb->insert( $table_quest_tasks, [
+                'team_id'          => $task->team_id,
+                'column_name'      => $task->column_name,
+                'title'            => $cloned_title,
+                'description'      => $task->description,
+                'deadline'         => $task->deadline,
+                'assigned_members' => $task->assigned_members,
+                'labels'           => $task->labels,
+                'quest_level'      => (int) ( $task->quest_level ?? 1 ),
+                'reward_type'      => $task->reward_type ?? 'both',
+                'reward_xp'        => (int) ( $task->reward_xp ?? 200 ),
+                'reward_gold'      => (int) ( $task->reward_gold ?? 50 ),
+                'reward_awarded'   => 0,
+                'sort_order'       => $max_order + 1,
+                'created_by'       => $current_user_id,
+                'created_at'       => current_time( 'mysql' ),
+                'updated_at'       => current_time( 'mysql' ),
+            ] );
+            $new_cloned_id = $wpdb->insert_id;
+
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                wp_send_json_success( [
+                    'message'   => "Tugas berhasil diduplikasi menjadi '{$cloned_title}'!",
+                    'cloned_id' => $new_cloned_id,
+                ] );
+            }
+
+            sgd_set_flash( 'celebration', "📋 Tugas berhasil diduplikasi: '{$cloned_title}'!" );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $new_cloned_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 12. Move Task Between Columns (Kanban Move / Drag & Drop)
+        if ( $action === 'sgd_move_quest_task' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            $team = sgd_get_quest_team( $task->team_id );
+            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => 'Hanya Manager Tim atau Administrator yang dapat memindahkan tugas.' ] );
+                sgd_set_flash( 'error', '⛔ Hanya Manager Tim atau Administrator yang dapat memindahkan tugas.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $allowed_columns = [ 'To do list', 'Dikerjakan', 'Selesai', 'Batal' ];
+            $target_column = sanitize_text_field( $_POST['target_column'] ?? '' );
+            if ( ! in_array( $target_column, $allowed_columns, true ) ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => 'Kolom tujuan tidak valid.' ] );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+            $wpdb->update(
+                $table_quest_tasks,
+                [
+                    'column_name' => $target_column,
+                    'updated_at'  => current_time( 'mysql' ),
+                ],
+                [ 'id' => $task_id ]
+            );
+
+            // If moved to Selesai, distribute quest rewards
+            $award_msg = '';
+            if ( $target_column === 'Selesai' ) {
+                $award_result = sgd_complete_quest_task( $task_id, $current_user_id );
+                if ( ! empty( $award_result ) ) {
+                    $parts = [];
+                    foreach ( $award_result as $ar ) {
+                        $parts[] = "{$ar['user_name']} ({$ar['percent']}% porsi = +{$ar['awarded_xp']} XP, +{$ar['awarded_gold']} 💎)";
+                    }
+                    $award_msg = ' Hadiah dibagikan: ' . implode( ', ', $parts );
+                }
+            }
+
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                wp_send_json_success( [
+                    'message'       => "Tugas dipindahkan ke '{$target_column}'" . ( $award_msg ? " 🎉 $award_msg" : '' ),
+                    'target_column' => $target_column,
+                    'reward_msg'    => $award_msg,
+                ] );
+            }
+
+            sgd_set_flash( 'celebration', "↔️ Tugas dipindahkan ke kolom '{$target_column}'." . ( $award_msg ? " 🎉 $award_msg" : '' ) );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 13. Delete Task
+        if ( $action === 'sgd_delete_quest_task' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                sgd_set_flash( 'error', '⚠️ Tugas tidak ditemukan.' );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            $team = sgd_get_quest_team( $task->team_id );
+            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+                sgd_set_flash( 'error', '⛔ Hanya Manager Tim atau Administrator yang dapat menghapus tugas.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+            $table_quest_comments = $wpdb->prefix . 'sgd_quest_comments';
+            $table_quest_attachments = $wpdb->prefix . 'sgd_quest_attachments';
+
+            $wpdb->delete( $table_quest_comments, [ 'task_id' => $task_id ] );
+            $wpdb->delete( $table_quest_attachments, [ 'task_id' => $task_id ] );
+            $wpdb->delete( $table_quest_tasks, [ 'id' => $task_id ] );
+
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                wp_send_json_success( [ 'message' => 'Tugas berhasil dihapus!' ] );
+            }
+
+            sgd_set_flash( 'celebration', "🗑️ Tugas '{$task->title}' berhasil dihapus." );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 14. Add Comment / Chat to Task
+        if ( $action === 'sgd_add_quest_comment' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            $comment_text = sanitize_textarea_field( $_POST['comment_text'] ?? '' );
+            if ( empty( $comment_text ) ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => 'Komentar tidak boleh kosong.' ] );
+                sgd_set_flash( 'error', '⚠️ Komentar tidak boleh kosong.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $table_quest_comments = $wpdb->prefix . 'sgd_quest_comments';
+            $wpdb->insert( $table_quest_comments, [
+                'task_id'    => $task_id,
+                'user_id'    => $current_user_id,
+                'comment'    => $comment_text,
+                'created_at' => current_time( 'mysql' ),
+            ] );
+            $comment_id = $wpdb->insert_id;
+
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                $u = wp_get_current_user();
+                wp_send_json_success( [
+                    'comment' => [
+                        'id'          => $comment_id,
+                        'user_name'   => $u->display_name,
+                        'user_avatar' => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $current_user_id ) : '👤',
+                        'comment'     => esc_html( $comment_text ),
+                        'created_at'  => current_time( 'd M Y, H:i' ),
+                    ],
+                ] );
+            }
+
+            sgd_set_flash( 'celebration', '💬 Komentar berhasil dikirim!' );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 15. Upload File Attachment for Task
+        if ( $action === 'sgd_upload_quest_attachment' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                sgd_set_flash( 'error', '⚠️ Tugas tidak ditemukan.' );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            if ( ! isset( $_FILES['quest_file'] ) || empty( $_FILES['quest_file']['name'] ) ) {
+                sgd_set_flash( 'error', '⚠️ Silakan pilih file dokumen atau gambar untuk diunggah.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $uploaded = wp_handle_upload( $_FILES['quest_file'], [ 'test_form' => false ] );
+            if ( $uploaded && ! isset( $uploaded['error'] ) ) {
+                $table_quest_attachments = $wpdb->prefix . 'sgd_quest_attachments';
+                $wpdb->insert( $table_quest_attachments, [
+                    'task_id'    => $task_id,
+                    'user_id'    => $current_user_id,
+                    'file_url'   => $uploaded['url'],
+                    'file_name'  => sanitize_file_name( $_FILES['quest_file']['name'] ),
+                    'file_size'  => (int) ( $_FILES['quest_file']['size'] ?? 0 ),
+                    'file_type'  => sanitize_text_field( $uploaded['type'] ?? '' ),
+                    'created_at' => current_time( 'mysql' ),
+                ] );
+                sgd_set_flash( 'celebration', "📎 File '{$_FILES['quest_file']['name']}' berhasil diunggah!" );
+            } else {
+                sgd_set_flash( 'error', '⚠️ Gagal mengunggah file: ' . ( $uploaded['error'] ?? 'Terjadi kesalahan' ) );
+            }
+
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 16. Delete File Attachment
+        if ( $action === 'sgd_delete_quest_attachment' ) {
+            $attachment_id = (int) ( $_POST['attachment_id'] ?? 0 );
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $task = sgd_get_quest_task( $task_id );
+
+            $table_quest_attachments = $wpdb->prefix . 'sgd_quest_attachments';
+            $wpdb->delete( $table_quest_attachments, [ 'id' => $attachment_id ] );
+
+            sgd_set_flash( 'celebration', '🗑️ File lampiran berhasil dihapus.' );
+            $team_id = $task ? $task->team_id : 0;
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+            exit;
+        }
 }
 
 // Cash Shop Rewards Catalog
@@ -3780,6 +4973,18 @@ function sgd_render_portal_override() {
     if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || ( strpos( $_SERVER['REQUEST_URI'] ?? '', 'wp-json' ) !== false ) || isset( $_GET['rest_route'] ) ) {
         return;
     }
+
+    // Fast JSON API responder for Quests Kanban task detail
+    if ( isset( $_GET['get_task_detail'] ) ) {
+        $task_id = (int) $_GET['get_task_detail'];
+        $task = sgd_get_quest_task( $task_id );
+        if ( $task ) {
+            wp_send_json_success( [ 'task' => $task ] );
+        } else {
+            wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan' ] );
+        }
+    }
+
     $view_file = SGD_PLUGIN_DIR . '/views/index.php';
     if ( file_exists( $view_file ) ) {
         include $view_file;
@@ -3796,4 +5001,26 @@ function sgd_template_loader( $template ) {
         }
     }
     return $template;
+}
+
+// 4. WP-Admin Quests (Cicle Kanban) Menu for Administrators
+add_action( 'admin_menu', 'sgd_register_quests_admin_menu' );
+function sgd_register_quests_admin_menu() {
+    add_menu_page(
+        __( 'Quests (Cicle Kanban)', 'sgd' ),
+        __( 'Quests', 'sgd' ),
+        'manage_options',
+        'sgd-quests',
+        function() {
+            $quests_url = add_query_arg( 'sgd_page', 'quests', home_url( '/' ) );
+            echo '<script>window.location.href = "' . esc_url( $quests_url ) . '";</script>';
+            echo '<div class="wrap" style="padding:40px; text-align:center;">';
+            echo '<h1 style="font-size:24px; margin-bottom:12px;">🎯 Mengalihkan ke Quests Kanban...</h1>';
+            echo '<p style="font-size:14px; color:#555;">Jika halaman tidak terbuka otomatis, silakan klik tombol di bawah:</p>';
+            echo '<p style="margin-top:20px;"><a class="button button-primary button-hero" href="' . esc_url( $quests_url ) . '">Buka Quests Kanban Board ➔</a></p>';
+            echo '</div>';
+        },
+        'dashicons-columns',
+        25
+    );
 }

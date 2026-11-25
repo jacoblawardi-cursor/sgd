@@ -1243,4 +1243,800 @@ document.addEventListener('DOMContentLoaded', function() {
             try { AudioEngine.playQuestAccept(); } catch(e) {}
         });
     }
+
+    // ========================================================
+    // K. CICLE KANBAN QUEST SYSTEM (HQ, TIM & PROYEK)
+    // ========================================================
+    (function initCicleKanban() {
+        const board = document.getElementById('sgd-kanban-board');
+        const modalCreateTeam = document.getElementById('sgd-modal-create-team');
+        const modalEditTeam = document.getElementById('sgd-modal-edit-team');
+        const modalTaskDetail = document.getElementById('sgd-modal-task-detail');
+
+        // Helper to safely play sounds
+        function sfxClick() {
+            try { if (typeof AudioEngine !== 'undefined') AudioEngine.playClick(); } catch(e) {}
+        }
+        function sfxSuccess() {
+            try { if (typeof AudioEngine !== 'undefined') AudioEngine.playSuccess(); } catch(e) {}
+        }
+
+        // Generic modal closer
+        document.querySelectorAll('[data-close-modal]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-close-modal');
+                const m = document.getElementById(targetId);
+                if (m) m.classList.remove('open');
+                sfxClick();
+            });
+        });
+
+        // Close on backdrop click
+        [modalCreateTeam, modalEditTeam, modalTaskDetail].forEach(m => {
+            if (m) {
+                m.addEventListener('click', function(e) {
+                    if (e.target === m) {
+                        m.classList.remove('open');
+                        sfxClick();
+                    }
+                });
+            }
+        });
+
+        // 1. Create Team Modal
+        const btnOpenCreate = document.getElementById('sgd-btn-open-create-team');
+        const btnOpenCreateEmpty = document.getElementById('sgd-btn-open-create-team-empty');
+        [btnOpenCreate, btnOpenCreateEmpty].forEach(btn => {
+            if (btn && modalCreateTeam) {
+                btn.addEventListener('click', function() {
+                    modalCreateTeam.classList.add('open');
+                    sfxClick();
+                    const nameInput = document.getElementById('sgd-input-timname');
+                    if (nameInput) setTimeout(() => nameInput.focus(), 100);
+                });
+            }
+        });
+
+        // Radio cards visual selection in Create Team
+        document.querySelectorAll('.sgd-type-radio-selector input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const parentSelector = this.closest('.sgd-type-radio-selector');
+                if (parentSelector) {
+                    parentSelector.querySelectorAll('.sgd-type-radio-card').forEach(c => c.classList.remove('active'));
+                    const card = this.closest('.sgd-type-radio-card');
+                    if (card) card.classList.add('active');
+                }
+            });
+        });
+
+        // 2. Edit Team Modal
+        function openEditTeam(data) {
+            if (!modalEditTeam) return;
+            document.getElementById('edit-team-id').value = data.id || '';
+            document.getElementById('edit-team-name').value = data.name || '';
+            document.getElementById('edit-team-desc').value = data.desc || '';
+            document.getElementById('edit-team-manager').value = data.mgr || '';
+
+            // Type radio
+            const typeRadios = modalEditTeam.querySelectorAll('input[name="team_type"]');
+            typeRadios.forEach(r => {
+                r.checked = (r.value === data.type);
+                const card = r.closest('.sgd-type-radio-card');
+                if (card) {
+                    if (r.checked) card.classList.add('active');
+                    else card.classList.remove('active');
+                }
+            });
+
+            // Member checkboxes
+            const memberIds = (data.members || '').split(',').map(s => s.trim());
+            modalEditTeam.querySelectorAll('.edit-member-check').forEach(chk => {
+                chk.checked = memberIds.includes(chk.getAttribute('data-user-id'));
+            });
+
+            modalEditTeam.classList.add('open');
+            sfxClick();
+        }
+
+        document.querySelectorAll('.sgd-team-edit-btn, #sgd-btn-edit-current-team').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                openEditTeam({
+                    id: this.getAttribute('data-team-id'),
+                    name: this.getAttribute('data-team-name'),
+                    type: this.getAttribute('data-team-type'),
+                    desc: this.getAttribute('data-team-desc'),
+                    mgr: this.getAttribute('data-team-mgr'),
+                    members: this.getAttribute('data-team-members'),
+                });
+            });
+        });
+
+        // 3. Inline Task Creator in Columns
+        document.querySelectorAll('.sgd-btn-add-tugas-toggle').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const colKey = this.getAttribute('data-column');
+                const formWrap = this.parentElement.querySelector('.sgd-inline-task-form');
+                if (formWrap) {
+                    const isVisible = formWrap.style.display !== 'none';
+                    if (isVisible) {
+                        formWrap.style.display = 'none';
+                    } else {
+                        // Close other inline forms first
+                        document.querySelectorAll('.sgd-inline-task-form').forEach(f => f.style.display = 'none');
+                        formWrap.style.display = 'block';
+                        const input = formWrap.querySelector('.sgd-input-task-name');
+                        if (input) input.focus();
+                    }
+                    sfxClick();
+                }
+            });
+        });
+
+        document.querySelectorAll('.sgd-btn-cancel-inline').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const formWrap = this.closest('.sgd-inline-task-form');
+                if (formWrap) formWrap.style.display = 'none';
+                sfxClick();
+            });
+        });
+
+        // 4. WYSIWYG Editor Controls
+        const wysiwygEditor = document.getElementById('modal-task-editor');
+        const wysiwygHidden = document.getElementById('modal-task-desc-hidden');
+
+        if (wysiwygEditor && wysiwygHidden) {
+            // Sync content from contenteditable to hidden textarea
+            function syncWysiwyg() {
+                wysiwygHidden.value = wysiwygEditor.innerHTML;
+            }
+            wysiwygEditor.addEventListener('input', syncWysiwyg);
+            wysiwygEditor.addEventListener('blur', syncWysiwyg);
+
+            // Toolbar actions
+            document.querySelectorAll('#sgd-wysiwyg-toolbar .sgd-tool-btn[data-cmd]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const cmd = this.getAttribute('data-cmd');
+                    const val = this.getAttribute('data-val') || null;
+                    document.execCommand(cmd, false, val);
+                    wysiwygEditor.focus();
+                    syncWysiwyg();
+                    sfxClick();
+                });
+            });
+
+            // Insert Link
+            const linkBtn = document.getElementById('sgd-tool-insert-link');
+            if (linkBtn) {
+                linkBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const url = prompt('Masukkan URL tautan:', 'https://');
+                    if (url && url !== 'https://') {
+                        document.execCommand('createLink', false, url);
+                        syncWysiwyg();
+                    }
+                });
+            }
+
+            // Sync on form submit
+            const taskForm = document.getElementById('sgd-form-update-task');
+            if (taskForm) {
+                taskForm.addEventListener('submit', function() {
+                    syncWysiwyg();
+                    sfxSuccess();
+                });
+            }
+        }
+
+        // 5. Open Task Detail Modal when Task Card is clicked
+        function openTaskDetail(taskId) {
+            if (!modalTaskDetail || !taskId) return;
+
+            // Fetch task detail via lightweight AJAX / fetch
+            const formData = new FormData();
+            formData.append('sgd_action', 'sgd_get_task_json');
+            formData.append('task_id', taskId);
+
+            // Optimistic UI fallback: read from card DOM
+            const card = document.querySelector(`.sgd-kanban-card[data-task-id="${taskId}"]`);
+            if (card) {
+                const title = card.querySelector('.sgd-card-title') ? card.querySelector('.sgd-card-title').textContent.trim() : '';
+                const col = card.getAttribute('data-column') || 'To do list';
+                populateTaskModal({
+                    id: taskId,
+                    title: title,
+                    column_name: col,
+                    description: '',
+                    deadline: '',
+                    assigned_members: '',
+                    comments: [],
+                    attachments: [],
+                });
+            }
+
+            // Query server for full rich details (WYSIWYG HTML, attachments, comments)
+            const queryUrl = window.SGD_QUESTS_CONFIG && window.SGD_QUESTS_CONFIG.ajaxUrl 
+                ? window.SGD_QUESTS_CONFIG.ajaxUrl + '?sgd_page=quests&get_task_detail=' + taskId 
+                : window.location.href;
+
+            fetch(queryUrl, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success && data.data && data.data.task) {
+                    populateTaskModal(data.data.task);
+                }
+            })
+            .catch(() => {});
+
+            modalTaskDetail.classList.add('open');
+            sfxClick();
+        }
+
+        function populateTaskModal(task) {
+            document.getElementById('modal-task-id').value = task.id;
+            document.getElementById('modal-task-id-display').textContent = '#' + task.id;
+            document.getElementById('modal-task-title').value = task.title || '';
+            document.getElementById('modal-task-column').value = task.column_name || 'To do list';
+            
+            const colBadge = document.getElementById('modal-task-column-badge');
+            if (colBadge) {
+                colBadge.textContent = task.column_name || 'To do list';
+            }
+
+            // WYSIWYG Editor
+            if (wysiwygEditor && wysiwygHidden) {
+                wysiwygEditor.innerHTML = task.description || '';
+                wysiwygHidden.value = task.description || '';
+            }
+
+            // Deadline
+            const dlInput = document.getElementById('modal-task-deadline');
+            if (dlInput) {
+                if (task.deadline && task.deadline !== '0000-00-00 00:00:00') {
+                    // Convert 'YYYY-MM-DD HH:MM:SS' to 'YYYY-MM-DDTHH:MM'
+                    dlInput.value = task.deadline.replace(' ', 'T').substring(0, 16);
+                } else {
+                    dlInput.value = '';
+                }
+            }
+
+            // Assigned Members
+            const assignedIds = (task.assigned_members || '').toString().split(',').map(s => s.trim());
+            document.querySelectorAll('.modal-assigned-member-check').forEach(chk => {
+                chk.checked = assignedIds.includes(chk.getAttribute('data-user-id'));
+            });
+
+            // Quest Level
+            const qlInput = document.getElementById('modal-task-quest-level');
+            if (qlInput) {
+                qlInput.value = task.quest_level || 1;
+            }
+
+            // Reward Type & Amounts
+            const rtSelect = document.getElementById('modal-task-reward-type');
+            if (rtSelect) {
+                rtSelect.value = task.reward_type || 'both';
+            }
+            const rxpInput = document.getElementById('modal-task-reward-xp');
+            if (rxpInput) {
+                rxpInput.value = (task.reward_xp !== undefined && task.reward_xp !== null) ? task.reward_xp : 200;
+            }
+            const rgoldInput = document.getElementById('modal-task-reward-gold');
+            if (rgoldInput) {
+                rgoldInput.value = (task.reward_gold !== undefined && task.reward_gold !== null) ? task.reward_gold : 50;
+            }
+
+            updateRewardFieldsVisibility(task.reward_type || 'both');
+            updateQuestLevelPreview(task.quest_level || 1);
+
+            // Labels / Tags
+            renderLabels(task.tags || []);
+
+            // Attachments
+            renderAttachments(task.attachments || []);
+
+            // Comments
+            renderComments(task.comments || []);
+        }
+
+        function updateRewardFieldsVisibility(type) {
+            const xpGroup = document.getElementById('modal-reward-xp-group');
+            const goldGroup = document.getElementById('modal-reward-gold-group');
+            if (!xpGroup || !goldGroup) return;
+
+            if (type === 'both') {
+                xpGroup.style.display = 'block';
+                goldGroup.style.display = 'block';
+            } else if (type === 'xp') {
+                xpGroup.style.display = 'block';
+                goldGroup.style.display = 'none';
+            } else if (type === 'gold') {
+                xpGroup.style.display = 'none';
+                goldGroup.style.display = 'block';
+            } else {
+                xpGroup.style.display = 'none';
+                goldGroup.style.display = 'none';
+            }
+        }
+
+        function updateQuestLevelPreview(questLevel) {
+            questLevel = Math.max(1, parseInt(questLevel, 10) || 1);
+            const badge = document.getElementById('modal-quest-lvl-badge');
+            if (badge) {
+                badge.textContent = 'Lv. ' + questLevel;
+            }
+
+            const myLevel = (window.SGD_QUESTS_CONFIG && window.SGD_QUESTS_CONFIG.currentUserLevel) ? parseInt(window.SGD_QUESTS_CONFIG.currentUserLevel, 10) : 1;
+            const diff = myLevel - questLevel;
+            
+            let percent = 100;
+            let status = 'Tepat Level';
+            let color = '#2ecc71';
+            let desc = '';
+
+            if (diff <= 2) {
+                percent = 100;
+                if (diff < 0) {
+                    status = 'Tantangan Tinggi';
+                    color = '#ff4444';
+                    desc = `Level Anda (Lv.${myLevel}) di bawah quest ini -> Anda mendapatkan 100% hadiah penuh!`;
+                } else {
+                    status = 'Tepat Level';
+                    color = '#2ecc71';
+                    desc = `Level Anda (Lv.${myLevel}) seimbang dengan quest -> Anda mendapatkan 100% hadiah penuh!`;
+                }
+            } else if (diff <= 5) {
+                percent = 70;
+                status = 'Tugas Mudah (70% Porsi)';
+                color = '#ff9f43';
+                desc = `Level Anda (Lv.${myLevel}) lebih tinggi (+${diff} level) -> Hanya mendapat 70% porsi hadiah dasar.`;
+            } else if (diff <= 9) {
+                percent = 40;
+                status = 'Tantangan Rendah (40% Porsi)';
+                color = '#a4b0be';
+                desc = `Level Anda (Lv.${myLevel}) jauh lebih tinggi (+${diff} level) -> Hanya mendapat 40% porsi hadiah dasar.`;
+            } else {
+                percent = 15;
+                status = 'Trivial / Pemula (15% Porsi)';
+                color = '#747d8c';
+                desc = `Level Anda (Lv.${myLevel}) veteran (+${diff} level dari Lv.${questLevel}) -> Hanya mendapat 15% porsi hadiah minimum.`;
+            }
+
+            const tag = document.getElementById('modal-preview-portion-tag');
+            if (tag) {
+                tag.textContent = percent + '% Porsi (' + status + ')';
+                tag.style.background = color;
+                tag.style.color = (color === '#2ecc71' || color === '#ff9f43') ? '#000' : '#fff';
+            }
+
+            const text = document.getElementById('modal-scaling-user-text');
+            if (text) {
+                text.textContent = desc;
+            }
+        }
+
+        // ========================================================
+        // Label & Tag Manager (Admin Need Button & Color Options)
+        // ========================================================
+        let currentTaskLabels = [];
+        let selectedLabelColor = '#ff4444';
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderLabels(labels) {
+            currentTaskLabels = Array.isArray(labels) ? labels : [];
+            const container = document.getElementById('modal-labels-container');
+            const hiddenInput = document.getElementById('modal-task-labels-hidden');
+            if (hiddenInput) {
+                hiddenInput.value = JSON.stringify(currentTaskLabels);
+            }
+            if (!container) return;
+
+            if (currentTaskLabels.length === 0) {
+                container.innerHTML = '<span class="sgd-no-labels-text" style="font-size:11px; color:#718093;">Belum ada label.</span>';
+                return;
+            }
+
+            let html = '';
+            currentTaskLabels.forEach((lbl, idx) => {
+                const color = lbl.color || '#00e5ff';
+                html += `
+                    <span class="sgd-modal-tag-chip" style="--chip-color:${color}; background:${color}22; border-color:${color}; color:${color};">
+                        <span class="sgd-tag-dot" style="background:${color};"></span>
+                        ${escapeHtml(lbl.name)}
+                        <button type="button" class="sgd-remove-tag-btn" data-tag-index="${idx}" title="Hapus label">&times;</button>
+                    </span>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // Toggle add label panel
+        const btnToggleAddLabel = document.getElementById('modal-btn-toggle-add-label');
+        const btnHeaderAddLabel = document.getElementById('modal-btn-add-label-trigger');
+        const addLabelPanel = document.getElementById('modal-add-label-panel');
+        const btnCancelAddLabel = document.getElementById('modal-btn-cancel-add-label');
+        const btnConfirmAddLabel = document.getElementById('modal-btn-confirm-add-label');
+        const newTagNameInput = document.getElementById('modal-new-tag-name');
+
+        function toggleAddLabelPanel(show) {
+            if (!addLabelPanel) return;
+            const willShow = (typeof show === 'boolean') ? show : (addLabelPanel.style.display === 'none');
+            addLabelPanel.style.display = willShow ? 'block' : 'none';
+            if (willShow && newTagNameInput) {
+                setTimeout(() => newTagNameInput.focus(), 50);
+            }
+            sfxClick();
+        }
+
+        if (btnToggleAddLabel) btnToggleAddLabel.addEventListener('click', () => toggleAddLabelPanel());
+        if (btnHeaderAddLabel) btnHeaderAddLabel.addEventListener('click', () => toggleAddLabelPanel(true));
+        if (btnCancelAddLabel) btnCancelAddLabel.addEventListener('click', () => toggleAddLabelPanel(false));
+
+        // Color swatches selection
+        document.querySelectorAll('#modal-tag-color-swatches .sgd-color-swatch').forEach(sw => {
+            sw.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('#modal-tag-color-swatches .sgd-color-swatch').forEach(s => s.classList.remove('active'));
+                this.classList.add('active');
+                selectedLabelColor = this.getAttribute('data-color') || '#ff4444';
+                sfxClick();
+            });
+        });
+
+        // Quick Tag Presets
+        document.querySelectorAll('.sgd-tag-preset-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const name = this.getAttribute('data-name');
+                const color = this.getAttribute('data-color');
+                if (newTagNameInput && name) newTagNameInput.value = name;
+                if (color) {
+                    selectedLabelColor = color;
+                    document.querySelectorAll('#modal-tag-color-swatches .sgd-color-swatch').forEach(s => {
+                        s.classList.toggle('active', s.getAttribute('data-color') === color);
+                    });
+                }
+                sfxClick();
+            });
+        });
+
+        // Confirm Add Label
+        if (btnConfirmAddLabel && newTagNameInput) {
+            btnConfirmAddLabel.addEventListener('click', function(e) {
+                e.preventDefault();
+                const name = newTagNameInput.value.trim();
+                if (!name) {
+                    newTagNameInput.focus();
+                    return;
+                }
+                currentTaskLabels.push({
+                    name: name,
+                    color: selectedLabelColor || '#00e5ff'
+                });
+                renderLabels(currentTaskLabels);
+                newTagNameInput.value = '';
+                toggleAddLabelPanel(false);
+                sfxSuccess();
+            });
+        }
+
+        // Remove Label from container
+        const labelsContainer = document.getElementById('modal-labels-container');
+        if (labelsContainer) {
+            labelsContainer.addEventListener('click', function(e) {
+                const removeBtn = e.target.closest('.sgd-remove-tag-btn');
+                if (removeBtn) {
+                    e.preventDefault();
+                    const idx = parseInt(removeBtn.getAttribute('data-tag-index'), 10);
+                    if (!isNaN(idx) && idx >= 0 && idx < currentTaskLabels.length) {
+                        currentTaskLabels.splice(idx, 1);
+                        renderLabels(currentTaskLabels);
+                        sfxClick();
+                    }
+                }
+            });
+        }
+
+        function renderAttachments(attachments) {
+            const list = document.getElementById('modal-attachments-list');
+            const countElem = document.getElementById('modal-attachment-count');
+            if (!list) return;
+
+            if (countElem) countElem.textContent = attachments.length + ' file';
+
+            if (!attachments || attachments.length === 0) {
+                list.innerHTML = '<p class="sgd-attachments-empty" style="color:#718093; font-size:12px; margin:0;">Belum ada file terlampir.</p>';
+                return;
+            }
+
+            let html = '';
+            attachments.forEach(att => {
+                const sizeKb = att.file_size ? Math.round(att.file_size / 1024) + ' KB' : '';
+                html += `
+                    <div class="sgd-attachment-item">
+                        <div class="sgd-attachment-info">
+                            <span style="font-size:18px;">📄</span>
+                            <div>
+                                <a href="${att.file_url}" target="_blank" class="sgd-attachment-name" title="${att.file_name}">${att.file_name}</a>
+                                <div class="sgd-attachment-meta">Oleh: ${att.uploader_name || 'Staff'} • ${sizeKb}</div>
+                            </div>
+                        </div>
+                        <form method="post" style="display:inline;" onsubmit="return confirm('Hapus file ini?');">
+                            <input type="hidden" name="sgd_action" value="sgd_delete_quest_attachment">
+                            <input type="hidden" name="attachment_id" value="${att.id}">
+                            <input type="hidden" name="task_id" value="${att.task_id}">
+                            <button type="submit" class="sgd-attachment-del" title="Hapus file">🗑️</button>
+                        </form>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
+
+        function renderComments(comments) {
+            const stream = document.getElementById('modal-comments-stream');
+            const countElem = document.getElementById('modal-comment-count');
+            if (!stream) return;
+
+            if (countElem) countElem.textContent = comments.length + ' pesan';
+
+            if (!comments || comments.length === 0) {
+                stream.innerHTML = '<p class="sgd-comments-empty" style="color:#718093; font-size:12px; margin:0;">Belum ada obrolan. Jadilah yang pertama memberikan masukan!</p>';
+                return;
+            }
+
+            let html = '';
+            comments.forEach(c => {
+                html += `
+                    <div class="sgd-comment-card">
+                        <div class="sgd-comment-avatar">${c.user_avatar || '👤'}</div>
+                        <div class="sgd-comment-content">
+                            <div class="sgd-comment-header">
+                                <span class="sgd-comment-author">${c.user_name || 'Anggota'}</span>
+                                <span class="sgd-comment-time">${c.created_at || ''}</span>
+                            </div>
+                            <div class="sgd-comment-text">${c.comment || ''}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            stream.innerHTML = html;
+            stream.scrollTop = stream.scrollHeight;
+        }
+
+        // Attach card click handlers
+        function initCardClicks() {
+            document.querySelectorAll('.sgd-kanban-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    // Don't trigger if clicked on quick action or move buttons
+                    if (e.target.closest('.sgd-card-quick-actions') || e.target.closest('.sgd-card-move-bar')) {
+                        return;
+                    }
+                    const taskId = this.getAttribute('data-task-id');
+                    openTaskDetail(taskId);
+                });
+            });
+        }
+        initCardClicks();
+
+        // 6. Clone & Delete Task Action Handlers
+        document.querySelectorAll('.sgd-btn-clone-task, #modal-btn-clone-task').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const taskId = this.getAttribute('data-task-id') || document.getElementById('modal-task-id').value;
+                if (!taskId) return;
+                const form = document.getElementById('sgd-hidden-clone-form');
+                if (form) {
+                    document.getElementById('sgd-hidden-clone-task-id').value = taskId;
+                    sfxSuccess();
+                    form.submit();
+                }
+            });
+        });
+
+        document.querySelectorAll('.sgd-btn-del-task, #modal-btn-delete-task').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const taskId = this.getAttribute('data-task-id') || document.getElementById('modal-task-id').value;
+                const title = this.getAttribute('data-task-title') || document.getElementById('modal-task-title').value;
+                if (!taskId) return;
+                if (confirm(`Apakah Anda yakin ingin menghapus tugas '${title}'?`)) {
+                    const form = document.getElementById('sgd-hidden-del-form');
+                    if (form) {
+                        document.getElementById('sgd-hidden-del-task-id').value = taskId;
+                        sfxClick();
+                        form.submit();
+                    }
+                }
+            });
+        });
+
+        // 7. Quick Move Column Buttons
+        document.querySelectorAll('.sgd-quick-move-pill').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const taskId = this.getAttribute('data-task-id');
+                const targetCol = this.getAttribute('data-target-column');
+                const form = document.getElementById('sgd-hidden-move-form');
+                if (form && taskId && targetCol) {
+                    document.getElementById('sgd-hidden-move-task-id').value = taskId;
+                    document.getElementById('sgd-hidden-move-target-column').value = targetCol;
+                    sfxClick();
+                    form.submit();
+                }
+            });
+        });
+
+        // 8. Add Comment Button in Modal
+        const btnSendComment = document.getElementById('modal-btn-send-comment');
+        const commentInput = document.getElementById('modal-new-comment-input');
+        if (btnSendComment && commentInput) {
+            btnSendComment.addEventListener('click', function() {
+                const text = commentInput.value.trim();
+                const taskId = document.getElementById('modal-task-id').value;
+                if (!text || !taskId) return;
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+
+                const a1 = document.createElement('input');
+                a1.name = 'sgd_action';
+                a1.value = 'sgd_add_quest_comment';
+                form.appendChild(a1);
+
+                const a2 = document.createElement('input');
+                a2.name = 'task_id';
+                a2.value = taskId;
+                form.appendChild(a2);
+
+                const a3 = document.createElement('input');
+                a3.name = 'comment_text';
+                a3.value = text;
+                form.appendChild(a3);
+
+                document.body.appendChild(form);
+                sfxSuccess();
+                form.submit();
+            });
+        }
+
+        // 9. Upload File Button in Modal
+        const btnUploadFile = document.getElementById('modal-btn-upload-file');
+        const fileInput = document.getElementById('modal-file-input');
+        if (btnUploadFile && fileInput) {
+            btnUploadFile.addEventListener('click', function() {
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    alert('Silakan pilih file terlebih dahulu.');
+                    return;
+                }
+                const taskId = document.getElementById('modal-task-id').value;
+                if (!taskId) return;
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.enctype = 'multipart/form-data';
+                form.style.display = 'none';
+
+                const a1 = document.createElement('input');
+                a1.name = 'sgd_action';
+                a1.value = 'sgd_upload_quest_attachment';
+                form.appendChild(a1);
+
+                const a2 = document.createElement('input');
+                a2.name = 'task_id';
+                a2.value = taskId;
+                form.appendChild(a2);
+
+                // Clone the file input into the form
+                form.appendChild(fileInput);
+
+                document.body.appendChild(form);
+                sfxSuccess();
+                form.submit();
+            });
+        }
+
+        // 10. HTML5 Drag and Drop for Kanban Cards
+        let draggedCard = null;
+
+        document.querySelectorAll('.sgd-kanban-card').forEach(card => {
+            if (card.getAttribute('draggable') !== 'true') return;
+
+            card.addEventListener('dragstart', function(e) {
+                draggedCard = this;
+                this.classList.add('is-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', this.getAttribute('data-task-id'));
+            });
+
+            card.addEventListener('dragend', function() {
+                this.classList.remove('is-dragging');
+                draggedCard = null;
+                document.querySelectorAll('.sgd-kanban-column').forEach(c => c.classList.remove('drag-over'));
+            });
+        });
+
+        document.querySelectorAll('.sgd-kanban-column').forEach(col => {
+            col.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                this.classList.add('drag-over');
+            });
+
+            col.addEventListener('dragleave', function(e) {
+                if (!this.contains(e.relatedTarget)) {
+                    this.classList.remove('drag-over');
+                }
+            });
+
+            col.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                const targetColumnName = this.getAttribute('data-column-name');
+                const taskId = e.dataTransfer.getData('text/plain') || (draggedCard ? draggedCard.getAttribute('data-task-id') : null);
+
+                if (draggedCard && taskId && targetColumnName) {
+                    const originCol = draggedCard.getAttribute('data-column');
+                    if (originCol !== targetColumnName) {
+                        const form = document.getElementById('sgd-hidden-move-form');
+                        if (form) {
+                            document.getElementById('sgd-hidden-move-task-id').value = taskId;
+                            document.getElementById('sgd-hidden-move-target-column').value = targetColumnName;
+                            sfxSuccess();
+                            form.submit();
+                        }
+                    }
+                }
+            });
+        });
+
+        // Listeners for Reward Choice and Quest Level in Modal
+        const rewardTypeSelect = document.getElementById('modal-task-reward-type');
+        if (rewardTypeSelect) {
+            rewardTypeSelect.addEventListener('change', function() {
+                updateRewardFieldsVisibility(this.value);
+            });
+        }
+
+        const questLevelInput = document.getElementById('modal-task-quest-level');
+        if (questLevelInput) {
+            questLevelInput.addEventListener('input', function() {
+                updateQuestLevelPreview(this.value);
+            });
+        }
+
+        // Auto-open task if ?open_task=X is present in URL
+        if (window.SGD_QUESTS_CONFIG && window.SGD_QUESTS_CONFIG.openTaskId) {
+            openTaskDetail(window.SGD_QUESTS_CONFIG.openTaskId);
+        }
+
+    })();
+
+    // Helper for deadline presets
+    window.sgdSetDeadlinePreset = function(days) {
+        const input = document.getElementById('modal-task-deadline');
+        if (!input) return;
+        const target = new Date(Date.now() + days * 86400000);
+        const y = target.getFullYear();
+        const m = String(target.getMonth() + 1).padStart(2, '0');
+        const d = String(target.getDate()).padStart(2, '0');
+        input.value = `${y}-${m}-${d}T17:00`;
+    };
+
+    // Helper for quest level presets
+    window.sgdSetQuestLevel = function(lvl) {
+        const input = document.getElementById('modal-task-quest-level');
+        if (!input) return;
+        input.value = lvl;
+        input.dispatchEvent(new Event('input'));
+    };
 });

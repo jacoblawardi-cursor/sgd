@@ -73,6 +73,20 @@ $table_prefix = 'wp_';
 
 /* Add any custom values between this line and the "stop editing" line. */
 
+/**
+ * Dynamic site URL configuration:
+ * Automatically adapts to the active Host and Port (e.g., 127.0.0.1:8080 or localhost:8080)
+ * Ensures CSS, JS, images, and links resolve correctly when web server port changes.
+ */
+if ( ! empty( $_SERVER['HTTP_HOST'] ) ) {
+    $sgd_proto = ( ! empty( $_SERVER['HTTPS'] ) && 'off' !== $_SERVER['HTTPS'] ) ? 'https://' : 'http://';
+    define( 'WP_HOME', $sgd_proto . $_SERVER['HTTP_HOST'] . '/sgd' );
+    define( 'WP_SITEURL', $sgd_proto . $_SERVER['HTTP_HOST'] . '/sgd' );
+} else {
+    define( 'WP_HOME', 'http://127.0.0.1:8080/sgd' );
+    define( 'WP_SITEURL', 'http://127.0.0.1:8080/sgd' );
+}
+
 
 
 /**

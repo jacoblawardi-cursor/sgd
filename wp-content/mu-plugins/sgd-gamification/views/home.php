@@ -380,6 +380,20 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
             <span class="sgd-menu-btn-arrow">➔</span>
         </a>
 
+        <!-- QUESTS (CICLE KANBAN) SHORTCUT -->
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #072a38 0%, #03131c 100%); border-color:#00e5ff; box-shadow:0 0 15px rgba(0,229,255,0.25);">
+            <span class="sgd-menu-btn-icon" style="border-color:#00e5ff; color:#00e5ff;">🎯</span>
+            <div class="sgd-menu-btn-content">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span class="sgd-menu-btn-label" style="color:#00e5ff;">QUESTS (CICLE KANBAN)</span>
+                    <span class="sgd-pill-reward" style="background:rgba(0,229,255,0.2); border-color:#00e5ff; color:#00e5ff;">🏢 HQ • 👥 TIM • 🚀 PROYEK</span>
+                    <span style="font-family:var(--font-pixel); font-size:8px; background:#00e5ff; color:#03131c; padding:2px 6px; border-radius:3px;">4 KOLOM KANBAN</span>
+                </div>
+                <span class="sgd-menu-btn-desc">Sistem manajemen tugas Cicle: Buat grup tugas (HQ, Tim, Proyek), 4 kolom Kanban (To do list, Dikerjakan, Selesai, Batal), WYSIWYG editor & diskusi obrolan</span>
+            </div>
+            <span class="sgd-menu-btn-arrow" style="color:#00e5ff;">➔</span>
+        </a>
+
         <?php if ( current_user_can('administrator') ): ?>
             <!-- ADMIN COMMAND CENTER SHORTCUT -->
             <a href="<?php echo esc_url( sgd_get_portal_url( 'admin' ) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #3d2b07 0%, #171003 100%); border-color:#ffd700;">

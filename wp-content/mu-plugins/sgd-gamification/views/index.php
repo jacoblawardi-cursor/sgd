@@ -33,6 +33,9 @@ switch ( $page ) {
     case 'admin':
         require_once __DIR__ . '/admin.php';
         break;
+    case 'quests':
+        require_once __DIR__ . '/quests.php';
+        break;
     case 'login':
         require_once __DIR__ . '/login.php';
         break;
