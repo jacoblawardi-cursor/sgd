@@ -8115,3 +8115,62 @@ body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
   padding: 2px 6px;
   font-size: 9px;
 }
+
+/* Card Multiple Upload Pill & Actions */
+.sgd-card-upload-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #8fa0bd;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1px 7px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  line-height: 1.4;
+}
+
+.sgd-card-upload-pill:hover {
+  background: rgba(52, 152, 219, 0.2);
+  border-color: rgba(52, 152, 219, 0.5);
+  color: #54a0ff;
+  transform: translateY(-1px);
+}
+
+.sgd-card-upload-pill.uploading {
+  opacity: 0.7;
+  pointer-events: none;
+  background: rgba(241, 196, 15, 0.2);
+  border-color: rgba(241, 196, 15, 0.6);
+  color: #f1c40f;
+  animation: sgd-upload-pulse 1s infinite alternate;
+}
+
+@keyframes sgd-upload-pulse {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.sgd-card-att-add {
+  font-size: 9px;
+  opacity: 0.75;
+  color: #3498db;
+  font-weight: 600;
+}
+
+.sgd-card-upload-pill:hover .sgd-card-att-add {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.sgd-card-quick-actions label.sgd-card-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  line-height: 1;
+  cursor: pointer;
+}

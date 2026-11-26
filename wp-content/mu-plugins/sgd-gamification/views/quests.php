@@ -491,6 +491,10 @@ $kanban_columns = [
                                             <h4 class="sgd-card-title"><?php echo esc_html( $task->title ); ?></h4>
                                         </div>
                                         <div class="sgd-card-quick-actions">
+                                            <label class="sgd-card-quick-btn sgd-btn-quick-upload" title="Unggah File ke Tugas Ini (Multi-File)" onclick="event.stopPropagation();">
+                                                📎
+                                                <input type="file" class="sgd-card-multiple-upload-input" data-task-id="<?php echo esc_attr( $task->id ); ?>" multiple style="display:none;" onclick="event.stopPropagation();">
+                                            </label>
                                             <button type="button" class="sgd-card-quick-btn sgd-btn-clone-task" data-task-id="<?php echo esc_attr( $task->id ); ?>" title="Duplikat Tugas (Clone Task)">
                                                 📋
                                             </button>
@@ -617,14 +621,11 @@ $kanban_columns = [
                                                     💬 <?php echo $task->comment_count; ?>
                                                 </span>
                                             <?php endif; ?>
-                                            <?php if ( $task->attachment_count > 0 ): ?>
-                                                <span class="sgd-card-indicator" title="<?php echo $task->attachment_count; ?> Lampiran File">
-                                                    📎 <?php echo $task->attachment_count; ?>
-                                                </span>
-                                            <?php endif; ?>
-                                            <?php if ( empty( $deadline_badge ) && $task->comment_count == 0 && $task->attachment_count == 0 ): ?>
-                                                <span class="sgd-card-team-label">👥 Tim</span>
-                                            <?php endif; ?>
+                                            <label class="sgd-card-upload-pill" id="card-upload-pill-<?php echo esc_attr( $task->id ); ?>" title="Klik untuk unggah file dokumen/gambar (multi-file)" onclick="event.stopPropagation();">
+                                                📎 <span class="sgd-card-att-count" id="card-att-count-<?php echo esc_attr( $task->id ); ?>"><?php echo (int) $task->attachment_count; ?></span>
+                                                <span class="sgd-card-att-add">+ File</span>
+                                                <input type="file" class="sgd-card-multiple-upload-input" data-task-id="<?php echo esc_attr( $task->id ); ?>" multiple style="display:none;" onclick="event.stopPropagation();">
+                                            </label>
                                         </div>
 
                                         <div class="sgd-card-footer-right">
@@ -973,12 +974,12 @@ $kanban_columns = [
                             <!-- File Upload Action Form -->
                             <div class="sgd-upload-box">
                                 <div class="sgd-upload-input-row">
-                                    <input type="file" id="modal-file-input" class="sgd-form-file-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt">
+                                    <input type="file" id="modal-file-input" name="quest_files[]" class="sgd-form-file-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt" multiple>
                                     <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="modal-btn-upload-file">
-                                        ⬆️ Unggah File
+                                        ⬆️ Unggah File (Multi)
                                     </button>
                                 </div>
-                                <small style="color:#8fa0bd; font-size:11px;">Mendukung format gambar (JPG/PNG), PDF, Word, Excel, ZIP & Dokumen teknis.</small>
+                                <small style="color:#8fa0bd; font-size:11px;">Mendukung unggah banyak file sekaligus (Multi-file): Gambar (JPG/PNG), PDF, Word, Excel, ZIP & Dokumen teknis.</small>
                             </div>
                         </div>
 

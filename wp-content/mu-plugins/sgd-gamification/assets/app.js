@@ -2217,7 +2217,88 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // 9. Upload File Button in Modal
+        // Helper: Upload Multiple Quest Files via AJAX
+        function uploadQuestFiles(taskId, fileList, pillElem, onFinish) {
+            if (!taskId || !fileList || fileList.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('sgd_action', 'sgd_upload_quest_attachment');
+            formData.append('is_ajax', '1');
+            formData.append('task_id', taskId);
+
+            for (let i = 0; i < fileList.length; i++) {
+                formData.append('quest_files[]', fileList[i]);
+            }
+
+            let origPillHtml = '';
+            if (pillElem) {
+                pillElem.classList.add('uploading');
+                origPillHtml = pillElem.innerHTML;
+                pillElem.innerHTML = '⏳ Uploading ' + fileList.length + ' file...';
+            }
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (pillElem) {
+                    pillElem.classList.remove('uploading');
+                    if (origPillHtml) pillElem.innerHTML = origPillHtml;
+                }
+                if (data.success) {
+                    sfxSuccess();
+                    // Update task card count
+                    const countElem = document.getElementById('card-att-count-' + taskId);
+                    if (countElem) {
+                        countElem.textContent = data.data.total_attachment;
+                    }
+
+                    // Update modal if currently opened on this task
+                    const currentModalTaskId = document.getElementById('modal-task-id')?.value;
+                    if (currentModalTaskId == taskId && typeof renderAttachments === 'function') {
+                        renderAttachments(data.data.attachments || []);
+                    }
+
+                    if (typeof onFinish === 'function') {
+                        onFinish(true, data.data);
+                    }
+                } else {
+                    alert(data.data?.message || 'Gagal mengunggah file.');
+                    if (typeof onFinish === 'function') {
+                        onFinish(false, data.data);
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Upload quest files error:', err);
+                if (pillElem) {
+                    pillElem.classList.remove('uploading');
+                    if (origPillHtml) pillElem.innerHTML = origPillHtml;
+                }
+                alert('Terjadi kesalahan koneksi saat mengunggah file.');
+                if (typeof onFinish === 'function') {
+                    onFinish(false, err);
+                }
+            });
+        }
+
+        // Event listener for multiple file upload directly from Kanban Task Cards
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('sgd-card-multiple-upload-input')) {
+                const input = e.target;
+                const taskId = input.getAttribute('data-task-id');
+                if (!input.files || input.files.length === 0 || !taskId) return;
+
+                const pill = document.getElementById('card-upload-pill-' + taskId);
+                uploadQuestFiles(taskId, input.files, pill, function(success) {
+                    input.value = '';
+                });
+            }
+        });
+
+        // 9. Upload File Button in Modal (Supports Multiple Files & AJAX)
         const btnUploadFile = document.getElementById('modal-btn-upload-file');
         const fileInput = document.getElementById('modal-file-input');
         if (btnUploadFile && fileInput) {
@@ -2226,30 +2307,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Silakan pilih file terlebih dahulu.');
                     return;
                 }
-                const taskId = document.getElementById('modal-task-id').value;
+                const taskId = document.getElementById('modal-task-id')?.value;
                 if (!taskId) return;
 
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.enctype = 'multipart/form-data';
-                form.style.display = 'none';
+                btnUploadFile.disabled = true;
+                const origBtnText = btnUploadFile.innerHTML;
+                btnUploadFile.innerHTML = '⏳ Mengunggah ' + fileInput.files.length + ' file...';
 
-                const a1 = document.createElement('input');
-                a1.name = 'sgd_action';
-                a1.value = 'sgd_upload_quest_attachment';
-                form.appendChild(a1);
-
-                const a2 = document.createElement('input');
-                a2.name = 'task_id';
-                a2.value = taskId;
-                form.appendChild(a2);
-
-                // Clone the file input into the form
-                form.appendChild(fileInput);
-
-                document.body.appendChild(form);
-                sfxSuccess();
-                form.submit();
+                uploadQuestFiles(taskId, fileInput.files, null, function(success) {
+                    btnUploadFile.disabled = false;
+                    btnUploadFile.innerHTML = origBtnText;
+                    if (success) {
+                        fileInput.value = '';
+                    }
+                });
             });
         }
 

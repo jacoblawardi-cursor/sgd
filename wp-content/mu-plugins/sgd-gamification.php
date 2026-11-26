@@ -4211,40 +4211,102 @@ function sgd_handle_form_actions() {
             exit;
         }
 
-        // 15. Upload File Attachment for Task
+        // 15. Upload File Attachment for Task (Supports Multiple Files & AJAX)
         if ( $action === 'sgd_upload_quest_attachment' ) {
             $task_id = (int) ( $_POST['task_id'] ?? 0 );
             $task = sgd_get_quest_task( $task_id );
             if ( ! $task ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) {
+                    wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+                }
                 sgd_set_flash( 'error', '⚠️ Tugas tidak ditemukan.' );
                 wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
-                exit;
-            }
-
-            if ( ! isset( $_FILES['quest_file'] ) || empty( $_FILES['quest_file']['name'] ) ) {
-                sgd_set_flash( 'error', '⚠️ Silakan pilih file dokumen atau gambar untuk diunggah.' );
-                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
                 exit;
             }
 
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/media.php';
 
-            $uploaded = wp_handle_upload( $_FILES['quest_file'], [ 'test_form' => false ] );
-            if ( $uploaded && ! isset( $uploaded['error'] ) ) {
-                $table_quest_attachments = $wpdb->prefix . 'sgd_quest_attachments';
-                $wpdb->insert( $table_quest_attachments, [
-                    'task_id'    => $task_id,
-                    'user_id'    => $current_user_id,
-                    'file_url'   => $uploaded['url'],
-                    'file_name'  => sanitize_file_name( $_FILES['quest_file']['name'] ),
-                    'file_size'  => (int) ( $_FILES['quest_file']['size'] ?? 0 ),
-                    'file_type'  => sanitize_text_field( $uploaded['type'] ?? '' ),
-                    'created_at' => current_time( 'mysql' ),
-                ] );
-                sgd_set_flash( 'celebration', "📎 File '{$_FILES['quest_file']['name']}' berhasil diunggah!" );
+            $files_to_process = [];
+            // Check quest_files (multiple) or quest_file
+            $file_key = isset( $_FILES['quest_files'] ) ? 'quest_files' : ( isset( $_FILES['quest_file'] ) ? 'quest_file' : null );
+
+            if ( $file_key && ! empty( $_FILES[ $file_key ]['name'] ) ) {
+                if ( is_array( $_FILES[ $file_key ]['name'] ) ) {
+                    $count = count( $_FILES[ $file_key ]['name'] );
+                    for ( $i = 0; $i < $count; $i++ ) {
+                        if ( ! empty( $_FILES[ $file_key ]['name'][ $i ] ) && ( $_FILES[ $file_key ]['error'][ $i ] ?? 1 ) === UPLOAD_ERR_OK ) {
+                            $files_to_process[] = [
+                                'name'     => $_FILES[ $file_key ]['name'][ $i ],
+                                'type'     => $_FILES[ $file_key ]['type'][ $i ] ?? '',
+                                'tmp_name' => $_FILES[ $file_key ]['tmp_name'][ $i ] ?? '',
+                                'error'    => $_FILES[ $file_key ]['error'][ $i ] ?? 0,
+                                'size'     => $_FILES[ $file_key ]['size'][ $i ] ?? 0,
+                            ];
+                        }
+                    }
+                } else {
+                    if ( ( $_FILES[ $file_key ]['error'] ?? 1 ) === UPLOAD_ERR_OK ) {
+                        $files_to_process[] = $_FILES[ $file_key ];
+                    }
+                }
+            }
+
+            if ( empty( $files_to_process ) ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) {
+                    wp_send_json_error( [ 'message' => 'Silakan pilih setidaknya satu file dokumen atau gambar untuk diunggah.' ] );
+                }
+                sgd_set_flash( 'error', '⚠️ Silakan pilih file dokumen atau gambar untuk diunggah.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            $table_quest_attachments = $wpdb->prefix . 'sgd_quest_attachments';
+            $uploaded_count = 0;
+            $uploaded_items = [];
+
+            foreach ( $files_to_process as $file_arr ) {
+                $uploaded = wp_handle_upload( $file_arr, [ 'test_form' => false ] );
+                if ( $uploaded && ! isset( $uploaded['error'] ) ) {
+                    $orig_name = sanitize_file_name( $file_arr['name'] );
+                    $wpdb->insert( $table_quest_attachments, [
+                        'task_id'    => $task_id,
+                        'user_id'    => $current_user_id,
+                        'file_url'   => $uploaded['url'],
+                        'file_name'  => $orig_name,
+                        'file_size'  => (int) ( $file_arr['size'] ?? 0 ),
+                        'file_type'  => sanitize_text_field( $uploaded['type'] ?? '' ),
+                        'created_at' => current_time( 'mysql' ),
+                    ] );
+                    $uploaded_count++;
+                    $uploaded_items[] = [
+                        'id'        => $wpdb->insert_id,
+                        'file_name' => $orig_name,
+                        'file_url'  => $uploaded['url'],
+                        'file_size' => (int) ( $file_arr['size'] ?? 0 ),
+                    ];
+                }
+            }
+
+            $total_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_quest_attachments WHERE task_id = %d", $task_id ) );
+
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                if ( $uploaded_count > 0 ) {
+                    wp_send_json_success( [
+                        'message'          => "$uploaded_count file berhasil diunggah!",
+                        'uploaded_count'   => $uploaded_count,
+                        'total_attachment' => $total_count,
+                        'attachments'      => sgd_get_quest_attachments( $task_id ),
+                    ] );
+                } else {
+                    wp_send_json_error( [ 'message' => 'Gagal mengunggah file. Pastikan format file didukung.' ] );
+                }
+            }
+
+            if ( $uploaded_count > 0 ) {
+                sgd_set_flash( 'celebration', "📎 $uploaded_count file lampiran berhasil diunggah!" );
             } else {
-                sgd_set_flash( 'error', '⚠️ Gagal mengunggah file: ' . ( $uploaded['error'] ?? 'Terjadi kesalahan' ) );
+                sgd_set_flash( 'error', '⚠️ Gagal mengunggah file: Pastikan format didukung.' );
             }
 
             wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
