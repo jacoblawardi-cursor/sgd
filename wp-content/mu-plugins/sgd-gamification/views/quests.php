@@ -465,6 +465,12 @@ $kanban_columns = [
                                             <?php endif; endforeach; ?>
                                         </select>
                                     </div>
+                                    <div style="flex:1; display:flex; align-items:flex-end; padding-bottom:3px;">
+                                        <label class="sgd-secret-toggle-label" title="Jika diaktifkan, tugas ini bersifat rahasia dan hanya dapat dilihat oleh anggota yang ditugaskan ke tugas ini">
+                                            <input type="checkbox" name="is_secret" value="1" class="sgd-secret-checkbox">
+                                            <span class="sgd-secret-toggle-badge">🔒 Tugas Rahasia</span>
+                                        </label>
+                                    </div>
                                 </div>
                                 <div class="sgd-inline-form-actions">
                                     <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-green sgd-btn-buat-tugas">
@@ -553,15 +559,18 @@ $kanban_columns = [
                                 $tag_names_str = strtolower( implode( ' ', array_column( $task->tags ?? [], 'name' ) ) );
                                 $has_cover = ( ! empty( $task->cover_image ) && $task->cover_image !== 'none' );
                                 $is_my_task = $current_user_id && in_array( (int) $current_user_id, array_map('intval', $assigned_member_ids), true );
+                                $is_secret_task = ! empty( $task->is_secret );
                                 $my_task_class = $is_my_task ? 'sgd-card-is-mine' : '';
+                                $secret_task_class = $is_secret_task ? 'sgd-card-is-secret' : '';
                                 ?>
-                                <div class="sgd-kanban-card <?php echo esc_attr( $card_deadline_class ); ?> <?php echo esc_attr( $my_task_class ); ?> sgd-card-manager-draggable"
+                                <div class="sgd-kanban-card <?php echo esc_attr( $card_deadline_class ); ?> <?php echo esc_attr( $my_task_class ); ?> <?php echo esc_attr( $secret_task_class ); ?> sgd-card-manager-draggable"
                                      draggable="true"
                                      data-task-id="<?php echo esc_attr( $task->id ); ?>"
                                      data-column="<?php echo esc_attr( $task->column_name ); ?>"
                                      data-title="<?php echo esc_attr( strtolower( $task->title ) ); ?>"
                                      data-assigned="<?php echo esc_attr( implode( ',', $assigned_member_ids ) ); ?>"
                                      data-is-mine="<?php echo $is_my_task ? 'true' : 'false'; ?>"
+                                     data-is-secret="<?php echo $is_secret_task ? 'true' : 'false'; ?>"
                                      data-deadline-status="<?php echo esc_attr( $dl_status ); ?>"
                                      data-has-files="<?php echo ( $task->attachment_count > 0 ) ? 'true' : 'false'; ?>"
                                      data-tags="<?php echo esc_attr( $tag_names_str ); ?>">
@@ -601,6 +610,9 @@ $kanban_columns = [
                                         <div style="display:flex; align-items:center; gap:6px; flex:1; flex-wrap:wrap;">
                                             <span class="sgd-card-drag-handle" title="⭐ Drag kartu untuk memindahkan status tugas">⠿</span>
                                             <h4 class="sgd-card-title"><?php echo esc_html( $task->title ); ?></h4>
+                                            <?php if ( $is_secret_task ): ?>
+                                                <span class="sgd-card-secret-badge" title="Tugas Rahasia: Hanya terlihat oleh anggota tugas">🔒 Rahasia</span>
+                                            <?php endif; ?>
                                             <?php if ( $is_my_task ): ?>
                                                 <span class="sgd-card-my-badge" title="Tugas ini ditugaskan kepada Anda">👤 Tugas Saya</span>
                                             <?php endif; ?>
@@ -1034,6 +1046,18 @@ $kanban_columns = [
                         <div class="sgd-form-group">
                             <label class="sgd-form-label" for="modal-task-title">Judul Tugas (Task Title):</label>
                             <input type="text" name="task_title" id="modal-task-title" class="sgd-form-input sgd-title-input-large" required maxlength="255">
+                        </div>
+
+                        <!-- SECRET TASK TOGGLE BANNER -->
+                        <div class="sgd-modal-secret-box">
+                            <label class="sgd-secret-modal-toggle" title="Jika aktif, tugas ini tersembunyi dari siapapun kecuali anggota tugas ini">
+                                <input type="checkbox" name="is_secret" id="modal-task-is-secret" value="1">
+                                <span class="sgd-secret-modal-slider"></span>
+                                <span class="sgd-secret-modal-text">
+                                    <strong>🔒 Kunci sebagai Tugas Rahasia (Secret Task)</strong>
+                                    <small>Hanya anggota tugas & pembuat yang dapat melihat dan membuka kartu ini di Kanban.</small>
+                                </span>
+                            </label>
                         </div>
 
                         <!-- BIG WYSIWYG EDITOR FOR DESCRIPTION -->

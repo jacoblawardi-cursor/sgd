@@ -40,15 +40,17 @@ $first_my_task = ! empty( $my_active_tasks ) ? $my_active_tasks[0] : null;
 $my_tasks_link = sgd_get_portal_url( 'quests' );
 
 // 2. Urgent / Approaching Deadline Tasks (<= 3 Days, Today, or Overdue across all teams)
-$urgent_deadline_tasks = $wpdb->get_results(
+$urgent_deadline_tasks = $wpdb->get_results( $wpdb->prepare(
     "SELECT t.*, tm.name as team_name, tm.type as team_type 
      FROM $table_quest_tasks t 
      LEFT JOIN $table_quest_teams tm ON t.team_id = tm.id 
      WHERE t.column_name != 'Selesai' AND t.column_name != 'Batal' 
+     AND (t.is_secret = 0 OR (t.is_secret = 1 AND (FIND_IN_SET(%d, t.assigned_members) OR t.assigned_members LIKE %s OR t.created_by = %d)))
      AND t.deadline IS NOT NULL AND t.deadline != '0000-00-00 00:00:00' 
      AND t.deadline <= DATE_ADD(NOW(), INTERVAL 3 DAY) 
-     ORDER BY t.deadline ASC LIMIT 4"
-);
+     ORDER BY t.deadline ASC LIMIT 4",
+    $user_id, '%' . $wpdb->esc_like( (string) $user_id ) . '%', $user_id
+) );
 
 // 3. Leaderboard Top 3 & User Rank
 $leaderboard_all = function_exists('sgd_get_leaderboard_data') ? sgd_get_leaderboard_data() : [];

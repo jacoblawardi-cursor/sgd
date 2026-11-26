@@ -289,6 +289,12 @@ function sgd_install_database() {
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `cover_image` TEXT DEFAULT NULL AFTER `labels`" );
     }
 
+    // Ensure is_secret column exists on tasks table
+    $has_secret_col = $wpdb->get_results( "SHOW COLUMNS FROM `$table_quest_tasks` LIKE 'is_secret'" );
+    if ( empty( $has_secret_col ) ) {
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `is_secret` TINYINT(1) NOT NULL DEFAULT 0 AFTER `cover_image`" );
+    }
+
     // Auto-seed sample cover images for a couple of tasks so it renders nicely out of the box
     $uncovered_tasks = $wpdb->get_results( "SELECT id FROM `$table_quest_tasks` WHERE cover_image IS NULL OR cover_image = '' LIMIT 2" );
     if ( ! empty( $uncovered_tasks ) ) {
@@ -2033,6 +2039,24 @@ function sgd_get_quest_tasks( $team_id, $column_name = '' ) {
 
     if ( empty( $tasks ) ) return [];
 
+    $current_uid = get_current_user_id();
+
+    $visible_tasks = [];
+    foreach ( $tasks as $t ) {
+        $assigned_ids = array_filter( array_map( 'intval', explode( ',', $t->assigned_members ?? '' ) ) );
+        $is_secret = ! empty( $t->is_secret );
+
+        // If task is secret, only visible to assigned members (and creator)
+        if ( $is_secret ) {
+            $is_task_member = in_array( (int) $current_uid, $assigned_ids, true ) || ( (int) ( $t->created_by ?? 0 ) === (int) $current_uid );
+            if ( ! $is_task_member ) {
+                continue; // Hidden from non-members
+            }
+        }
+        $visible_tasks[] = $t;
+    }
+    $tasks = $visible_tasks;
+
     foreach ( $tasks as &$t ) {
         $assigned_ids = array_filter( array_map( 'intval', explode( ',', $t->assigned_members ?? '' ) ) );
         $t->members = [];
@@ -2106,7 +2130,17 @@ function sgd_get_quest_task( $task_id ) {
     $task = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $task_id ) );
     if ( ! $task ) return null;
 
+    $current_uid = get_current_user_id();
     $assigned_ids = array_filter( array_map( 'intval', explode( ',', $task->assigned_members ?? '' ) ) );
+
+    // If task is secret, verify current user is a task member or creator
+    if ( ! empty( $task->is_secret ) ) {
+        $is_task_member = in_array( (int) $current_uid, $assigned_ids, true ) || ( (int) ( $task->created_by ?? 0 ) === (int) $current_uid );
+        if ( ! $is_task_member ) {
+            return null; // Forbidden / Hidden to anyone else
+        }
+    }
+
     $task->members = [];
     foreach ( $assigned_ids as $uid ) {
         $u = get_user_by( 'id', $uid );
@@ -3876,6 +3910,8 @@ function sgd_handle_form_actions() {
             }
             $assigned_members_str = (string) $assigned_user_id;
 
+            $is_secret = ! empty( $_POST['is_secret'] ) ? 1 : 0;
+
             $wpdb->insert( $table_quest_tasks, [
                 'team_id'          => $team_id,
                 'column_name'      => $column_name,
@@ -3884,6 +3920,7 @@ function sgd_handle_form_actions() {
                 'deadline'         => null,
                 'assigned_members' => $assigned_members_str,
                 'labels'           => $labels_json,
+                'is_secret'        => $is_secret,
                 'sort_order'       => $max_order + 1,
                 'quest_level'      => $quest_level,
                 'reward_type'      => $reward_type,
@@ -4018,6 +4055,7 @@ function sgd_handle_form_actions() {
             }
             $reward_xp = isset( $_POST['reward_xp'] ) ? max( 0, (int) $_POST['reward_xp'] ) : ( $task->reward_xp ?? 200 );
             $reward_gold = isset( $_POST['reward_gold'] ) ? max( 0, (int) $_POST['reward_gold'] ) : ( $task->reward_gold ?? 50 );
+            $is_secret = isset( $_POST['is_secret'] ) ? ( ! empty( $_POST['is_secret'] ) ? 1 : 0 ) : (int) ( $task->is_secret ?? 0 );
 
             $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
             $wpdb->update(
@@ -4030,6 +4068,7 @@ function sgd_handle_form_actions() {
                     'assigned_members' => $assigned_str,
                     'labels'           => $labels_json,
                     'checklist'        => $checklist_json,
+                    'is_secret'        => $is_secret,
                     'quest_level'      => $quest_level,
                     'reward_type'      => $reward_type,
                     'reward_xp'        => $reward_xp,
@@ -4099,6 +4138,7 @@ function sgd_handle_form_actions() {
                 'assigned_members' => $task->assigned_members,
                 'labels'           => $task->labels,
                 'checklist'        => wp_json_encode( $task->checklist ),
+                'is_secret'        => (int) ( $task->is_secret ?? 0 ),
                 'quest_level'      => (int) ( $task->quest_level ?? 1 ),
                 'reward_type'      => $task->reward_type ?? 'both',
                 'reward_xp'        => (int) ( $task->reward_xp ?? 200 ),

@@ -1509,6 +1509,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 chk.checked = assignedIds.includes(chk.getAttribute('data-user-id'));
             });
 
+            // Secret Task Toggle
+            const secretInput = document.getElementById('modal-task-is-secret');
+            if (secretInput) {
+                secretInput.checked = (task.is_secret == 1 || task.is_secret === true || task.is_secret === '1');
+            }
+
             // Quest Level
             const qlInput = document.getElementById('modal-task-quest-level');
             if (qlInput) {
