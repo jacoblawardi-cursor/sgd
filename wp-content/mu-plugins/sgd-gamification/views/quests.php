@@ -465,12 +465,17 @@ $kanban_columns = [
                                             <?php endif; endforeach; ?>
                                         </select>
                                     </div>
-                                    <div style="flex:1; display:flex; align-items:flex-end; padding-bottom:3px;">
-                                        <label class="sgd-secret-toggle-label" title="Jika diaktifkan, tugas ini bersifat rahasia dan hanya dapat dilihat oleh anggota yang ditugaskan ke tugas ini">
-                                            <input type="checkbox" name="is_secret" value="1" class="sgd-secret-checkbox">
-                                            <span class="sgd-secret-toggle-badge">🔒 Tugas Rahasia</span>
-                                        </label>
-                                    </div>
+                                </div>
+                                <!-- EXPLICIT PROMINENT SECRET TASK TOGGLE ROW -->
+                                <div class="sgd-inline-secret-box" style="margin-bottom:10px;">
+                                    <label class="sgd-secret-toggle-banner">
+                                        <input type="checkbox" name="is_secret" value="1" class="sgd-secret-checkbox">
+                                        <span class="sgd-secret-custom-checkbox"></span>
+                                        <span class="sgd-secret-banner-text">
+                                            <strong>🔒 Kunci sebagai Tugas Rahasia (Secret Task)</strong>
+                                            <small>Jika dicentang, tugas ini disembunyikan dari siapapun kecuali anggota tugas & pembuat.</small>
+                                        </span>
+                                    </label>
                                 </div>
                                 <div class="sgd-inline-form-actions">
                                     <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-green sgd-btn-buat-tugas">
@@ -1365,6 +1370,21 @@ $kanban_columns = [
                                     </label>
                                 <?php endforeach; ?>
                             </div>
+                        </div>
+
+                        <!-- SECRET TASK TOGGLE IN SIDEBAR WIDGET -->
+                        <div class="sgd-sidebar-widget" id="modal-secret-task-widget" style="background:rgba(165,94,234,0.12); border:1.5px solid #a55eea;">
+                            <label class="sgd-form-label" style="font-size:12px; color:#d1b8ff; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                                <span>🔒 Pengaturan Kerahasiaan Tugas:</span>
+                            </label>
+                            <label class="sgd-secret-modal-toggle" style="cursor:pointer;" title="Kunci tugas ini agar hanya anggota tugas yang dapat melihatnya">
+                                <input type="checkbox" name="is_secret" id="modal-task-is-secret" value="1">
+                                <span class="sgd-secret-modal-slider"></span>
+                                <span class="sgd-secret-modal-text">
+                                    <strong style="color:#ffffff; font-size:11px;">Aktifkan Tugas Rahasia</strong>
+                                    <small style="color:#d1b8ff; font-size:10px;">Sembunyikan kartu dari siapapun selain anggota tugas & pembuat.</small>
+                                </span>
+                            </label>
                         </div>
 
                     </div><!-- .sgd-task-modal-sidebar -->
