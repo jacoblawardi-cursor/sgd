@@ -283,6 +283,26 @@ function sgd_install_database() {
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `checklist` LONGTEXT DEFAULT NULL AFTER `labels`" );
     }
 
+    // Ensure cover_image column exists on tasks table
+    $has_cover_col = $wpdb->get_results( "SHOW COLUMNS FROM `$table_quest_tasks` LIKE 'cover_image'" );
+    if ( empty( $has_cover_col ) ) {
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `cover_image` TEXT DEFAULT NULL AFTER `labels`" );
+    }
+
+    // Auto-seed sample cover images for a couple of tasks so it renders nicely out of the box
+    $uncovered_tasks = $wpdb->get_results( "SELECT id FROM `$table_quest_tasks` WHERE cover_image IS NULL OR cover_image = '' LIMIT 2" );
+    if ( ! empty( $uncovered_tasks ) ) {
+        $upload_dir = wp_upload_dir();
+        $sample_covers = [
+            $upload_dir['baseurl'] . '/2026/10/aPx6ppV_460swp.webp',
+            $upload_dir['baseurl'] . '/2026/10/avW2vKE_460swp.webp',
+        ];
+        foreach ( $uncovered_tasks as $idx => $t_obj ) {
+            $c_url = $sample_covers[ $idx % count( $sample_covers ) ];
+            $wpdb->update( $table_quest_tasks, [ 'cover_image' => $c_url ], [ 'id' => $t_obj->id ] );
+        }
+    }
+
     // Auto-seed initial labels for existing tasks that have no labels yet so labels/tags immediately show on cards
     $unlabeled_tasks = $wpdb->get_results( "SELECT id, title FROM `$table_quest_tasks` WHERE labels IS NULL OR labels = '' OR labels = '[]' LIMIT 30" );
     if ( ! empty( $unlabeled_tasks ) ) {
@@ -2065,6 +2085,17 @@ function sgd_get_quest_tasks( $team_id, $column_name = '' ) {
         $t->reward_xp = isset( $t->reward_xp ) ? (int) $t->reward_xp : 200;
         $t->reward_gold = isset( $t->reward_gold ) ? (int) $t->reward_gold : 50;
         $t->reward_awarded = (int) ( $t->reward_awarded ?? 0 );
+
+        // Cover Image: fallback to first image attachment if empty
+        if ( empty( $t->cover_image ) ) {
+            $first_img = $wpdb->get_var( $wpdb->prepare(
+                "SELECT file_url FROM $table_att WHERE task_id = %d AND (file_type LIKE 'image/%' OR file_name LIKE '%.png' OR file_name LIKE '%.jpg' OR file_name LIKE '%.jpeg' OR file_name LIKE '%.webp' OR file_name LIKE '%.gif') ORDER BY id ASC LIMIT 1",
+                $t->id
+            ) );
+            if ( $first_img ) {
+                $t->cover_image = $first_img;
+            }
+        }
     }
     return $tasks;
 }
@@ -2124,6 +2155,18 @@ function sgd_get_quest_task( $task_id ) {
     $task->reward_xp = isset( $task->reward_xp ) ? (int) $task->reward_xp : 200;
     $task->reward_gold = isset( $task->reward_gold ) ? (int) $task->reward_gold : 50;
     $task->reward_awarded = (int) ( $task->reward_awarded ?? 0 );
+
+    // Cover Image: fallback to first image attachment if empty
+    if ( empty( $task->cover_image ) ) {
+        $table_att = $wpdb->prefix . 'sgd_quest_attachments';
+        $first_img = $wpdb->get_var( $wpdb->prepare(
+            "SELECT file_url FROM $table_att WHERE task_id = %d AND (file_type LIKE 'image/%' OR file_name LIKE '%.png' OR file_name LIKE '%.jpg' OR file_name LIKE '%.jpeg' OR file_name LIKE '%.webp' OR file_name LIKE '%.gif') ORDER BY id ASC LIMIT 1",
+            $task->id
+        ) );
+        if ( $first_img ) {
+            $task->cover_image = $first_img;
+        }
+    }
 
     $task->comments = sgd_get_quest_comments( $task->id );
     $task->attachments = sgd_get_quest_attachments( $task->id );
@@ -3879,11 +3922,15 @@ function sgd_handle_form_actions() {
             }
 
             $team = sgd_get_quest_team( $task->team_id );
-            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+            $is_mgr = sgd_user_can_manage_quest( $team, $current_user_id );
+            $team_member_ids = array_filter( array_map( 'intval', explode( ',', $team->member_ids ?? '' ) ) );
+            $is_member = in_array( $current_user_id, $team_member_ids, true ) || ( (int) ( $team->manager_id ?? 0 ) === $current_user_id );
+
+            if ( ! $is_mgr && ! $is_member ) {
                 if ( ! empty( $_POST['is_ajax'] ) ) {
-                    wp_send_json_error( [ 'message' => 'Hanya Manager Tim atau Administrator yang dapat mengubah tugas.' ] );
+                    wp_send_json_error( [ 'message' => 'Anda bukan anggota tim ini.' ] );
                 }
-                sgd_set_flash( 'error', '⛔ Hanya Manager Tim atau Administrator yang dapat mengubah tugas.' );
+                sgd_set_flash( 'error', '⛔ Anda bukan anggota dari tim ini.' );
                 wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
                 exit;
             }
@@ -3893,6 +3940,12 @@ function sgd_handle_form_actions() {
             $column_name = sanitize_text_field( $_POST['column_name'] ?? $task->column_name );
             if ( ! in_array( $column_name, $allowed_columns, true ) ) {
                 $column_name = $task->column_name;
+            }
+
+            // MANAGER APPROVAL GATE: Only manager can update status to Selesai
+            if ( $column_name === 'Selesai' && $task->column_name !== 'Selesai' && ! $is_mgr ) {
+                $column_name = $task->column_name;
+                sgd_set_flash( 'error', '🔒 Kolom Selesai membutuhkan verifikasi dan persetujuan Manager Tim.' );
             }
 
             // Big WYSIWYG editor description: preserve rich HTML formatting safely
@@ -4081,9 +4134,23 @@ function sgd_handle_form_actions() {
             }
 
             $team = sgd_get_quest_team( $task->team_id );
-            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
-                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => 'Hanya Manager Tim atau Administrator yang dapat memindahkan tugas.' ] );
-                sgd_set_flash( 'error', '⛔ Hanya Manager Tim atau Administrator yang dapat memindahkan tugas.' );
+            $is_mgr = sgd_user_can_manage_quest( $team, $current_user_id );
+            $team_member_ids = array_filter( array_map( 'intval', explode( ',', $team->member_ids ?? '' ) ) );
+            $is_member = in_array( $current_user_id, $team_member_ids, true ) || ( (int) ( $team->manager_id ?? 0 ) === $current_user_id );
+
+            if ( ! $is_mgr && ! $is_member ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => 'Anda bukan anggota tim ini.' ] );
+                sgd_set_flash( 'error', '⛔ Anda bukan anggota dari tim ini.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            // MANAGER APPROVAL GATE: Only Manager can approve moving task to "Selesai"
+            if ( $target_column === 'Selesai' && ! $is_mgr ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) {
+                    wp_send_json_error( [ 'message' => '🔒 Kolom Selesai membutuhkan verifikasi dan persetujuan Manager Tim.' ] );
+                }
+                sgd_set_flash( 'error', '🔒 Kolom Selesai membutuhkan verifikasi dan persetujuan Manager Tim.' );
                 wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id ], home_url( '/' ) ) );
                 exit;
             }
@@ -4475,6 +4542,96 @@ function sgd_handle_form_actions() {
                 'total_count' => $chk_total,
                 'percent'     => $chk_pct,
             ] );
+        }
+
+        // 20. Set Card Cover Image (Or remove cover with cover_url='none')
+        if ( $action === 'sgd_set_quest_cover' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $cover_url = sanitize_text_field( $_POST['cover_url'] ?? '' );
+            if ( $cover_url !== 'none' ) {
+                $cover_url = esc_url_raw( $cover_url );
+            }
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+            }
+
+            $wpdb->update(
+                $wpdb->prefix . 'sgd_quest_tasks',
+                [
+                    'cover_image' => $cover_url,
+                    'updated_at'  => current_time( 'mysql' ),
+                ],
+                [ 'id' => $task_id ]
+            );
+
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                wp_send_json_success( [
+                    'message'   => $cover_url === 'none' ? 'Cover kartu dihapus.' : 'Gambar cover kartu berhasil dipasang!',
+                    'cover_url' => $cover_url,
+                    'task_id'   => $task_id,
+                ] );
+            }
+            sgd_set_flash( 'celebration', '🖼️ Cover kartu tugas diperbarui!' );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+            exit;
+        }
+
+        // 21. Manager Approval Gate (One-Click Verify & Complete Quest)
+        if ( $action === 'sgd_approve_quest_task' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+            }
+
+            $team = sgd_get_quest_team( $task->team_id );
+            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+                wp_send_json_error( [ 'message' => '⛔ Hanya Manager Tim atau Administrator yang berhak menyetujui penyelesaian tugas ini.' ] );
+            }
+
+            // Auto-check all subtasks/checklist items as verified
+            $checklist = ! empty( $task->checklist ) && is_array( $task->checklist ) ? $task->checklist : [];
+            foreach ( $checklist as &$item ) {
+                $item['completed'] = true;
+                $item['completed_by'] = $current_user_id;
+                $item['completed_at'] = current_time( 'mysql' );
+            }
+
+            $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+            $wpdb->update(
+                $table_quest_tasks,
+                [
+                    'column_name' => 'Selesai',
+                    'checklist'   => wp_json_encode( $checklist ),
+                    'updated_at'  => current_time( 'mysql' ),
+                ],
+                [ 'id' => $task_id ]
+            );
+
+            // Execute reward distribution
+            $award_result = sgd_complete_quest_task( $task_id, $current_user_id );
+            $award_msg = '';
+            if ( ! empty( $award_result ) ) {
+                $parts = [];
+                foreach ( $award_result as $ar ) {
+                    $parts[] = "{$ar['user_name']} ({$ar['percent']}% porsi = +{$ar['awarded_xp']} XP, +{$ar['awarded_gold']} 💎)";
+                }
+                $award_msg = ' Hadiah dibagikan: ' . implode( ', ', $parts );
+            }
+
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                wp_send_json_success( [
+                    'message'       => "👑 Quest telah disetujui & diselesaikan oleh Manager! 🎉" . ( $award_msg ? " $award_msg" : '' ),
+                    'target_column' => 'Selesai',
+                    'award_msg'     => $award_msg,
+                    'checklist'     => $checklist,
+                ] );
+            }
+
+            sgd_set_flash( 'celebration', "👑 Quest telah diverifikasi & disetujui oleh Manager!" . ( $award_msg ? " 🎉 $award_msg" : '' ) );
+            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+            exit;
         }
 }
 

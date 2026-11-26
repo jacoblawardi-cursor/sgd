@@ -2068,21 +2068,27 @@ document.addEventListener('DOMContentLoaded', function() {
             let html = '';
             attachments.forEach(att => {
                 const sizeKb = att.file_size ? Math.round(att.file_size / 1024) + ' KB' : '';
+                const isImg = (att.file_type && att.file_type.startsWith('image/')) || /\.(png|jpe?g|webp|gif)$/i.test(att.file_url);
+                const coverBtn = isImg ? `<button type="button" class="sgd-btn-make-cover" data-url="${att.file_url}" data-task-id="${att.task_id}" title="Jadikan gambar ini cover kartu">🖼️ Cover</button>` : '';
+
                 html += `
                     <div class="sgd-attachment-item">
                         <div class="sgd-attachment-info">
-                            <span style="font-size:18px;">📄</span>
+                            <span style="font-size:18px;">${isImg ? '🖼️' : '📄'}</span>
                             <div>
                                 <a href="${att.file_url}" target="_blank" class="sgd-attachment-name" title="${att.file_name}">${att.file_name}</a>
                                 <div class="sgd-attachment-meta">Oleh: ${att.uploader_name || 'Staff'} • ${sizeKb}</div>
                             </div>
                         </div>
-                        <form method="post" style="display:inline;" onsubmit="return confirm('Hapus file ini?');">
-                            <input type="hidden" name="sgd_action" value="sgd_delete_quest_attachment">
-                            <input type="hidden" name="attachment_id" value="${att.id}">
-                            <input type="hidden" name="task_id" value="${att.task_id}">
-                            <button type="submit" class="sgd-attachment-del" title="Hapus file">🗑️</button>
-                        </form>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            ${coverBtn}
+                            <form method="post" style="display:inline;" onsubmit="return confirm('Hapus file ini?');">
+                                <input type="hidden" name="sgd_action" value="sgd_delete_quest_attachment">
+                                <input type="hidden" name="attachment_id" value="${att.id}">
+                                <input type="hidden" name="task_id" value="${att.task_id}">
+                                <button type="submit" class="sgd-attachment-del" title="Hapus file">🗑️</button>
+                            </form>
+                        </div>
                     </div>
                 `;
             });
@@ -2366,6 +2372,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (draggedCard && taskId && targetColumnName) {
                     const originCol = draggedCard.getAttribute('data-column');
                     if (originCol !== targetColumnName) {
+                        // MANAGER APPROVAL GATE: Non-manager cannot drag into "Selesai"
+                        if (targetColumnName === 'Selesai' && !window.SGD_QUESTS_CONFIG?.canManageTeam) {
+                            alert('🔒 Kolom "Selesai" membutuhkan verifikasi checklist dan persetujuan Manager Tim. Tugas tidak dapat langsung diselesaikan.');
+                            return;
+                        }
+
                         const form = document.getElementById('sgd-hidden-move-form');
                         if (form) {
                             document.getElementById('sgd-hidden-move-task-id').value = taskId;
@@ -2377,6 +2389,250 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
+
+        // 11. Manager Approval Gate Button Handler in Modal
+        const btnApproveDone = document.getElementById('modal-btn-approve-done');
+        if (btnApproveDone) {
+            btnApproveDone.addEventListener('click', function() {
+                const taskId = document.getElementById('modal-task-id')?.value;
+                if (!taskId) return;
+
+                if (!confirm('👑 Setujui dan selesaikan tugas ini? Semua item checklist verifikasi akan otomatis dicentang selesai dan hadiah quest akan dibagikan ke anggota tim.')) {
+                    return;
+                }
+
+                btnApproveDone.disabled = true;
+                const origText = btnApproveDone.textContent;
+                btnApproveDone.textContent = '⏳ Menyelesaikan...';
+
+                const formData = new FormData();
+                formData.append('sgd_action', 'sgd_approve_quest_task');
+                formData.append('is_ajax', '1');
+                formData.append('task_id', taskId);
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        sfxSuccess();
+                        alert(data.data?.message || '👑 Quest berhasil disetujui & diselesaikan!');
+                        window.location.reload();
+                    } else {
+                        alert(data.data?.message || 'Gagal menyetujui tugas.');
+                        btnApproveDone.disabled = false;
+                        btnApproveDone.textContent = origText;
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Terjadi kesalahan koneksi.');
+                    btnApproveDone.disabled = false;
+                    btnApproveDone.textContent = origText;
+                });
+            });
+        }
+
+        // 12. Set Image as Task Cover Handler
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('sgd-btn-make-cover')) {
+                const btn = e.target;
+                const coverUrl = btn.getAttribute('data-url');
+                const taskId = btn.getAttribute('data-task-id');
+                if (!coverUrl || !taskId) return;
+
+                btn.disabled = true;
+                btn.textContent = '⏳ Menyimpan...';
+
+                const formData = new FormData();
+                formData.append('sgd_action', 'sgd_set_quest_cover');
+                formData.append('is_ajax', '1');
+                formData.append('task_id', taskId);
+                formData.append('cover_url', coverUrl);
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    btn.disabled = false;
+                    btn.textContent = '🖼️ Cover';
+                    if (data.success) {
+                        sfxSuccess();
+                        // Update card cover element in real-time
+                        const wrap = document.getElementById('card-cover-wrap-' + taskId);
+                        const img = document.getElementById('card-cover-img-' + taskId);
+                        if (wrap && img) {
+                            img.src = coverUrl;
+                            wrap.style.display = '';
+                        }
+                        alert('Gambar berhasil dipasang sebagai cover kartu tugas!');
+                    } else {
+                        alert(data.data?.message || 'Gagal mengubah cover.');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    btn.disabled = false;
+                    btn.textContent = '🖼️ Cover';
+                    alert('Terjadi kesalahan koneksi.');
+                });
+            }
+        });
+
+        // 13. Kanban Quick Filters & Live Search Engine
+        function initKanbanFilters() {
+            const searchInput = document.getElementById('sgd-kanban-search');
+            const searchClear = document.getElementById('sgd-search-clear');
+            const filterPills = document.querySelectorAll('.sgd-filter-pill');
+            const tagSelect = document.getElementById('sgd-filter-tag');
+            const memberSelect = document.getElementById('sgd-filter-member');
+            const btnReset = document.getElementById('sgd-btn-reset-filters');
+            const currentUserId = String(window.SGD_QUESTS_CONFIG?.currentUserId || '');
+
+            let currentActivePill = 'all';
+
+            // Calculate initial badge counts
+            const cards = document.querySelectorAll('.sgd-kanban-card');
+            let myCount = 0;
+            let urgentCount = 0;
+            let filesCount = 0;
+
+            cards.forEach(card => {
+                const assigned = (card.getAttribute('data-assigned') || '').split(',');
+                const dlStatus = card.getAttribute('data-deadline-status') || '';
+                const hasFiles = card.getAttribute('data-has-files') === 'true';
+
+                if (currentUserId && assigned.includes(currentUserId)) myCount++;
+                if (['urgent-3days', 'today', 'overdue'].includes(dlStatus)) urgentCount++;
+                if (hasFiles) filesCount++;
+            });
+
+            const pillMy = document.getElementById('pill-count-my');
+            const pillUrgent = document.getElementById('pill-count-urgent');
+            const pillFiles = document.getElementById('pill-count-files');
+            if (pillMy) pillMy.textContent = myCount;
+            if (pillUrgent) pillUrgent.textContent = urgentCount;
+            if (pillFiles) pillFiles.textContent = filesCount;
+
+            function applyFilters() {
+                const query = (searchInput?.value || '').trim().toLowerCase();
+                const selectedTag = (tagSelect?.value || '').trim().toLowerCase();
+                const selectedMember = (memberSelect?.value || '').trim();
+
+                if (searchClear) {
+                    searchClear.style.display = query ? 'flex' : 'none';
+                }
+
+                document.querySelectorAll('.sgd-kanban-column').forEach(col => {
+                    const colCards = col.querySelectorAll('.sgd-kanban-card');
+                    let visibleCount = 0;
+
+                    colCards.forEach(card => {
+                        const title = (card.getAttribute('data-title') || '').toLowerCase();
+                        const tags = (card.getAttribute('data-tags') || '').toLowerCase();
+                        const assigned = (card.getAttribute('data-assigned') || '').split(',');
+                        const dlStatus = card.getAttribute('data-deadline-status') || '';
+                        const hasFiles = card.getAttribute('data-has-files') === 'true';
+
+                        let matches = true;
+
+                        // 1. Text search
+                        if (query && !title.includes(query) && !tags.includes(query)) {
+                            matches = false;
+                        }
+
+                        // 2. Active quick pill filter
+                        if (matches && currentActivePill === 'my-tasks') {
+                            if (!currentUserId || !assigned.includes(currentUserId)) matches = false;
+                        } else if (matches && currentActivePill === 'urgent') {
+                            if (!['urgent-3days', 'today', 'overdue'].includes(dlStatus)) matches = false;
+                        } else if (matches && currentActivePill === 'has-files') {
+                            if (!hasFiles) matches = false;
+                        }
+
+                        // 3. Tag filter
+                        if (matches && selectedTag) {
+                            if (!tags.includes(selectedTag)) matches = false;
+                        }
+
+                        // 4. Member filter
+                        if (matches && selectedMember) {
+                            if (!assigned.includes(selectedMember)) matches = false;
+                        }
+
+                        if (matches) {
+                            card.style.display = '';
+                            visibleCount++;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+
+                    // Update column badge counter
+                    const badge = col.querySelector('.sgd-column-count-badge');
+                    if (badge) {
+                        badge.textContent = visibleCount;
+                    }
+
+                    // Check if column needs empty placeholder
+                    let emptyMsg = col.querySelector('.sgd-filter-empty-alert');
+                    if (visibleCount === 0 && colCards.length > 0) {
+                        if (!emptyMsg) {
+                            emptyMsg = document.createElement('div');
+                            emptyMsg.className = 'sgd-filter-empty-alert';
+                            emptyMsg.textContent = 'Tidak ada tugas yang cocok dengan filter.';
+                            col.querySelector('.sgd-column-cards-list')?.appendChild(emptyMsg);
+                        }
+                        emptyMsg.style.display = '';
+                    } else if (emptyMsg) {
+                        emptyMsg.style.display = 'none';
+                    }
+                });
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', applyFilters);
+            }
+
+            if (searchClear) {
+                searchClear.addEventListener('click', function() {
+                    searchInput.value = '';
+                    applyFilters();
+                    searchInput.focus();
+                });
+            }
+
+            filterPills.forEach(pill => {
+                pill.addEventListener('click', function() {
+                    filterPills.forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+                    currentActivePill = this.getAttribute('data-filter') || 'all';
+                    applyFilters();
+                });
+            });
+
+            if (tagSelect) tagSelect.addEventListener('change', applyFilters);
+            if (memberSelect) memberSelect.addEventListener('change', applyFilters);
+
+            if (btnReset) {
+                btnReset.addEventListener('click', function() {
+                    if (searchInput) searchInput.value = '';
+                    if (tagSelect) tagSelect.value = '';
+                    if (memberSelect) memberSelect.value = '';
+                    filterPills.forEach(p => p.classList.remove('active'));
+                    document.querySelector('.sgd-filter-pill[data-filter="all"]')?.classList.add('active');
+                    currentActivePill = 'all';
+                    applyFilters();
+                });
+            }
+        }
+
+        // Initialize Kanban Filters
+        initKanbanFilters();
 
         // Listeners for Reward Choice and Quest Level in Modal
         const rewardTypeSelect = document.getElementById('modal-task-reward-type');

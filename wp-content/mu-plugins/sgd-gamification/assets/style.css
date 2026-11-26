@@ -8174,3 +8174,224 @@ body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
   line-height: 1;
   cursor: pointer;
 }
+
+/* ========================================================
+   KANBAN BOARD QUICK FILTERS & LIVE SEARCH TOOLBAR
+   ======================================================== */
+.sgd-board-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #090e1a;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.sgd-toolbar-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.sgd-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 240px;
+  max-width: 340px;
+  flex: 1;
+}
+
+.sgd-search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 13px;
+  color: #8fa0bd;
+  pointer-events: none;
+}
+
+.sgd-search-input {
+  width: 100%;
+  background: rgba(11, 25, 51, 0.85);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 20px;
+  padding: 6px 30px 6px 32px;
+  font-size: 12px;
+  color: #fff;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.sgd-search-input:focus {
+  border-color: #00e5ff;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.25);
+  background: rgba(11, 25, 51, 1);
+}
+
+.sgd-search-clear {
+  position: absolute;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  font-size: 10px;
+  color: #8fa0bd;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sgd-search-clear:hover {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.sgd-quick-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.sgd-filter-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #c8d1e0;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.sgd-filter-pill:hover {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.4);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.sgd-filter-pill.active {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(46, 204, 113, 0.25));
+  border-color: #00e5ff;
+  color: #00e5ff;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.25);
+}
+
+.sgd-filter-badge {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-family: var(--font-pixel, monospace);
+  color: #ffd700;
+}
+
+.sgd-toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sgd-toolbar-select {
+  background: #0b1933;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: #c8d1e0;
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.sgd-toolbar-select:focus {
+  border-color: #ffd700;
+}
+
+.sgd-btn-reset-filters {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #8fa0bd;
+  padding: 5px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sgd-btn-reset-filters:hover {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+/* ========================================================
+   CARD COVER IMAGE BANNER STYLES
+   ======================================================== */
+.sgd-card-cover-wrap {
+  margin: -10px -10px 10px -10px;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  max-height: 130px;
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #000;
+}
+
+.sgd-card-cover-img {
+  width: 100%;
+  height: 115px;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.sgd-kanban-card:hover .sgd-card-cover-img {
+  transform: scale(1.03);
+}
+
+/* Cover trigger button inside detail modal attachments */
+.sgd-btn-make-cover {
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  color: #ffd700;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sgd-btn-make-cover:hover {
+  background: #ffd700;
+  color: #000;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
+/* Empty filter state notice */
+.sgd-filter-empty-alert {
+  text-align: center;
+  padding: 20px 10px;
+  color: #718093;
+  font-size: 12px;
+  font-style: italic;
+}

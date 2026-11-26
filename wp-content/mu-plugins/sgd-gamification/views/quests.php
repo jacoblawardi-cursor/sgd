@@ -286,7 +286,6 @@ $kanban_columns = [
             </div>
         </div>
 
-        <!-- THE 4 KANBAN COLUMNS CONTAINER -->
         <?php
         $team_members_pool = $current_team ? ( $current_team->members ?? [] ) : [];
         if ( empty( $team_members_pool ) ) {
@@ -300,7 +299,72 @@ $kanban_columns = [
                 ];
             }
         }
+
+        // Collect all tasks and distinct tags for quick filters
+        $all_team_tasks = sgd_get_quest_tasks( $current_team->id );
+        $distinct_tags = [];
+        foreach ( $all_team_tasks as $at ) {
+            if ( ! empty( $at->tags ) && is_array( $at->tags ) ) {
+                foreach ( $at->tags as $t_item ) {
+                    $t_name = trim( $t_item['name'] ?? '' );
+                    if ( $t_name && ! isset( $distinct_tags[ $t_name ] ) ) {
+                        $distinct_tags[ $t_name ] = $t_item['color'] ?? '#00e5ff';
+                    }
+                }
+            }
+        }
         ?>
+
+        <!-- KANBAN BOARD QUICK FILTERS & LIVE SEARCH TOOLBAR -->
+        <div class="sgd-board-toolbar">
+            <div class="sgd-toolbar-left">
+                <div class="sgd-search-box">
+                    <span class="sgd-search-icon">🔍</span>
+                    <input type="text" id="sgd-kanban-search" class="sgd-search-input" placeholder="Cari judul tugas, checklist, atau tag..." autocomplete="off">
+                    <button type="button" id="sgd-search-clear" class="sgd-search-clear" style="display:none;" title="Bersihkan pencarian">✕</button>
+                </div>
+
+                <div class="sgd-quick-filter-pills">
+                    <button type="button" class="sgd-filter-pill active" data-filter="all">
+                        🌐 Semua <span class="sgd-filter-badge" id="pill-count-all"><?php echo count( $all_team_tasks ); ?></span>
+                    </button>
+                    <button type="button" class="sgd-filter-pill" data-filter="my-tasks" title="Hanya tugas yang ditugaskan kepada saya">
+                        👤 Tugas Saya <span class="sgd-filter-badge" id="pill-count-my">0</span>
+                    </button>
+                    <button type="button" class="sgd-filter-pill" data-filter="urgent" title="Tugas dengan tenggat waktu mendesak (<= 3 hari / hari ini / lewat)">
+                        🚨 Deadline Mendesak <span class="sgd-filter-badge" id="pill-count-urgent">0</span>
+                    </button>
+                    <button type="button" class="sgd-filter-pill" data-filter="has-files" title="Tugas yang memiliki lampiran file dokumen/gambar">
+                        📎 Ada File <span class="sgd-filter-badge" id="pill-count-files">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sgd-toolbar-right">
+                <!-- Tag Filter Dropdown -->
+                <select id="sgd-filter-tag" class="sgd-toolbar-select">
+                    <option value="">🏷️ Semua Label/Tag</option>
+                    <?php foreach ( $distinct_tags as $d_tag_name => $d_tag_color ): ?>
+                        <option value="<?php echo esc_attr( strtolower( $d_tag_name ) ); ?>"><?php echo esc_html( $d_tag_name ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <!-- Member Filter Dropdown -->
+                <select id="sgd-filter-member" class="sgd-toolbar-select">
+                    <option value="">👥 Semua Anggota</option>
+                    <?php foreach ( $team_members_pool as $tm ): ?>
+                        <option value="<?php echo esc_attr( $tm['id'] ); ?>"><?php echo esc_html( $tm['display_name'] ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <!-- Reset Filters Button -->
+                <button type="button" id="sgd-btn-reset-filters" class="sgd-btn-reset-filters" title="Reset semua filter">
+                    🔄 Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- THE 4 KANBAN COLUMNS CONTAINER -->
         <div class="sgd-kanban-board-container" id="sgd-kanban-board" data-team-id="<?php echo esc_attr( $current_team->id ); ?>">
             <?php 
             foreach ( $kanban_columns as $col_key => $col_meta ): 
@@ -460,8 +524,24 @@ $kanban_columns = [
                                         $deadline_badge = '<span class="sgd-task-deadline-pill" title="Tenggat: ' . esc_attr( date( 'd M Y', $d_ts ) ) . '">📅 ' . esc_html( date( 'd M', $d_ts ) ) . '</span>';
                                     }
                                 }
+                                $assigned_member_ids = array_column( $task->members ?? [], 'id' );
+                                $tag_names_str = strtolower( implode( ' ', array_column( $task->tags ?? [], 'name' ) ) );
+                                $has_cover = ( ! empty( $task->cover_image ) && $task->cover_image !== 'none' );
                                 ?>
-                                <div class="sgd-kanban-card <?php echo esc_attr( $card_deadline_class ); ?> <?php echo $can_manage_team ? 'sgd-card-manager-draggable' : ''; ?>" draggable="<?php echo $can_manage_team ? 'true' : 'false'; ?>" data-task-id="<?php echo esc_attr( $task->id ); ?>" data-column="<?php echo esc_attr( $task->column_name ); ?>">
+                                <div class="sgd-kanban-card <?php echo esc_attr( $card_deadline_class ); ?> sgd-card-manager-draggable"
+                                     draggable="true"
+                                     data-task-id="<?php echo esc_attr( $task->id ); ?>"
+                                     data-column="<?php echo esc_attr( $task->column_name ); ?>"
+                                     data-title="<?php echo esc_attr( strtolower( $task->title ) ); ?>"
+                                     data-assigned="<?php echo esc_attr( implode( ',', $assigned_member_ids ) ); ?>"
+                                     data-deadline-status="<?php echo esc_attr( $dl_status ); ?>"
+                                     data-has-files="<?php echo ( $task->attachment_count > 0 ) ? 'true' : 'false'; ?>"
+                                     data-tags="<?php echo esc_attr( $tag_names_str ); ?>">
+
+                                    <!-- CARD COVER IMAGE -->
+                                    <div class="sgd-card-cover-wrap" id="card-cover-wrap-<?php echo esc_attr( $task->id ); ?>" style="<?php echo $has_cover ? '' : 'display:none;'; ?>">
+                                        <img src="<?php echo $has_cover ? esc_url( $task->cover_image ) : ''; ?>" class="sgd-card-cover-img" id="card-cover-img-<?php echo esc_attr( $task->id ); ?>" alt="Cover" loading="lazy">
+                                    </div>
                                     
                                     <!-- TAGS / LABELS ROW ON CARD -->
                                     <div class="sgd-card-tags-list">
@@ -485,9 +565,7 @@ $kanban_columns = [
 
                                     <div class="sgd-card-top">
                                         <div style="display:flex; align-items:center; gap:6px; flex:1;">
-                                            <?php if ( $can_manage_team ): ?>
-                                                <span class="sgd-card-drag-handle" title="⭐ Drag kartu untuk memindahkan status tugas">⠿</span>
-                                            <?php endif; ?>
+                                            <span class="sgd-card-drag-handle" title="⭐ Drag kartu untuk memindahkan status tugas">⠿</span>
                                             <h4 class="sgd-card-title"><?php echo esc_html( $task->title ); ?></h4>
                                         </div>
                                         <div class="sgd-card-quick-actions">
@@ -1051,9 +1129,21 @@ $kanban_columns = [
                             <select name="column_name" id="modal-task-column" class="sgd-form-select">
                                 <option value="To do list">📝 To do list</option>
                                 <option value="Dikerjakan">⏳ Dikerjakan</option>
-                                <option value="Selesai">✅ Selesai</option>
+                                <?php if ( $can_manage_team ): ?>
+                                    <option value="Selesai">✅ Selesai</option>
+                                <?php else: ?>
+                                    <option value="Selesai" disabled>🔒 Selesai (Butuh Persetujuan Manager)</option>
+                                <?php endif; ?>
                                 <option value="Batal">🚫 Batal</option>
                             </select>
+
+                            <?php if ( $can_manage_team ): ?>
+                                <div id="modal-manager-approval-box" style="margin-top:10px;">
+                                    <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-gold" id="modal-btn-approve-done" style="width:100%; justify-content:center; font-weight:bold; font-size:11px;" title="Verifikasi checklist dan langsung selesaikan quest ini">
+                                        👑 Setujui & Selesaikan Quest
+                                    </button>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- QUEST LEVEL & SCALING WIDGET -->
