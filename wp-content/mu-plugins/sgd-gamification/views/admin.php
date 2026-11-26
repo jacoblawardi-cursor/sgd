@@ -108,8 +108,8 @@ foreach ( $emp_unlocked_raw as $eu ) {
         <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'orders' ) ? 'active' : ''; ?>" data-target="admin-sec-orders">
             🎁 Cash Shop Orders (<?php echo $pending_orders_count; ?>)
         </button>
-        <button type="button" class="sgd-admin-subtab" data-target="admin-sec-users">
-            💎 Diamonds Treasury & XP
+        <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'users' ) ? 'active' : ''; ?>" data-target="admin-sec-users" style="color:#00e5ff; border-color:#00e5ff;">
+            👥 Hero Roster & Rank Stats (S-F)
         </button>
         <button type="button" class="sgd-admin-subtab <?php echo ( $admin_tab === 'proofs' ) ? 'active' : ''; ?>" data-target="admin-sec-proofs">
             📸 Submitted Photo Proofs (<?php echo count( $completed_proofs ); ?>)
@@ -883,10 +883,185 @@ foreach ( $emp_unlocked_raw as $eu ) {
 
     </div>
 
-    <!-- 4. EMPLOYEE DIAMONDS TREASURY -->
-    <div id="admin-sec-users" class="sgd-admin-section" style="display:none;">
-        <h3 style="font-family:var(--font-title); font-size:18px; color:var(--wow-gold-light); margin-bottom:15px;">
-            💎 Adjust Employee Diamond Balances
+    <!-- 4. EMPLOYEE ROSTER & QUEST RANK (S-F) COMPLETION STATISTICS -->
+    <div id="admin-sec-users" class="sgd-admin-section" style="<?php echo ( $admin_tab === 'users' ) ? 'display:block;' : 'display:none;'; ?>">
+        
+        <?php 
+        $all_roster_stats = sgd_get_all_users_quest_rank_stats();
+        $admin_ranks_def = sgd_get_quest_ranks();
+
+        // Calculate company-wide totals
+        $guild_total_quests = 0;
+        $guild_rank_totals = [ 'S' => 0, 'A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0, 'F' => 0 ];
+        foreach ( $all_roster_stats as $ru ) {
+            $guild_total_quests += (int) $ru['total_done'];
+            foreach ( $ru['ranks'] as $rk => $cnt ) {
+                $guild_rank_totals[ $rk ] = ( $guild_rank_totals[ $rk ] ?? 0 ) + (int) $cnt;
+            }
+        }
+        ?>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:15px;">
+            <div>
+                <h3 style="font-family:var(--font-title); font-size:18px; color:var(--wow-gold-light); margin:0;">
+                    👥 Hero Roster & Quest Rank (S-F) Completion Metrics
+                </h3>
+                <p style="color:#8fa0bd; font-size:12px; margin-top:3px;">
+                    Pantau volume dan distribusi kontribusi tugas setiap hero di Sinar Graha Mandiri berdasarkan tier rank S, A, B, C, D, E, dan F.
+                </p>
+            </div>
+            <div style="background:#111522; border:1px solid var(--wow-gold); padding:4px 12px; border-radius:4px; font-family:var(--font-pixel); font-size:9px; color:#ffd700;">
+                TOTAL QUEST SELESAI (SERIKAT): <?php echo number_format( $guild_total_quests ); ?>
+            </div>
+        </div>
+
+        <!-- GUILD SUMMARY MINI TILES (S TO F) -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:20px;">
+            <?php foreach ( $admin_ranks_def as $rk => $rdata ): ?>
+                <div style="background:<?php echo esc_attr( $rdata['badge_bg'] ); ?>; border:1px solid <?php echo esc_attr( $rdata['badge_border'] ); ?>; border-radius:6px; padding:10px 12px; box-shadow:<?php echo esc_attr( $rdata['glow'] ); ?>;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                        <span style="font-size:11px; font-weight:bold; color:<?php echo esc_attr( $rdata['color'] ); ?>;">
+                            <?php echo $rdata['icon']; ?> <?php echo $rdata['name']; ?>
+                        </span>
+                        <span style="font-size:9px; color:#8fa0bd;">Lv.<?php echo $rdata['level_gate']; ?>+</span>
+                    </div>
+                    <div style="font-size:20px; font-weight:900; color:#fff;">
+                        <?php echo number_format( $guild_rank_totals[ $rk ] ?? 0 ); ?>
+                        <span style="font-size:10px; font-weight:normal; color:#cbd5e1;">Quest</span>
+                    </div>
+                    <div style="font-size:9px; color:#8fa0bd; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        <?php echo esc_html( $rdata['scope'] ); ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- USER ROSTER TABLE -->
+        <div style="background:#111420; border:2px solid var(--wow-gold-border); border-radius:8px; overflow-x:auto; margin-bottom:25px; box-shadow:0 8px 25px rgba(0,0,0,0.7);">
+            <div style="padding:10px 14px; background:#090b12; border-bottom:1px solid #232a3b; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <span style="font-family:var(--font-pixel); font-size:9px; color:#ffd700;">
+                    ⚔️ DAFTAR KARYAWAN & STATISTIK TIER RANK
+                </span>
+                <input type="text" id="sgd-admin-user-filter" placeholder="Cari nama karyawan..." onkeyup="sgdFilterUserTable()" style="background:#161928; border:1px solid #3d4a66; border-radius:4px; padding:4px 10px; font-size:11px; color:#fff; width:200px;">
+            </div>
+
+            <table id="sgd-admin-users-table" style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
+                <thead>
+                    <tr style="background:#090b12; border-bottom:2px solid var(--wow-gold); font-family:var(--font-pixel); font-size:8px; color:var(--wow-gold-light);">
+                        <th style="padding:10px 12px;">HERO</th>
+                        <th style="padding:10px 10px;">ROLE / KELAS</th>
+                        <th style="padding:10px 10px; text-align:center;">LEVEL</th>
+                        <th style="padding:10px 8px; text-align:center; color:#ff3838;" title="Rank S: Policy making & strategic planning (Gate Lv.20+)">👑 S</th>
+                        <th style="padding:10px 8px; text-align:center; color:#ff9f43;" title="Rank A: Independent business & annual leadership (Gate Lv.15+)">⭐ A</th>
+                        <th style="padding:10px 8px; text-align:center; color:#be2edd;" title="Rank B: Division quarterly management (Gate Lv.10+)">🔮 B</th>
+                        <th style="padding:10px 8px; text-align:center; color:#00e5ff;" title="Rank C: Department monthly management (Gate Lv.8+)">💠 C</th>
+                        <th style="padding:10px 8px; text-align:center; color:#2ed573;" title="Rank D: Basic managerial & weekly tasks (Gate Lv.6+)">🌿 D</th>
+                        <th style="padding:10px 8px; text-align:center; color:#70a1ff;" title="Rank E: Technical work & task-based (Gate Lv.4+)">📜 E</th>
+                        <th style="padding:10px 8px; text-align:center; color:#a4b0be;" title="Rank F: Consistency & routine tasks (Gate Lv.1+)">⚪ F</th>
+                        <th style="padding:10px 10px; text-align:center; color:#ffd700;">TOTAL</th>
+                        <th style="padding:10px 10px; text-align:center; color:#00e5ff;">SALDO 💎</th>
+                        <th style="padding:10px 12px; text-align:right;">ACTION</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $all_roster_stats as $ru ): ?>
+                        <tr class="sgd-admin-user-row" style="border-bottom:1px solid #1f2538; transition:background 0.15s ease;">
+                            <td style="padding:10px 12px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:20px;"><?php echo $ru['avatar']; ?></span>
+                                    <div>
+                                        <div style="font-weight:bold; color:#fff; font-size:13px;" class="sgd-user-name">
+                                            <?php echo esc_html( $ru['display_name'] ); ?>
+                                        </div>
+                                        <div style="font-size:10px; color:#8fa0bd;">@<?php echo esc_html( $ru['user_login'] ); ?></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="padding:10px 10px;">
+                                <span class="sgd-job-class-pill <?php echo strtolower($ru['job_class']) === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>" style="font-size:9px; padding:2px 6px;">
+                                    <?php echo ( strtolower($ru['job_class']) === 'manager' ? '⭐ ' : '🎖️ ' ) . esc_html( $ru['job_class'] ); ?>
+                                </span>
+                            </td>
+                            <td style="padding:10px 10px; text-align:center; font-weight:bold; color:var(--wow-gold-light);">
+                                Lv.<?php echo $ru['level']; ?>
+                            </td>
+                            <td style="padding:10px 8px; text-align:center;">
+                                <span style="display:inline-block; min-width:24px; padding:1px 5px; border-radius:3px; background:rgba(255, 56, 56, 0.2); border:1px solid #ff4d4d; color:#ff3838; font-weight:bold; font-size:11px;">
+                                    <?php echo (int)( $ru['ranks']['S'] ?? 0 ); ?>
+                                </span>
+                            </td>
+                            <td style="padding:10px 8px; text-align:center;">
+                                <span style="display:inline-block; min-width:24px; padding:1px 5px; border-radius:3px; background:rgba(255, 159, 67, 0.2); border:1px solid #ff9f43; color:#ff9f43; font-weight:bold; font-size:11px;">
+                                    <?php echo (int)( $ru['ranks']['A'] ?? 0 ); ?>
+                                </span>
+                            </td>
+                            <td style="padding:10px 8px; text-align:center;">
+                                <span style="display:inline-block; min-width:24px; padding:1px 5px; border-radius:3px; background:rgba(190, 46, 221, 0.2); border:1px solid #be2edd; color:#be2edd; font-weight:bold; font-size:11px;">
+                                    <?php echo (int)( $ru['ranks']['B'] ?? 0 ); ?>
+                                </span>
+                            </td>
+                            <td style="padding:10px 8px; text-align:center;">
+                                <span style="display:inline-block; min-width:24px; padding:1px 5px; border-radius:3px; background:rgba(0, 229, 255, 0.2); border:1px solid #00e5ff; color:#00e5ff; font-weight:bold; font-size:11px;">
+                                    <?php echo (int)( $ru['ranks']['C'] ?? 0 ); ?>
+                                </span>
+                            </td>
+                            <td style="padding:10px 8px; text-align:center;">
+                                <span style="display:inline-block; min-width:24px; padding:1px 5px; border-radius:3px; background:rgba(46, 213, 115, 0.2); border:1px solid #2ed573; color:#2ed573; font-weight:bold; font-size:11px;">
+                                    <?php echo (int)( $ru['ranks']['D'] ?? 0 ); ?>
+                                </span>
+                            </td>
+                            <td style="padding:10px 8px; text-align:center;">
+                                <span style="display:inline-block; min-width:24px; padding:1px 5px; border-radius:3px; background:rgba(112, 161, 255, 0.2); border:1px solid #70a1ff; color:#70a1ff; font-weight:bold; font-size:11px;">
+                                    <?php echo (int)( $ru['ranks']['E'] ?? 0 ); ?>
+                                </span>
+                            </td>
+                            <td style="padding:10px 8px; text-align:center;">
+                                <span style="display:inline-block; min-width:24px; padding:1px 5px; border-radius:3px; background:rgba(164, 176, 190, 0.2); border:1px solid #a4b0be; color:#a4b0be; font-weight:bold; font-size:11px;">
+                                    <?php echo (int)( $ru['ranks']['F'] ?? 0 ); ?>
+                                </span>
+                            </td>
+                            <td style="padding:10px 10px; text-align:center; font-weight:bold; color:#ffd700; font-size:12px;">
+                                <?php echo number_format( $ru['total_done'] ); ?>
+                            </td>
+                            <td style="padding:10px 10px; text-align:center; font-weight:bold; color:#00e5ff;">
+                                <?php echo number_format( $ru['diamonds'] ); ?> 💎
+                            </td>
+                            <td style="padding:10px 12px; text-align:right;">
+                                <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-gold" onclick="sgdSelectUserForAdjust('<?php echo $ru['user_id']; ?>');" title="Quick Adjust Balance & XP">
+                                    ⚙️ Adjust
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+        function sgdFilterUserTable() {
+            var input = document.getElementById('sgd-admin-user-filter');
+            if (!input) return;
+            var filter = input.value.toLowerCase();
+            var rows = document.querySelectorAll('.sgd-admin-user-row');
+            rows.forEach(function(row) {
+                var nameEl = row.querySelector('.sgd-user-name');
+                var text = nameEl ? nameEl.textContent.toLowerCase() : '';
+                row.style.display = text.indexOf(filter) > -1 ? '' : 'none';
+            });
+        }
+        function sgdSelectUserForAdjust(userId) {
+            var sel = document.getElementById('sgd-admin-target-user-select');
+            if (sel) {
+                sel.value = userId;
+                var formTitle = document.getElementById('sgd-adjust-form-title');
+                if (formTitle) formTitle.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        </script>
+
+        <!-- FORM ADJUST EMPLOYEE DIAMONDS & XP -->
+        <h3 id="sgd-adjust-form-title" style="font-family:var(--font-title); font-size:18px; color:var(--wow-gold-light); margin-bottom:15px;">
+            💎 Adjust Employee Diamond Balances & Hero Stats
         </h3>
 
         <div style="background:#161928; border:2px solid var(--wow-gold); border-radius:8px; padding:20px; max-width:650px;">
@@ -895,7 +1070,7 @@ foreach ( $emp_unlocked_raw as $eu ) {
 
                 <div class="sgd-form-group">
                     <label class="sgd-form-label">Select Employee Hero</label>
-                    <select name="target_user_id" class="sgd-form-select">
+                    <select name="target_user_id" id="sgd-admin-target-user-select" class="sgd-form-select">
                         <?php foreach ( $users as $u ): 
                             $u_diamonds = sgd_get_diamonds( $u->ID );
                         ?>

@@ -578,6 +578,29 @@ $class_meta = $class_titles[ $active_rpg_class ] ?? $class_titles['paladin'];
                     </div>
                 </div>
 
+                <!-- Quest Rank Clear Record (S / A / B / C / D / E / F) -->
+                <?php 
+                $char_rank_stats = sgd_get_user_quest_rank_stats( $user_id );
+                $char_ranks_def = sgd_get_quest_ranks();
+                ?>
+                <div class="sgd-stats-col">
+                    <div class="sgd-stats-col-title">⚔️ Tier Rank Clears (S - F)</div>
+                    <div class="sgd-stat-row" style="border-bottom:1px solid rgba(255,215,0,0.2); padding-bottom:6px; margin-bottom:6px;">
+                        <span class="sgd-stat-label" style="color:#ffd700; font-weight:bold;">Total Quests Cleared</span>
+                        <span class="sgd-stat-val" style="color:#ffd700; font-weight:bold;"><?php echo number_format($char_rank_stats['total']); ?> Cleared</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; margin-top:8px;">
+                        <?php foreach ( $char_ranks_def as $rk => $rdata ): 
+                            $cnt = (int) ($char_rank_stats['ranks'][$rk] ?? 0);
+                        ?>
+                            <div style="background:<?php echo esc_attr($rdata['badge_bg']); ?>; border:1px solid <?php echo esc_attr($rdata['badge_border']); ?>; border-radius:6px; padding:6px 2px; text-align:center;" title="<?php echo esc_attr($rdata['name'] . ': ' . $rdata['definition'] . ' (Gate Lv.' . $rdata['level_gate'] . ')'); ?>">
+                                <div style="font-family:var(--font-pixel); font-size:10px; color:<?php echo esc_attr($rdata['color']); ?>; font-weight:bold;"><?php echo esc_html($rk); ?></div>
+                                <div style="font-size:13px; font-weight:bold; color:#fff; margin-top:2px;"><?php echo $cnt; ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
             </div>
         </div>
 

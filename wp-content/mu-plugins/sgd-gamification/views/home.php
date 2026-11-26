@@ -232,7 +232,63 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
         </a>
     </div>
 
-    <!-- 3. QUICK LAUNCHPAD TOOLBAR (ALL MODULES IN 1 CLICK) -->
+    <!-- 2.5. QUEST RANK (S / A / B / C / D / E / F) COMPLETION STATS -->
+    <?php 
+    $my_rank_stats = sgd_get_user_quest_rank_stats( $user_id );
+    $quest_ranks_def = sgd_get_quest_ranks();
+    ?>
+    <div class="sgd-rank-stats-card">
+        <div class="sgd-rank-stats-header">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <span style="font-size:28px;">⚔️</span>
+                <div>
+                    <h3 class="sgd-rank-stats-title">
+                        PENCAPAIAN TUGAS BERDASARKAN TIER RANK (S / A / B / C / D / E / F)
+                    </h3>
+                    <p class="sgd-rank-stats-subtitle">
+                        Total Selesai: <strong style="color:#ffd700;"><?php echo $my_rank_stats['total']; ?> Quest</strong> • Rekapitulasi kontribusi Anda berdasarkan tingkat wewenang & lingkup tanggung jawab di Sinar Graha Mandiri.
+                    </p>
+                </div>
+            </div>
+            <a href="<?php echo esc_url( sgd_get_portal_url('quests') ); ?>" class="sgd-btn sgd-btn-sm sgd-btn-gold" style="white-space:nowrap;">
+                🎯 Buka Papan Kanban ➔
+            </a>
+        </div>
+
+        <div class="sgd-rank-stats-grid">
+            <?php foreach ( $quest_ranks_def as $rk => $rdata ): 
+                $count_done = (int) ( $my_rank_stats['ranks'][ $rk ] ?? 0 );
+            ?>
+                <a href="<?php echo esc_url( sgd_get_portal_url('quests') ); ?>" class="sgd-rank-stat-tile rank-tile-<?php echo esc_attr( strtolower( $rk ) ); ?>"
+                   style="background:<?php echo esc_attr( $rdata['badge_bg'] ); ?>; border:1.5px solid <?php echo esc_attr( $rdata['badge_border'] ); ?>; text-decoration:none; color:inherit;"
+                   title="<?php echo esc_attr( $rdata['name'] . ': ' . $rdata['definition'] . ' (' . $rdata['scope'] . ') • Gate: Lv.' . $rdata['level_gate'] ); ?>">
+                    
+                    <div class="sgd-rank-tile-top">
+                        <span class="sgd-rank-tile-badge" style="color:<?php echo esc_attr( $rdata['color'] ); ?>;">
+                            <?php echo $rdata['icon']; ?> <?php echo esc_html( $rdata['name'] ); ?>
+                        </span>
+                        <span class="sgd-rank-tile-gate" style="border:1px solid <?php echo esc_attr( $rdata['badge_border'] ); ?>; color:<?php echo esc_attr( $rdata['color'] ); ?>;">
+                            Gate Lv.<?php echo $rdata['level_gate']; ?>+
+                        </span>
+                    </div>
+
+                    <div class="sgd-rank-tile-count" style="color:<?php echo esc_attr( $rdata['color'] ); ?>;">
+                        <?php echo number_format( $count_done ); ?>
+                        <span style="font-size:11px; color:#cbd5e1; font-weight:normal;">Selesai</span>
+                    </div>
+
+                    <div class="sgd-rank-tile-scope">
+                        Scope: <strong><?php echo esc_html( $rdata['scope'] ); ?></strong>
+                    </div>
+
+                    <div class="sgd-rank-tile-def">
+                        "<?php echo esc_html( $rdata['definition'] ); ?>"
+                    </div>
+
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
     <div class="sgd-quick-launchpad">
         <div class="sgd-launchpad-title">
             <span>⚡ Akses Cepat Modul Utama (Quick Launchpad)</span>

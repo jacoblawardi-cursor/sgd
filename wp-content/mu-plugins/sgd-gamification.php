@@ -2307,6 +2307,88 @@ function sgd_get_quest_rank_info( $rank ) {
 }
 
 /**
+ * Get S/A/B/C/D/E/F Quest Rank completion stats for a specific user.
+ */
+function sgd_get_user_quest_rank_stats( $user_id = null ) {
+    global $wpdb;
+    if ( ! $user_id ) $user_id = get_current_user_id();
+    $table = $wpdb->prefix . 'sgd_quest_tasks';
+
+    $ranks_data = [
+        'S' => 0,
+        'A' => 0,
+        'B' => 0,
+        'C' => 0,
+        'D' => 0,
+        'E' => 0,
+        'F' => 0,
+    ];
+
+    if ( ! $user_id ) {
+        return [
+            'ranks' => $ranks_data,
+            'total' => 0,
+        ];
+    }
+
+    $results = $wpdb->get_results( $wpdb->prepare(
+        "SELECT quest_level, COUNT(*) as cnt 
+         FROM $table 
+         WHERE (column_name = 'Selesai' OR reward_awarded = 1)
+           AND (completed_by = %d OR FIND_IN_SET(%d, assigned_members) OR assigned_members LIKE %s OR created_by = %d)
+         GROUP BY quest_level",
+        $user_id, $user_id, '%' . $wpdb->esc_like( (string) $user_id ) . '%', $user_id
+    ) );
+
+    $total = 0;
+    if ( ! empty( $results ) ) {
+        foreach ( $results as $row ) {
+            $norm = sgd_normalize_quest_rank( $row->quest_level );
+            $cnt = (int) $row->cnt;
+            $ranks_data[ $norm ] = ( $ranks_data[ $norm ] ?? 0 ) + $cnt;
+            $total += $cnt;
+        }
+    }
+
+    return [
+        'ranks' => $ranks_data,
+        'total' => $total,
+    ];
+}
+
+/**
+ * Get S/A/B/C/D/E/F Quest Rank completion statistics for all users (for Admin Roster view).
+ */
+function sgd_get_all_users_quest_rank_stats() {
+    $users = get_users();
+    $roster = [];
+    foreach ( $users as $u ) {
+        $xp_data = sgd_get_user_xp_data( $u->ID );
+        $stats = sgd_get_user_quest_rank_stats( $u->ID );
+        $job_class = sgd_get_user_job_class( $u->ID );
+        $diamonds = sgd_get_diamonds( $u->ID );
+        $avatar = sgd_get_user_avatar( $u->ID );
+        $is_admin = in_array( 'administrator', (array) $u->roles, true ) || $u->user_login === 'admin';
+
+        $roster[] = [
+            'user_id'      => $u->ID,
+            'user_login'   => $u->user_login,
+            'display_name' => $u->display_name,
+            'user_email'   => $u->user_email,
+            'is_admin'     => $is_admin,
+            'job_class'    => $job_class,
+            'avatar'       => $avatar,
+            'level'        => $xp_data['level'],
+            'total_xp'     => $xp_data['total_xp'],
+            'diamonds'     => $diamonds,
+            'ranks'        => $stats['ranks'],
+            'total_done'   => $stats['total'],
+        ];
+    }
+    return $roster;
+}
+
+/**
  * Calculate the reward ratio based on level difference between Employee Level and Quest Rank Level Gate.
  */
 function sgd_calculate_quest_reward_ratio( $quest_rank = 'F', $user_level = 1 ) {
