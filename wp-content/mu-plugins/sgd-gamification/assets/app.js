@@ -2789,6 +2789,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     applyFilters();
                 });
             }
+
+            // Auto-apply initial filter if passed from URL (e.g. ?filter=my-tasks)
+            const initialFilter = window.SGD_QUESTS_CONFIG?.initialFilter;
+            if (initialFilter) {
+                const targetPill = document.querySelector(`.sgd-filter-pill[data-filter="${initialFilter}"]`);
+                if (targetPill) {
+                    filterPills.forEach(p => p.classList.remove('active'));
+                    targetPill.classList.add('active');
+                    currentActivePill = initialFilter;
+                    applyFilters();
+                }
+            }
         }
 
         // Initialize Kanban Filters
@@ -2811,7 +2823,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Auto-open task if ?open_task=X is present in URL
         if (window.SGD_QUESTS_CONFIG && window.SGD_QUESTS_CONFIG.openTaskId) {
-            openTaskDetail(window.SGD_QUESTS_CONFIG.openTaskId);
+            const targetTaskId = window.SGD_QUESTS_CONFIG.openTaskId;
+            openTaskDetail(targetTaskId);
+
+            // Highlight and scroll to the card in Kanban
+            setTimeout(() => {
+                const cardEl = document.querySelector(`.sgd-kanban-card[data-task-id="${targetTaskId}"]`);
+                if (cardEl) {
+                    cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    cardEl.classList.add('sgd-card-highlighted');
+                    setTimeout(() => {
+                        cardEl.classList.remove('sgd-card-highlighted');
+                    }, 5000);
+                }
+            }, 300);
         }
 
     })();

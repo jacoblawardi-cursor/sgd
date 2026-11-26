@@ -36,6 +36,11 @@ $my_active_count = (int) $wpdb->get_var( $wpdb->prepare(
     $user_id, '%' . $wpdb->esc_like( (string) $user_id ) . '%', $user_id
 ) );
 
+$first_my_task = ! empty( $my_active_tasks ) ? $my_active_tasks[0] : null;
+$my_tasks_link = $first_my_task 
+    ? add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $first_my_task->team_id, 'open_task' => $first_my_task->id, 'filter' => 'my-tasks' ], home_url( '/' ) )
+    : add_query_arg( [ 'sgd_page' => 'quests', 'filter' => 'my-tasks' ], home_url( '/' ) );
+
 // 2. Urgent / Approaching Deadline Tasks (<= 3 Days, Today, or Overdue across all teams)
 $urgent_deadline_tasks = $wpdb->get_results(
     "SELECT t.*, tm.name as team_name, tm.type as team_type 
@@ -210,12 +215,18 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
             </div>
         </a>
 
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-kpi-card kpi-tasks" title="Lihat tugas yang sedang Anda kerjakan">
+        <a href="<?php echo esc_url( $my_tasks_link ); ?>" class="sgd-kpi-card kpi-tasks" title="<?php echo $first_my_task ? 'Klik untuk langsung membuka tugas aktif teratas: ' . esc_attr($first_my_task->title) : 'Lihat tugas aktif Anda di papan Kanban'; ?>">
             <div class="sgd-kpi-icon" style="color:#2ecc71;">🎯</div>
             <div class="sgd-kpi-content">
                 <div class="sgd-kpi-label">Tugas Aktif Saya</div>
                 <div class="sgd-kpi-value" style="color:#2ecc71;"><?php echo $my_active_count; ?> Tugas</div>
-                <div class="sgd-kpi-sub">Di Papan Kanban Quests ➔</div>
+                <div class="sgd-kpi-sub">
+                    <?php if ( $first_my_task ): ?>
+                        Buka: <strong><?php echo esc_html( wp_trim_words( $first_my_task->title, 4 ) ); ?></strong> ➔
+                    <?php else: ?>
+                        Di Papan Kanban Quests ➔
+                    <?php endif; ?>
+                </div>
             </div>
         </a>
     </div>
@@ -305,8 +316,8 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
                             <?php echo count($my_active_tasks); ?> Berjalan
                         </span>
                     </h3>
-                    <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-dash-card-link">
-                        Buka Semua di Kanban ➔
+                    <a href="<?php echo esc_url( $my_tasks_link ); ?>" class="sgd-dash-card-link">
+                        <?php echo $first_my_task ? 'Buka Tugas Pertama ➔' : 'Buka Semua di Kanban ➔'; ?>
                     </a>
                 </div>
                 <div class="sgd-dash-card-body">
@@ -345,17 +356,20 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
                                 <div class="sgd-dash-task-item">
                                     <div class="sgd-dash-task-top">
                                         <div style="flex:1;">
-                                            <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $mt->team_id, 'open_task' => $mt->id ], home_url( '/' ) ) ); ?>" class="sgd-dash-task-title">
+                                            <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $mt->team_id, 'open_task' => $mt->id, 'filter' => 'my-tasks' ], home_url( '/' ) ) ); ?>" class="sgd-dash-task-title">
                                                 <?php echo esc_html( $mt->title ); ?>
                                             </a>
                                             <div style="font-size:11px; color:#8fa0bd; margin-top:2px;">
                                                 Grup: <strong><?php echo esc_html( $mt->team_name ?: 'Tim' ); ?></strong>
                                             </div>
                                         </div>
-                                        <div style="text-align:right;">
+                                        <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
                                             <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.08); color:#ffd700; font-family:var(--font-pixel, monospace); font-weight:bold;">
                                                 Lv.<?php echo max(1, (int)$mt->quest_level); ?>
                                             </span>
+                                            <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $mt->team_id, 'open_task' => $mt->id, 'filter' => 'my-tasks' ], home_url( '/' ) ) ); ?>" class="sgd-dash-task-open-btn" title="Buka Kartu Tugas">
+                                                Buka Kartu ➔
+                                            </a>
                                         </div>
                                     </div>
                                     <div class="sgd-dash-task-meta">

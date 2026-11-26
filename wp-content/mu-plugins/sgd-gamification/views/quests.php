@@ -1340,6 +1340,7 @@ window.SGD_QUESTS_CONFIG = {
     currentUserLevel: <?php echo (int) ( ( $current_user_id && function_exists('sgd_get_user_xp_data') ) ? sgd_get_user_xp_data($current_user_id)['level'] : 1 ); ?>,
     currentTeamId: <?php echo (int) $team_id; ?>,
     openTaskId: <?php echo (int) $open_task_id; ?>,
+    initialFilter: "<?php echo esc_js( sanitize_text_field( $_GET['filter'] ?? '' ) ); ?>",
     canManageTeam: <?php echo $can_manage_team ? 'true' : 'false'; ?>
 };
 </script>
