@@ -6286,3 +6286,8 @@ function sgd_register_quests_admin_menu() {
         25
     );
 }
+
+// 5. Load SGD Gmail AI Quest Bot Integration
+if ( file_exists( SGD_PLUGIN_DIR . '/sgd-email-task-bot.php' ) ) {
+    require_once SGD_PLUGIN_DIR . '/sgd-email-task-bot.php';
+}

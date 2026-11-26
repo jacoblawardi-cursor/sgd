@@ -1409,6 +1409,68 @@ foreach ( $emp_unlocked_raw as $eu ) {
             Connect your manager's <strong>Cicle project management boards</strong> or an <strong>AI automation agent (OpenAI, Claude, DeepSeek, or Python script)</strong>. The AI can automatically read daily tasks from Cicle, break them down into gamified daily quests, and assign them directly to each employee in this portal with custom diamond rewards!
         </p>
 
+        <!-- GMAIL AI QUEST BOT CONTROL PANEL -->
+        <?php 
+        $bot_cfg = function_exists('sgd_get_email_bot_config') ? sgd_get_email_bot_config() : ['email' => 'sgdquest@gmail.com'];
+        $last_sync_time = get_option( 'sgd_email_bot_last_sync', 'Belum pernah dicek' );
+        $last_sync_count = (int) get_option( 'sgd_email_bot_last_count', 0 );
+        $all_teams_list = $wpdb->get_results( "SELECT id, name FROM {$wpdb->prefix}sgd_quest_teams ORDER BY id ASC" );
+        ?>
+        <div style="background:linear-gradient(135deg, #0d1b2a 0%, #111e38 100%); border:2px solid #00e5ff; border-radius:10px; padding:20px; margin-bottom:24px; box-shadow:0 0 20px rgba(0, 229, 255, 0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:15px; border-bottom:1px solid rgba(0,229,255,0.25); padding-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:24px;">📬</span>
+                    <div>
+                        <h4 style="font-family:var(--font-title); font-size:16px; color:#00e5ff; margin:0;">
+                            Gmail AI Quest Bot (<span style="color:#ffd700;"><?php echo esc_html( $bot_cfg['email'] ); ?></span>)
+                        </h4>
+                        <div style="font-size:11px; color:#8fa0bd; margin-top:2px;">
+                            Kirim email instruksi/tugas ke <strong><?php echo esc_html( $bot_cfg['email'] ); ?></strong> ➔ AI Gemini otomatis mengubahnya jadi kartu tugas Kanban!
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="background:rgba(46, 204, 113, 0.2); border:1px solid #2ecc71; color:#2ecc71; padding:4px 10px; border-radius:12px; font-size:10px; font-weight:bold; font-family:var(--font-pixel);">
+                        🟢 IMAP SSL READY
+                    </span>
+                    <span style="background:rgba(0, 229, 255, 0.2); border:1px solid #00e5ff; color:#00e5ff; padding:4px 10px; border-radius:12px; font-size:10px; font-weight:bold; font-family:var(--font-pixel);">
+                        ✨ GEMINI AI ACTIVE
+                    </span>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:15px; margin-bottom:18px;">
+                <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:12px;">
+                    <div style="font-family:var(--font-pixel); font-size:8px; color:#8fa0bd; margin-bottom:4px;">KOTAK MASUK TUGAS:</div>
+                    <code style="color:#ffd700; font-size:13px; font-weight:bold;"><?php echo esc_html( $bot_cfg['email'] ); ?></code>
+                    <div style="font-size:10px; color:#7bed9f; margin-top:4px;">✔ App Password 16-karakter Terkonfigurasi</div>
+                </div>
+
+                <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:12px;">
+                    <div style="font-family:var(--font-pixel); font-size:8px; color:#8fa0bd; margin-bottom:4px;">AI PARSING ENGINE:</div>
+                    <div style="color:#00e5ff; font-size:12px; font-weight:bold;">Google Gemini Flash ⚡</div>
+                    <div style="font-size:10px; color:#c8d6e5; margin-top:4px;">Otomatis skala Rank Quest S/A/B/C/D/E/F & Hadiah XP/Gold</div>
+                </div>
+
+                <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:12px;">
+                    <div style="font-family:var(--font-pixel); font-size:8px; color:#8fa0bd; margin-bottom:4px;">STATUS SINKRONISASI:</div>
+                    <div style="color:#ffffff; font-size:11px;">Terakhir cek: <strong><?php echo esc_html( $last_sync_time ); ?></strong></div>
+                    <div style="font-size:10px; color:#8fa0bd; margin-top:4px;">Background Auto-Check: Tiap 1 Jam via WP-Cron</div>
+                </div>
+            </div>
+
+            <!-- SYNC NOW TRIGGER FORM -->
+            <form method="post" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(0, 229, 255, 0.04); border:1px dashed rgba(0, 229, 255, 0.3); border-radius:8px; padding:12px 16px;">
+                <input type="hidden" name="sgd_action" value="sgd_sync_email_tasks">
+                <div style="font-size:12px; color:#c8d6e5;">
+                    💡 <em>Kirim email dari HP atau laptop Anda ke <strong><?php echo esc_html( $bot_cfg['email'] ); ?></strong>, lalu klik tombol di samping untuk segera membuat kartu tugas:</em>
+                </div>
+                <button type="submit" class="sgd-btn sgd-btn-blue" style="padding:8px 20px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:8px;">
+                    <span>🔄</span> Cek & Proses Email Sekarang
+                </button>
+            </form>
+        </div>
+
         <!-- API CREDENTIALS & ENDPOINTS -->
         <div style="background:#111522; border:2px solid var(--wow-gold-border); border-radius:10px; padding:20px; margin-bottom:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
