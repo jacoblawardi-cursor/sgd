@@ -1532,6 +1532,19 @@ document.addEventListener('DOMContentLoaded', function() {
             updateRewardFieldsVisibility(task.reward_type || 'both');
             updateQuestLevelPreview(task.quest_level || 1);
 
+            // Cover Image Widget in Modal
+            const coverBox = document.getElementById('modal-cover-preview-box');
+            const coverImg = document.getElementById('modal-cover-preview-img');
+            const btnRemoveCover = document.getElementById('modal-btn-remove-cover');
+            if (task.cover_image && task.cover_image !== 'none') {
+                if (coverImg) coverImg.src = task.cover_image;
+                if (coverBox) coverBox.style.display = 'block';
+                if (btnRemoveCover) btnRemoveCover.style.display = 'inline-block';
+            } else {
+                if (coverBox) coverBox.style.display = 'none';
+                if (btnRemoveCover) btnRemoveCover.style.display = 'none';
+            }
+
             // Labels / Tags
             renderLabels(task.tags || []);
 
@@ -2478,6 +2491,153 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error(err);
                     btn.disabled = false;
                     btn.textContent = '🖼️ Cover';
+                    alert('Terjadi kesalahan koneksi.');
+                });
+            }
+        });
+
+        // Modal Cover File Input Handler
+        const modalCoverInput = document.getElementById('modal-cover-file-input');
+        if (modalCoverInput) {
+            modalCoverInput.addEventListener('change', function() {
+                const file = this.files && this.files[0];
+                const taskId = document.getElementById('modal-task-id')?.value;
+                if (!file || !taskId) return;
+
+                const lbl = document.getElementById('modal-lbl-upload-cover');
+                const origText = lbl ? lbl.innerHTML : '';
+                if (lbl) lbl.innerHTML = '⏳ Mengunggah...';
+
+                const formData = new FormData();
+                formData.append('sgd_action', 'sgd_upload_quest_cover');
+                formData.append('is_ajax', '1');
+                formData.append('task_id', taskId);
+                formData.append('cover_file', file);
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (lbl) lbl.innerHTML = origText;
+                    modalCoverInput.value = '';
+                    if (data.success) {
+                        sfxSuccess();
+                        const coverBox = document.getElementById('modal-cover-preview-box');
+                        const coverImg = document.getElementById('modal-cover-preview-img');
+                        const btnRemoveCover = document.getElementById('modal-btn-remove-cover');
+                        if (coverImg) coverImg.src = data.data.cover_url;
+                        if (coverBox) coverBox.style.display = 'block';
+                        if (btnRemoveCover) btnRemoveCover.style.display = 'inline-block';
+
+                        const cardWrap = document.getElementById('card-cover-wrap-' + taskId);
+                        const cardImg = document.getElementById('card-cover-img-' + taskId);
+                        if (cardWrap && cardImg) {
+                            cardImg.src = data.data.cover_url;
+                            cardWrap.style.display = '';
+                        }
+
+                        if (data.data.attachments && typeof renderAttachments === 'function') {
+                            renderAttachments(data.data.attachments);
+                        }
+                        alert('Foto sampul berhasil diunggah!');
+                    } else {
+                        alert(data.data?.message || 'Gagal mengunggah foto sampul.');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    if (lbl) lbl.innerHTML = origText;
+                    modalCoverInput.value = '';
+                    alert('Terjadi kesalahan koneksi.');
+                });
+            });
+        }
+
+        // Modal Remove Cover Button Handler
+        const btnRemoveCover = document.getElementById('modal-btn-remove-cover');
+        if (btnRemoveCover) {
+            btnRemoveCover.addEventListener('click', function() {
+                const taskId = document.getElementById('modal-task-id')?.value;
+                if (!taskId) return;
+
+                if (!confirm('Hapus foto sampul dari kartu ini?')) return;
+
+                btnRemoveCover.disabled = true;
+
+                const formData = new FormData();
+                formData.append('sgd_action', 'sgd_set_quest_cover');
+                formData.append('is_ajax', '1');
+                formData.append('task_id', taskId);
+                formData.append('cover_url', 'none');
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    btnRemoveCover.disabled = false;
+                    if (data.success) {
+                        sfxSuccess();
+                        const coverBox = document.getElementById('modal-cover-preview-box');
+                        if (coverBox) coverBox.style.display = 'none';
+                        btnRemoveCover.style.display = 'none';
+
+                        const cardWrap = document.getElementById('card-cover-wrap-' + taskId);
+                        if (cardWrap) cardWrap.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    btnRemoveCover.disabled = false;
+                });
+            });
+        }
+
+        // Direct Card Quick Cover Upload Handler
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('sgd-card-cover-upload-input')) {
+                const input = e.target;
+                const file = input.files && input.files[0];
+                const taskId = input.getAttribute('data-task-id');
+                if (!file || !taskId) return;
+
+                const parentBtn = input.closest('.sgd-btn-quick-cover');
+                const origHtml = parentBtn ? parentBtn.innerHTML : '';
+                if (parentBtn) parentBtn.innerHTML = '⏳';
+
+                const formData = new FormData();
+                formData.append('sgd_action', 'sgd_upload_quest_cover');
+                formData.append('is_ajax', '1');
+                formData.append('task_id', taskId);
+                formData.append('cover_file', file);
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (parentBtn) parentBtn.innerHTML = origHtml;
+                    input.value = '';
+                    if (data.success) {
+                        sfxSuccess();
+                        const cardWrap = document.getElementById('card-cover-wrap-' + taskId);
+                        const cardImg = document.getElementById('card-cover-img-' + taskId);
+                        if (cardWrap && cardImg) {
+                            cardImg.src = data.data.cover_url;
+                            cardWrap.style.display = '';
+                        }
+                    } else {
+                        alert(data.data?.message || 'Gagal mengunggah cover.');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    if (parentBtn) parentBtn.innerHTML = origHtml;
+                    input.value = '';
                     alert('Terjadi kesalahan koneksi.');
                 });
             }

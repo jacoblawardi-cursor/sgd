@@ -4633,6 +4633,69 @@ function sgd_handle_form_actions() {
             wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
             exit;
         }
+
+        // 22. Upload Card Cover Image directly from file
+        if ( $action === 'sgd_upload_quest_cover' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+                wp_safe_redirect( add_query_arg( 'sgd_page', 'quests', home_url( '/' ) ) );
+                exit;
+            }
+
+            if ( empty( $_FILES['cover_file'] ) || ( $_FILES['cover_file']['error'] ?? 1 ) !== UPLOAD_ERR_OK ) {
+                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => 'Silakan pilih file gambar yang valid.' ] );
+                sgd_set_flash( 'error', '⚠️ Silakan pilih file gambar yang valid untuk cover.' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+                exit;
+            }
+
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $uploaded = wp_handle_upload( $_FILES['cover_file'], [ 'test_form' => false ] );
+            if ( $uploaded && ! isset( $uploaded['error'] ) ) {
+                $cover_url = $uploaded['url'];
+                $table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+                $wpdb->update(
+                    $table_quest_tasks,
+                    [ 'cover_image' => $cover_url, 'updated_at' => current_time( 'mysql' ) ],
+                    [ 'id' => $task_id ]
+                );
+
+                // Also record into attachments table so it appears in files list
+                $table_quest_attachments = $wpdb->prefix . 'sgd_quest_attachments';
+                $orig_name = sanitize_file_name( $_FILES['cover_file']['name'] );
+                $wpdb->insert( $table_quest_attachments, [
+                    'task_id'    => $task_id,
+                    'user_id'    => $current_user_id,
+                    'file_url'   => $cover_url,
+                    'file_name'  => $orig_name,
+                    'file_size'  => (int) ( $_FILES['cover_file']['size'] ?? 0 ),
+                    'file_type'  => sanitize_text_field( $uploaded['type'] ?? '' ),
+                    'created_at' => current_time( 'mysql' ),
+                ] );
+
+                if ( ! empty( $_POST['is_ajax'] ) ) {
+                    wp_send_json_success( [
+                        'message'     => 'Foto sampul berhasil diunggah!',
+                        'cover_url'   => $cover_url,
+                        'task_id'     => $task_id,
+                        'attachments' => sgd_get_quest_attachments( $task_id ),
+                    ] );
+                }
+                sgd_set_flash( 'celebration', '🖼️ Foto sampul kartu berhasil diunggah!' );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+                exit;
+            } else {
+                $err_msg = $uploaded['error'] ?? 'Gagal mengunggah file gambar.';
+                if ( ! empty( $_POST['is_ajax'] ) ) wp_send_json_error( [ 'message' => $err_msg ] );
+                sgd_set_flash( 'error', "⚠️ $err_msg" );
+                wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $task->team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
+                exit;
+            }
+        }
 }
 
 // Cash Shop Rewards Catalog

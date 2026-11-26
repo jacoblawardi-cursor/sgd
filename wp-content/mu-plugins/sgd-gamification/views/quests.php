@@ -569,6 +569,10 @@ $kanban_columns = [
                                             <h4 class="sgd-card-title"><?php echo esc_html( $task->title ); ?></h4>
                                         </div>
                                         <div class="sgd-card-quick-actions">
+                                            <label class="sgd-card-quick-btn sgd-btn-quick-cover" title="Unggah Foto Sampul (Cover Image)" onclick="event.stopPropagation();">
+                                                🖼️
+                                                <input type="file" class="sgd-card-cover-upload-input" data-task-id="<?php echo esc_attr( $task->id ); ?>" accept="image/*" style="display:none;" onclick="event.stopPropagation();">
+                                            </label>
                                             <label class="sgd-card-quick-btn sgd-btn-quick-upload" title="Unggah File ke Tugas Ini (Multi-File)" onclick="event.stopPropagation();">
                                                 📎
                                                 <input type="file" class="sgd-card-multiple-upload-input" data-task-id="<?php echo esc_attr( $task->id ); ?>" multiple style="display:none;" onclick="event.stopPropagation();">
@@ -1121,6 +1125,25 @@ $kanban_columns = [
                             <button type="submit" class="sgd-btn sgd-btn-gold sgd-btn-block" id="modal-btn-save-task">
                                 💾 Simpan Perubahan Tugas
                             </button>
+                        </div>
+
+                        <!-- COVER IMAGE WIDGET -->
+                        <div class="sgd-sidebar-widget" id="modal-cover-widget">
+                            <label class="sgd-form-label" style="font-size:12px; color:#ffd700; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                                <span>🖼️ Foto Sampul (Cover):</span>
+                            </label>
+                            <div id="modal-cover-preview-box" style="margin-bottom:8px; border-radius:6px; overflow:hidden; max-height:110px; background:#000; display:none; border:1px solid rgba(255,255,255,0.15);">
+                                <img id="modal-cover-preview-img" src="" style="width:100%; height:95px; object-fit:cover; display:block;">
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <label class="sgd-btn sgd-btn-sm sgd-btn-blue" id="modal-lbl-upload-cover" style="flex:1; justify-content:center; cursor:pointer; margin:0;" title="Pilih foto dari komputer untuk dijadikan sampul kartu">
+                                    📷 Upload Cover
+                                    <input type="file" id="modal-cover-file-input" accept="image/*" style="display:none;">
+                                </label>
+                                <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-secondary" id="modal-btn-remove-cover" style="display:none;" title="Hapus foto sampul">
+                                    🗑️ Hapus
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Column / Status Selector -->
