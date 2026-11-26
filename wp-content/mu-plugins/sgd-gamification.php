@@ -381,13 +381,26 @@ function sgd_install_database() {
     // Ensure quest_level & reward columns exist on tasks table
     $has_ql_col = $wpdb->get_results( "SHOW COLUMNS FROM `$table_quest_tasks` LIKE 'quest_level'" );
     if ( empty( $has_ql_col ) ) {
-        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `quest_level` INT NOT NULL DEFAULT 1 AFTER `sort_order`" );
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `quest_level` VARCHAR(10) NOT NULL DEFAULT 'F' AFTER `sort_order`" );
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `reward_type` VARCHAR(20) NOT NULL DEFAULT 'both' AFTER `quest_level`" );
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `reward_xp` INT NOT NULL DEFAULT 200 AFTER `reward_type`" );
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `reward_gold` INT NOT NULL DEFAULT 50 AFTER `reward_xp`" );
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `reward_awarded` TINYINT(1) NOT NULL DEFAULT 0 AFTER `reward_gold`" );
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `completed_by` BIGINT UNSIGNED DEFAULT 0 AFTER `reward_awarded`" );
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `completed_time` DATETIME DEFAULT NULL AFTER `completed_by`" );
+    } else {
+        // Upgrade legacy INT column to VARCHAR(10) for Rank S/A/B/C/D/E/F system
+        $first_col = $has_ql_col[0];
+        if ( isset( $first_col->Type ) && strpos( strtolower( $first_col->Type ), 'int' ) !== false ) {
+            $wpdb->query( "ALTER TABLE `$table_quest_tasks` MODIFY COLUMN `quest_level` VARCHAR(10) NOT NULL DEFAULT 'F'" );
+            $wpdb->query( "UPDATE `$table_quest_tasks` SET `quest_level` = 'S' WHERE `quest_level` >= 20" );
+            $wpdb->query( "UPDATE `$table_quest_tasks` SET `quest_level` = 'A' WHERE `quest_level` >= 15 AND `quest_level` < 20" );
+            $wpdb->query( "UPDATE `$table_quest_tasks` SET `quest_level` = 'B' WHERE `quest_level` >= 10 AND `quest_level` < 15" );
+            $wpdb->query( "UPDATE `$table_quest_tasks` SET `quest_level` = 'C' WHERE `quest_level` >= 8 AND `quest_level` < 10" );
+            $wpdb->query( "UPDATE `$table_quest_tasks` SET `quest_level` = 'D' WHERE `quest_level` >= 6 AND `quest_level` < 8" );
+            $wpdb->query( "UPDATE `$table_quest_tasks` SET `quest_level` = 'E' WHERE `quest_level` >= 4 AND `quest_level` < 6" );
+            $wpdb->query( "UPDATE `$table_quest_tasks` SET `quest_level` = 'F' WHERE `quest_level` NOT IN ('S', 'A', 'B', 'C', 'D', 'E', 'F')" );
+        }
     }
 
     // Cicle Kanban: Task Comments table
@@ -2172,50 +2185,173 @@ function sgd_user_can_manage_quest( $team = null, $user_id = 0 ) {
 }
 
 /**
- * Calculate the reward ratio based on level difference between Employee Level and Quest Level.
- *
- * Mechanism:
- * - Difference <= 2 (At-Level or Under-Level Challenge): 100% full reward
- * - Difference 3 to 5 (Moderate / Easy): 70% portion
- * - Difference 6 to 9 (Low Challenge / Beginner): 40% portion
- * - Difference >= 10 (Over-Leveled / Trivial): 15% portion (minimum baseline)
+ * Rank definitions for S/A/B/C/D/E/F Quest Level System
+ * S: Policy making and strategic planning (Group, long-term) -> Gate: Lv. 20 (or 3x level 15)
+ * A: Independent business / project leadership (Annual) -> Gate: Lv. 15
+ * B: Division management (Monthly - quarter) -> Gate: Lv. 10
+ * C: Department management (Weekly - monthly) -> Gate: Lv. 8
+ * D: Basic managerial (Weekly) -> Gate: Lv. 6
+ * E: Work requiring technical skill (Task-based) -> Gate: Lv. 4
+ * F: Consistency, routine execution (Routine) -> Gate: Lv. 1
  */
-function sgd_calculate_quest_reward_ratio( $quest_level = 1, $user_level = 1 ) {
-    $quest_level = max( 1, (int) $quest_level );
-    $user_level = max( 1, (int) $user_level );
-    $diff = $user_level - $quest_level;
+function sgd_get_quest_ranks() {
+    return [
+        'S' => [
+            'rank'        => 'S',
+            'name'        => 'Rank S',
+            'definition'  => 'Policy making and strategic planning',
+            'scope'       => 'Group, long-term',
+            'level_gate'  => 20,
+            'color'       => '#ff3838', // glowing crimson
+            'badge_bg'    => 'linear-gradient(135deg, #7a0c0c 0%, #3d0505 100%)',
+            'badge_border'=> '#ff4d4d',
+            'glow'        => '0 0 10px rgba(255, 77, 77, 0.6)',
+            'icon'        => '👑',
+        ],
+        'A' => [
+            'rank'        => 'A',
+            'name'        => 'Rank A',
+            'definition'  => 'Independent business / project leadership',
+            'scope'       => 'Annual',
+            'level_gate'  => 15,
+            'color'       => '#ff9f43', // radiant orange
+            'badge_bg'    => 'linear-gradient(135deg, #7a4100 0%, #3d2000 100%)',
+            'badge_border'=> '#ff9f43',
+            'glow'        => '0 0 10px rgba(255, 159, 67, 0.5)',
+            'icon'        => '⭐',
+        ],
+        'B' => [
+            'rank'        => 'B',
+            'name'        => 'Rank B',
+            'definition'  => 'Division management',
+            'scope'       => 'Monthly - quarter',
+            'level_gate'  => 10,
+            'color'       => '#be2edd', // epic purple
+            'badge_bg'    => 'linear-gradient(135deg, #4b1a7a 0%, #250b3d 100%)',
+            'badge_border'=> '#be2edd',
+            'glow'        => '0 0 10px rgba(190, 46, 221, 0.5)',
+            'icon'        => '🔮',
+        ],
+        'C' => [
+            'rank'        => 'C',
+            'name'        => 'Rank C',
+            'definition'  => 'Department management',
+            'scope'       => 'Weekly - monthly',
+            'level_gate'  => 8,
+            'color'       => '#00e5ff', // cyan
+            'badge_bg'    => 'linear-gradient(135deg, #005c6b 0%, #002d36 100%)',
+            'badge_border'=> '#00e5ff',
+            'glow'        => '0 0 8px rgba(0, 229, 255, 0.4)',
+            'icon'        => '💠',
+        ],
+        'D' => [
+            'rank'        => 'D',
+            'name'        => 'Rank D',
+            'definition'  => 'Basic managerial',
+            'scope'       => 'Weekly',
+            'level_gate'  => 6,
+            'color'       => '#2ed573', // green
+            'badge_bg'    => 'linear-gradient(135deg, #0e5e2e 0%, #063118 100%)',
+            'badge_border'=> '#2ed573',
+            'glow'        => '0 0 8px rgba(46, 213, 115, 0.4)',
+            'icon'        => '🌿',
+        ],
+        'E' => [
+            'rank'        => 'E',
+            'name'        => 'Rank E',
+            'definition'  => 'Work requiring technical skill',
+            'scope'       => 'Task-based',
+            'level_gate'  => 4,
+            'color'       => '#70a1ff', // blue
+            'badge_bg'    => 'linear-gradient(135deg, #1e3d7a 0%, #0f1f3d 100%)',
+            'badge_border'=> '#70a1ff',
+            'glow'        => '0 0 6px rgba(112, 161, 255, 0.3)',
+            'icon'        => '📜',
+        ],
+        'F' => [
+            'rank'        => 'F',
+            'name'        => 'Rank F',
+            'definition'  => 'Consistency, routine execution',
+            'scope'       => 'Routine',
+            'level_gate'  => 1,
+            'color'       => '#a4b0be', // silver grey
+            'badge_bg'    => 'linear-gradient(135deg, #3d4552 0%, #1e2229 100%)',
+            'badge_border'=> '#a4b0be',
+            'glow'        => 'none',
+            'icon'        => '⚪',
+        ],
+    ];
+}
 
-    if ( $diff <= 2 ) {
+function sgd_normalize_quest_rank( $val ) {
+    if ( empty( $val ) ) return 'F';
+    $clean = strtoupper( trim( (string) $val ) );
+    $valid = [ 'S', 'A', 'B', 'C', 'D', 'E', 'F' ];
+    if ( in_array( $clean, $valid, true ) ) {
+        return $clean;
+    }
+    $num = (int) $val;
+    if ( $num >= 20 ) return 'S';
+    if ( $num >= 15 ) return 'A';
+    if ( $num >= 10 ) return 'B';
+    if ( $num >= 8 )  return 'C';
+    if ( $num >= 6 )  return 'D';
+    if ( $num >= 4 )  return 'E';
+    return 'F';
+}
+
+function sgd_get_quest_rank_info( $rank ) {
+    $ranks = sgd_get_quest_ranks();
+    $clean = sgd_normalize_quest_rank( $rank );
+    return $ranks[ $clean ] ?? $ranks['F'];
+}
+
+/**
+ * Calculate the reward ratio based on level difference between Employee Level and Quest Rank Level Gate.
+ */
+function sgd_calculate_quest_reward_ratio( $quest_rank = 'F', $user_level = 1 ) {
+    $rank_info = sgd_get_quest_rank_info( $quest_rank );
+    $gate = (int) $rank_info['level_gate'];
+    $user_level = max( 1, (int) $user_level );
+    $diff = $user_level - $gate;
+
+    if ( $diff <= 3 ) {
         return [
             'ratio'      => 1.0,
             'percent'    => 100,
             'difficulty' => ( $diff < 0 ) ? 'challenging' : 'normal',
-            'label'      => ( $diff < 0 ) ? 'Challenging (100% Hadiah Penuh)' : 'Tepat Level (100% Hadiah Penuh)',
+            'label'      => ( $diff < 0 ) 
+                ? 'Tantangan Tinggi (Hero Lv.' . $user_level . ' < Gate Lv.' . $gate . ') - 100% Hadiah Penuh' 
+                : 'Tepat Level ' . $rank_info['name'] . ' (100% Hadiah Penuh)',
             'color'      => ( $diff < 0 ) ? '#ff4444' : '#ffd700',
+            'rank_info'  => $rank_info,
         ];
-    } elseif ( $diff <= 5 ) {
+    } elseif ( $diff <= 6 ) {
         return [
             'ratio'      => 0.70,
             'percent'    => 70,
             'difficulty' => 'easy',
-            'label'      => 'Tugas Mudah (70% Porsi Hadiah)',
+            'label'      => 'Tugas Mudah untuk Hero Lv.' . $user_level . ' (70% Porsi Hadiah)',
             'color'      => '#2ecc71',
+            'rank_info'  => $rank_info,
         ];
-    } elseif ( $diff <= 9 ) {
+    } elseif ( $diff <= 12 ) {
         return [
             'ratio'      => 0.40,
             'percent'    => 40,
             'difficulty' => 'low',
             'label'      => 'Tantangan Rendah (40% Porsi Hadiah)',
             'color'      => '#a4b0be',
+            'rank_info'  => $rank_info,
         ];
     } else {
         return [
             'ratio'      => 0.15,
             'percent'    => 15,
             'difficulty' => 'trivial',
-            'label'      => 'Tugas Trivial / Abu-abu (15% Porsi Hadiah)',
+            'label'      => 'Tugas Trivial / Rutin (15% Porsi Hadiah)',
             'color'      => '#747d8c',
+            'rank_info'  => $rank_info,
         ];
     }
 }
@@ -2240,7 +2376,7 @@ function sgd_complete_quest_task( $task_id, $actor_user_id = 0 ) {
         $assigned_ids = [ (int) $actor_user_id ];
     }
 
-    $quest_level = max( 1, (int) ( $task->quest_level ?? 1 ) );
+    $quest_level = sgd_normalize_quest_rank( $task->quest_level ?? 'F' );
     $reward_type = $task->reward_type ?? 'both';
     $base_xp = (int) ( $task->reward_xp ?? 200 );
     $base_gold = (int) ( $task->reward_gold ?? 50 );
@@ -2461,7 +2597,8 @@ function sgd_get_quest_tasks( $team_id, $column_name = '' ) {
         }
 
         // Quest Level & Rewards defaults
-        $t->quest_level = max( 1, (int) ( $t->quest_level ?? 1 ) );
+        $t->quest_level = sgd_normalize_quest_rank( $t->quest_level ?? 'F' );
+        $t->quest_rank_info = sgd_get_quest_rank_info( $t->quest_level );
         $t->reward_type = $t->reward_type ?? 'both';
         $t->reward_xp = isset( $t->reward_xp ) ? (int) $t->reward_xp : 200;
         $t->reward_gold = isset( $t->reward_gold ) ? (int) $t->reward_gold : 50;
@@ -2541,7 +2678,8 @@ function sgd_get_quest_task( $task_id ) {
     }
 
     // Quest Level & Rewards defaults
-    $task->quest_level = max( 1, (int) ( $task->quest_level ?? 1 ) );
+    $task->quest_level = sgd_normalize_quest_rank( $task->quest_level ?? 'F' );
+    $task->quest_rank_info = sgd_get_quest_rank_info( $task->quest_level );
     $task->reward_type = $task->reward_type ?? 'both';
     $task->reward_xp = isset( $task->reward_xp ) ? (int) $task->reward_xp : 200;
     $task->reward_gold = isset( $task->reward_gold ) ? (int) $task->reward_gold : 50;
@@ -4237,7 +4375,7 @@ function sgd_handle_form_actions() {
                 $team_id, $column_name
             ) );
 
-            $quest_level = max( 1, min( 50, (int) ( $_POST['quest_level'] ?? 1 ) ) );
+            $quest_level = sgd_normalize_quest_rank( $_POST['quest_level'] ?? 'F' );
             $reward_type = sanitize_text_field( $_POST['reward_type'] ?? 'both' );
             if ( ! in_array( $reward_type, [ 'both', 'xp', 'gold', 'none' ], true ) ) {
                 $reward_type = 'both';
@@ -4420,7 +4558,7 @@ function sgd_handle_form_actions() {
             }
 
             // Quest Level & Rewards
-            $quest_level = max( 1, min( 50, (int) ( $_POST['quest_level'] ?? ( $task->quest_level ?? 1 ) ) ) );
+            $quest_level = sgd_normalize_quest_rank( $_POST['quest_level'] ?? ( $task->quest_level ?? 'F' ) );
             $reward_type = sanitize_text_field( $_POST['reward_type'] ?? ( $task->reward_type ?? 'both' ) );
             if ( ! in_array( $reward_type, [ 'both', 'xp', 'gold', 'none' ], true ) ) {
                 $reward_type = 'both';
@@ -4511,7 +4649,7 @@ function sgd_handle_form_actions() {
                 'labels'           => $task->labels,
                 'checklist'        => wp_json_encode( $task->checklist ),
                 'is_secret'        => (int) ( $task->is_secret ?? 0 ),
-                'quest_level'      => (int) ( $task->quest_level ?? 1 ),
+                'quest_level'      => sgd_normalize_quest_rank( $task->quest_level ?? 'F' ),
                 'reward_type'      => $task->reward_type ?? 'both',
                 'reward_xp'        => (int) ( $task->reward_xp ?? 200 ),
                 'reward_gold'      => (int) ( $task->reward_gold ?? 50 ),

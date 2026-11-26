@@ -424,10 +424,16 @@ $kanban_columns = [
                                 <div class="sgd-form-group" style="margin-bottom:8px;">
                                     <input type="text" name="task_title" class="sgd-form-input sgd-input-task-name" placeholder="Ketik nama tugas..." required maxlength="255" autocomplete="off">
                                 </div>
-                                <div class="sgd-inline-meta-row" style="display:flex; gap:8px; margin-bottom:8px;">
-                                    <div style="flex:1;">
-                                        <label style="font-size:10px; color:#ffd700; display:block; margin-bottom:2px; font-weight:bold;">⚔️ Lvl Quest:</label>
-                                        <input type="number" name="quest_level" min="1" max="50" value="1" class="sgd-form-input" style="font-size:11px; padding:4px 6px;">
+                                <div class="sgd-inline-meta-row" style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                                    <div style="flex:1.4; min-width:140px;">
+                                        <label style="font-size:10px; color:#ffd700; display:block; margin-bottom:2px; font-weight:bold;">⚔️ Rank Quest (S-F):</label>
+                                        <select name="quest_level" class="sgd-form-select" style="font-size:11px; padding:4px 6px;">
+                                            <?php foreach ( sgd_get_quest_ranks() as $rk => $rdata ): ?>
+                                                <option value="<?php echo esc_attr( $rk ); ?>" <?php selected( $rk, 'F' ); ?>>
+                                                    <?php echo esc_html( $rdata['icon'] . ' Rank ' . $rk . ' (' . $rdata['scope'] . ' - Gate Lv.' . $rdata['level_gate'] . ')' ); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
                                     <div style="flex:1.4;">
                                         <label style="font-size:10px; color:#00e5ff; display:block; margin-bottom:2px; font-weight:bold;">🎁 Pilihan Hadiah:</label>
@@ -640,9 +646,10 @@ $kanban_columns = [
                                         </div>
                                     </div>
 
-                                    <!-- QUEST LEVEL & REWARD PILLS -->
+                                    <!-- QUEST RANK (S/A/B/C/D/E/F) & REWARD PILLS -->
                                     <?php 
-                                    $ql = max( 1, (int) ( $task->quest_level ?? 1 ) );
+                                    $rank_code = sgd_normalize_quest_rank( $task->quest_level ?? 'F' );
+                                    $rank_info = sgd_get_quest_rank_info( $rank_code );
                                     $rt = $task->reward_type ?? 'both';
                                     $rxp = (int) ( $task->reward_xp ?? 200 );
                                     $rgold = (int) ( $task->reward_gold ?? 50 );
@@ -653,12 +660,15 @@ $kanban_columns = [
                                     if ( $current_user_id && function_exists('sgd_calculate_quest_reward_ratio') && function_exists('sgd_get_user_xp_data') ) {
                                         $my_xp_data = sgd_get_user_xp_data( $current_user_id );
                                         $my_lvl = max( 1, (int) $my_xp_data['level'] );
-                                        $user_scaling = sgd_calculate_quest_reward_ratio( $ql, $my_lvl );
+                                        $user_scaling = sgd_calculate_quest_reward_ratio( $rank_code, $my_lvl );
                                     }
                                     ?>
                                     <div class="sgd-card-quest-meta-row">
-                                        <span class="sgd-quest-lvl-badge <?php echo $user_scaling ? 'diff-' . esc_attr($user_scaling['difficulty']) : ''; ?>" title="Level Quest: <?php echo $ql; ?><?php echo $user_scaling ? ' (Porsi Hadiah untukmu: ' . $user_scaling['percent'] . '%)' : ''; ?>">
-                                            ⚔️ Lv.<?php echo $ql; ?>
+                                        <span class="sgd-quest-rank-badge rank-<?php echo esc_attr( strtolower( $rank_code ) ); ?> <?php echo $user_scaling ? 'diff-' . esc_attr($user_scaling['difficulty']) : ''; ?>" 
+                                              style="background:<?php echo esc_attr( $rank_info['badge_bg'] ); ?>; border:1px solid <?php echo esc_attr( $rank_info['badge_border'] ); ?>; color:<?php echo esc_attr( $rank_info['color'] ); ?>; box-shadow:<?php echo esc_attr( $rank_info['glow'] ); ?>; font-size:10px; padding:2px 7px; border-radius:4px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;"
+                                              title="<?php echo esc_attr( $rank_info['name'] . ': ' . $rank_info['definition'] . ' (' . $rank_info['scope'] . ') • Gate: Lv.' . $rank_info['level_gate'] . ($user_scaling ? ' • Porsi Hadiah: ' . $user_scaling['percent'] . '%' : '') ); ?>">
+                                            <span><?php echo $rank_info['icon']; ?></span>
+                                            <span><?php echo esc_html( $rank_info['name'] ); ?></span>
                                         </span>
 
                                         <?php if ( $rt === 'xp' || $rt === 'both' ): ?>
@@ -1235,31 +1245,55 @@ $kanban_columns = [
                             <?php endif; ?>
                         </div>
 
-                        <!-- QUEST LEVEL & SCALING WIDGET -->
+                        <!-- QUEST LEVEL RANK & SCALING WIDGET (S/A/B/C/D/E/F) -->
                         <div class="sgd-sidebar-widget" id="modal-quest-level-widget">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                 <label class="sgd-form-label" for="modal-task-quest-level" style="margin:0; font-size:12px; color:#ffd700;">
-                                    ⚔️ Level Quest (Tingkat):
+                                    ⚔️ Rank Quest (S / A / B / C / D / E / F):
                                 </label>
-                                <span class="sgd-modal-lvl-badge" id="modal-quest-lvl-badge" style="font-family:var(--font-pixel); font-size:9px; background:#ffd700; color:#0b1933; padding:2px 6px; border-radius:3px; font-weight:bold;">Lv. 1</span>
+                                <span class="sgd-modal-rank-badge" id="modal-quest-lvl-badge" style="font-family:var(--font-pixel); font-size:9px; background:#ffd700; color:#0b1933; padding:2px 8px; border-radius:4px; font-weight:bold;">Rank F</span>
                             </div>
-                            <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-                                <input type="number" name="quest_level" id="modal-task-quest-level" min="1" max="50" value="1" class="sgd-form-input" style="font-size:13px; font-weight:bold; width:75px; text-align:center;">
-                                <div class="sgd-lvl-presets-row" style="display:flex; gap:3px; flex-wrap:wrap; flex:1;">
-                                    <button type="button" class="sgd-preset-pill" onclick="sgdSetQuestLevel(1);">Lv.1</button>
-                                    <button type="button" class="sgd-preset-pill" onclick="sgdSetQuestLevel(5);">Lv.5</button>
-                                    <button type="button" class="sgd-preset-pill" onclick="sgdSetQuestLevel(10);">Lv.10</button>
-                                    <button type="button" class="sgd-preset-pill" onclick="sgdSetQuestLevel(20);">Lv.20</button>
-                                    <button type="button" class="sgd-preset-pill" onclick="sgdSetQuestLevel(30);">Lv.30</button>
+
+                            <!-- Hidden input storing selected rank -->
+                            <input type="hidden" name="quest_level" id="modal-task-quest-level" value="F">
+
+                            <!-- S / A / B / C / D / E / F Preset Buttons Grid -->
+                            <div class="sgd-rank-presets-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; margin-bottom:10px;">
+                                <?php foreach ( sgd_get_quest_ranks() as $rk => $rdata ): ?>
+                                    <button type="button" 
+                                            class="sgd-rank-preset-btn sgd-rank-btn-<?php echo esc_attr( strtolower( $rk ) ); ?>" 
+                                            data-rank="<?php echo esc_attr( $rk ); ?>"
+                                            onclick="sgdSetQuestLevel('<?php echo esc_js( $rk ); ?>');"
+                                            title="<?php echo esc_attr( $rdata['name'] . ': ' . $rdata['definition'] . ' (' . $rdata['scope'] . ') • Syarat Hero: Lv.' . $rdata['level_gate'] . '+' ); ?>"
+                                            style="border:1px solid <?php echo esc_attr( $rdata['badge_border'] ); ?>; padding:5px 0; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer; background:rgba(0,0,0,0.5); color:<?php echo esc_attr( $rdata['color'] ); ?>;">
+                                        <div style="font-size:12px;"><?php echo $rdata['icon']; ?></div>
+                                        <div><?php echo esc_html( $rk ); ?></div>
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <!-- Live Rank Details Box (Definition, Scope, Level Gate) -->
+                            <div class="sgd-rank-info-detail-box" id="modal-rank-info-box" style="background:rgba(20, 25, 38, 0.9); border:1px solid rgba(255,215,0,0.3); border-radius:6px; padding:8px 10px; margin-bottom:8px; font-size:11px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                    <strong id="modal-rank-info-name" style="color:#ffd700; font-size:12px;">Rank F (Routine)</strong>
+                                    <span id="modal-rank-info-gate" style="color:#00e5ff; font-weight:bold;">Gate: Hero Lv. 1+</span>
+                                </div>
+                                <div id="modal-rank-info-scope" style="color:#94a3b8; font-size:10px; margin-bottom:2px;">
+                                    Scope: Routine
+                                </div>
+                                <div id="modal-rank-info-def" style="color:#cbd5e1; font-size:11px; font-style:italic;">
+                                    "Consistency, routine execution"
                                 </div>
                             </div>
-                            <div class="sgd-scaling-preview-box" id="modal-scaling-preview-box" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,215,0,0.3); border-radius:6px; padding:8px 10px; font-size:11px; line-height:1.4;">
-                                <div style="font-weight:bold; color:#ffd700; margin-bottom:3px; display:flex; align-items:center; gap:5px;">
-                                    <span>⚖️ Mekanisme Skala Level:</span>
-                                    <span id="modal-preview-portion-tag" style="background:#2ecc71; color:#000; font-size:9px; padding:1px 5px; border-radius:3px; font-family:var(--font-pixel);">100% Porsi</span>
+
+                            <!-- Scaling Mechanism Box -->
+                            <div class="sgd-scaling-preview-box" id="modal-scaling-preview-box" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,215,0,0.25); border-radius:6px; padding:8px 10px; font-size:11px; line-height:1.4;">
+                                <div style="font-weight:bold; color:#ffd700; margin-bottom:3px; display:flex; align-items:center; justify-content:space-between;">
+                                    <span>⚖️ Status Skala Hadiah:</span>
+                                    <span id="modal-preview-portion-tag" style="background:#2ecc71; color:#000; font-size:9px; padding:1px 6px; border-radius:3px; font-family:var(--font-pixel);">100% Porsi</span>
                                 </div>
                                 <div id="modal-scaling-user-text" style="color:#c8d1e0; font-size:10px;">
-                                    Karyawan level tinggi yang menyelesaikan quest level rendah hanya mendapat sebagian porsi hadiah (15% - 70%) untuk menjaga keadilan serikat.
+                                    Karyawan yang menyelesaikan quest sesuai rank gate mendapatkan 100% hadiah penuh.
                                 </div>
                             </div>
                         </div>

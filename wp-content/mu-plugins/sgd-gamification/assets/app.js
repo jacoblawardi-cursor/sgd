@@ -1515,10 +1515,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 secretInput.checked = (task.is_secret == 1 || task.is_secret === true || task.is_secret === '1');
             }
 
-            // Quest Level
+            // Quest Level / Rank (S / A / B / C / D / E / F)
             const qlInput = document.getElementById('modal-task-quest-level');
             if (qlInput) {
-                qlInput.value = task.quest_level || 1;
+                qlInput.value = task.quest_level || 'F';
             }
 
             // Reward Type & Amounts
@@ -1536,7 +1536,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             updateRewardFieldsVisibility(task.reward_type || 'both');
-            updateQuestLevelPreview(task.quest_level || 1);
+            updateQuestLevelPreview(task.quest_level || 'F');
 
             // Cover Image Widget in Modal
             const coverBox = document.getElementById('modal-cover-preview-box');
@@ -1584,47 +1584,124 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        const SGD_QUEST_RANKS = {
+            'S': { rank: 'S', name: 'Rank S', definition: 'Policy making and strategic planning', scope: 'Group, long-term', gate: 20, color: '#ff3838', icon: '👑', bg: 'linear-gradient(135deg, #7a0c0c 0%, #3d0505 100%)', border: '#ff4d4d' },
+            'A': { rank: 'A', name: 'Rank A', definition: 'Independent business / project leadership', scope: 'Annual', gate: 15, color: '#ff9f43', icon: '⭐', bg: 'linear-gradient(135deg, #7a4100 0%, #3d2000 100%)', border: '#ff9f43' },
+            'B': { rank: 'B', name: 'Rank B', definition: 'Division management', scope: 'Monthly - quarter', gate: 10, color: '#be2edd', icon: '🔮', bg: 'linear-gradient(135deg, #4b1a7a 0%, #250b3d 100%)', border: '#be2edd' },
+            'C': { rank: 'C', name: 'Rank C', definition: 'Department management', scope: 'Weekly - monthly', gate: 8, color: '#00e5ff', icon: '💠', bg: 'linear-gradient(135deg, #005c6b 0%, #002d36 100%)', border: '#00e5ff' },
+            'D': { rank: 'D', name: 'Rank D', definition: 'Basic managerial', scope: 'Weekly', gate: 6, color: '#2ed573', icon: '🌿', bg: 'linear-gradient(135deg, #0e5e2e 0%, #063118 100%)', border: '#2ed573' },
+            'E': { rank: 'E', name: 'Rank E', definition: 'Work requiring technical skill', scope: 'Task-based', gate: 4, color: '#70a1ff', icon: '📜', bg: 'linear-gradient(135deg, #1e3d7a 0%, #0f1f3d 100%)', border: '#70a1ff' },
+            'F': { rank: 'F', name: 'Rank F', definition: 'Consistency, routine execution', scope: 'Routine', gate: 1, color: '#a4b0be', icon: '⚪', bg: 'linear-gradient(135deg, #3d4552 0%, #1e2229 100%)', border: '#a4b0be' },
+        };
+
+        function normalizeQuestRank(val) {
+            if (!val) return 'F';
+            const s = String(val).trim().toUpperCase();
+            if (SGD_QUEST_RANKS[s]) return s;
+            const num = parseInt(val, 10);
+            if (!isNaN(num)) {
+                if (num >= 20) return 'S';
+                if (num >= 15) return 'A';
+                if (num >= 10) return 'B';
+                if (num >= 8)  return 'C';
+                if (num >= 6)  return 'D';
+                if (num >= 4)  return 'E';
+                return 'F';
+            }
+            return 'F';
+        }
+
         function updateQuestLevelPreview(questLevel) {
-            questLevel = Math.max(1, parseInt(questLevel, 10) || 1);
-            const badge = document.getElementById('modal-quest-lvl-badge');
-            if (badge) {
-                badge.textContent = 'Lv. ' + questLevel;
+            const rankKey = normalizeQuestRank(questLevel);
+            const rData = SGD_QUEST_RANKS[rankKey] || SGD_QUEST_RANKS['F'];
+
+            // Update hidden input if present
+            const qlInput = document.getElementById('modal-task-quest-level');
+            if (qlInput && qlInput.value !== rankKey) {
+                qlInput.value = rankKey;
             }
 
+            // Update Rank Badge in header
+            const badge = document.getElementById('modal-quest-lvl-badge');
+            if (badge) {
+                badge.textContent = rData.icon + ' ' + rData.name;
+                badge.style.background = rData.bg;
+                badge.style.border = '1px solid ' + rData.border;
+                badge.style.color = rData.color;
+            }
+
+            // Update Preset Buttons Active State
+            const presetBtns = document.querySelectorAll('.sgd-rank-preset-btn');
+            presetBtns.forEach(btn => {
+                if (btn.getAttribute('data-rank') === rankKey) {
+                    btn.classList.add('active');
+                    btn.style.background = rData.color;
+                    btn.style.color = '#000';
+                    btn.style.boxShadow = '0 0 10px ' + rData.color;
+                } else {
+                    btn.classList.remove('active');
+                    const bRank = btn.getAttribute('data-rank');
+                    const bData = SGD_QUEST_RANKS[bRank];
+                    btn.style.background = 'rgba(0,0,0,0.5)';
+                    btn.style.color = bData ? bData.color : '#cbd5e1';
+                    btn.style.boxShadow = 'none';
+                }
+            });
+
+            // Update Detail Box
+            const nameEl = document.getElementById('modal-rank-info-name');
+            const gateEl = document.getElementById('modal-rank-info-gate');
+            const scopeEl = document.getElementById('modal-rank-info-scope');
+            const defEl = document.getElementById('modal-rank-info-def');
+            if (nameEl) {
+                nameEl.textContent = rData.icon + ' ' + rData.name;
+                nameEl.style.color = rData.color;
+            }
+            if (gateEl) {
+                gateEl.textContent = 'Gate: Hero Lv. ' + rData.gate + '+';
+            }
+            if (scopeEl) {
+                scopeEl.textContent = 'Scope: ' + rData.scope;
+            }
+            if (defEl) {
+                defEl.textContent = '"' + rData.definition + '"';
+            }
+
+            // Reward Scaling preview
             const myLevel = (window.SGD_QUESTS_CONFIG && window.SGD_QUESTS_CONFIG.currentUserLevel) ? parseInt(window.SGD_QUESTS_CONFIG.currentUserLevel, 10) : 1;
-            const diff = myLevel - questLevel;
+            const diff = myLevel - rData.gate;
             
             let percent = 100;
             let status = 'Tepat Level';
             let color = '#2ecc71';
             let desc = '';
 
-            if (diff <= 2) {
+            if (diff <= 3) {
                 percent = 100;
                 if (diff < 0) {
                     status = 'Tantangan Tinggi';
                     color = '#ff4444';
-                    desc = `Level Anda (Lv.${myLevel}) di bawah quest ini -> Anda mendapatkan 100% hadiah penuh!`;
+                    desc = `Hero Lv.${myLevel} < Gate Lv.${rData.gate} (${rData.name}) -> Tantangan berat berani diambil, Anda mendapat 100% hadiah penuh!`;
                 } else {
                     status = 'Tepat Level';
                     color = '#2ecc71';
-                    desc = `Level Anda (Lv.${myLevel}) seimbang dengan quest -> Anda mendapatkan 100% hadiah penuh!`;
+                    desc = `Hero Lv.${myLevel} memenuhi syarat gate (${rData.name}) -> Anda mendapatkan 100% hadiah penuh!`;
                 }
-            } else if (diff <= 5) {
+            } else if (diff <= 6) {
                 percent = 70;
                 status = 'Tugas Mudah (70% Porsi)';
                 color = '#ff9f43';
-                desc = `Level Anda (Lv.${myLevel}) lebih tinggi (+${diff} level) -> Hanya mendapat 70% porsi hadiah dasar.`;
-            } else if (diff <= 9) {
+                desc = `Hero Lv.${myLevel} melebihi gate (+${diff} level dari Lv.${rData.gate}) -> Mendapat 70% porsi hadiah dasar.`;
+            } else if (diff <= 12) {
                 percent = 40;
                 status = 'Tantangan Rendah (40% Porsi)';
                 color = '#a4b0be';
-                desc = `Level Anda (Lv.${myLevel}) jauh lebih tinggi (+${diff} level) -> Hanya mendapat 40% porsi hadiah dasar.`;
+                desc = `Hero Lv.${myLevel} jauh melebihi gate (+${diff} level) -> Mendapat 40% porsi hadiah dasar.`;
             } else {
                 percent = 15;
-                status = 'Trivial / Pemula (15% Porsi)';
+                status = 'Trivial / Rutin (15% Porsi)';
                 color = '#747d8c';
-                desc = `Level Anda (Lv.${myLevel}) veteran (+${diff} level dari Lv.${questLevel}) -> Hanya mendapat 15% porsi hadiah minimum.`;
+                desc = `Hero Lv.${myLevel} veteran (+${diff} level dari gate Lv.${rData.gate}) -> Mendapat 15% porsi hadiah minimum.`;
             }
 
             const tag = document.getElementById('modal-preview-portion-tag');
@@ -2858,11 +2935,14 @@ document.addEventListener('DOMContentLoaded', function() {
         input.value = `${y}-${m}-${d}T17:00`;
     };
 
-    // Helper for quest level presets
+    // Helper for quest level rank presets (S / A / B / C / D / E / F)
     window.sgdSetQuestLevel = function(lvl) {
         const input = document.getElementById('modal-task-quest-level');
-        if (!input) return;
-        input.value = lvl;
-        input.dispatchEvent(new Event('input'));
+        if (input) {
+            input.value = lvl;
+        }
+        if (typeof updateQuestLevelPreview === 'function') {
+            updateQuestLevelPreview(lvl);
+        }
     };
 });

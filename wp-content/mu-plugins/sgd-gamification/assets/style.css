@@ -10287,3 +10287,102 @@ body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
     align-items: flex-start;
   }
 }
+
+
+/* ==========================================================================
+   QUEST LEVEL S / A / B / C / D / E / F RANK TIERS
+   ========================================================================== */
+
+.sgd-quest-rank-badge {
+  font-family: var(--font-pixel, monospace);
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  transition: all 0.2s ease;
+}
+
+.sgd-quest-rank-badge:hover {
+  transform: translateY(-1px);
+}
+
+.sgd-quest-rank-badge.rank-s {
+  background: linear-gradient(135deg, #7a0c0c 0%, #3d0505 100%) !important;
+  border: 1.5px solid #ff4d4d !important;
+  color: #ff3838 !important;
+  box-shadow: 0 0 12px rgba(255, 77, 77, 0.6) !important;
+  animation: pulse-rank-s 2s infinite ease-in-out;
+}
+
+@keyframes pulse-rank-s {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 77, 77, 0.4); }
+  50% { box-shadow: 0 0 16px rgba(255, 77, 77, 0.85); }
+}
+
+.sgd-quest-rank-badge.rank-a {
+  background: linear-gradient(135deg, #7a4100 0%, #3d2000 100%) !important;
+  border: 1.5px solid #ff9f43 !important;
+  color: #ff9f43 !important;
+  box-shadow: 0 0 10px rgba(255, 159, 67, 0.5) !important;
+}
+
+.sgd-quest-rank-badge.rank-b {
+  background: linear-gradient(135deg, #4b1a7a 0%, #250b3d 100%) !important;
+  border: 1.5px solid #be2edd !important;
+  color: #be2edd !important;
+  box-shadow: 0 0 10px rgba(190, 46, 221, 0.5) !important;
+}
+
+.sgd-quest-rank-badge.rank-c {
+  background: linear-gradient(135deg, #005c6b 0%, #002d36 100%) !important;
+  border: 1.5px solid #00e5ff !important;
+  color: #00e5ff !important;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.4) !important;
+}
+
+.sgd-quest-rank-badge.rank-d {
+  background: linear-gradient(135deg, #0e5e2e 0%, #063118 100%) !important;
+  border: 1.5px solid #2ed573 !important;
+  color: #2ed573 !important;
+  box-shadow: 0 0 8px rgba(46, 213, 115, 0.4) !important;
+}
+
+.sgd-quest-rank-badge.rank-e {
+  background: linear-gradient(135deg, #1e3d7a 0%, #0f1f3d 100%) !important;
+  border: 1.5px solid #70a1ff !important;
+  color: #70a1ff !important;
+  box-shadow: 0 0 6px rgba(112, 161, 255, 0.3) !important;
+}
+
+.sgd-quest-rank-badge.rank-f {
+  background: linear-gradient(135deg, #3d4552 0%, #1e2229 100%) !important;
+  border: 1.5px solid #a4b0be !important;
+  color: #a4b0be !important;
+  box-shadow: none !important;
+}
+
+/* Modal Rank Buttons */
+.sgd-rank-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.sgd-rank-preset-btn {
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.sgd-rank-preset-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.25);
+}
+
+.sgd-rank-preset-btn.active {
+  transform: scale(1.05);
+}

@@ -365,8 +365,12 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
                                             </div>
                                         </div>
                                         <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-                                            <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.08); color:#ffd700; font-family:var(--font-pixel, monospace); font-weight:bold;">
-                                                Lv.<?php echo max(1, (int)$mt->quest_level); ?>
+                                            <?php 
+                                            $mt_rank = function_exists('sgd_normalize_quest_rank') ? sgd_normalize_quest_rank( $mt->quest_level ) : 'F';
+                                            $mt_rinfo = function_exists('sgd_get_quest_rank_info') ? sgd_get_quest_rank_info( $mt_rank ) : null;
+                                            ?>
+                                            <span style="font-size:10px; padding:2px 8px; border-radius:4px; background:<?php echo $mt_rinfo ? esc_attr($mt_rinfo['badge_bg']) : 'rgba(255,255,255,0.08)'; ?>; border:1px solid <?php echo $mt_rinfo ? esc_attr($mt_rinfo['badge_border']) : '#ffd700'; ?>; color:<?php echo $mt_rinfo ? esc_attr($mt_rinfo['color']) : '#ffd700'; ?>; font-weight:bold; box-shadow:<?php echo $mt_rinfo ? esc_attr($mt_rinfo['glow']) : 'none'; ?>;" title="<?php echo $mt_rinfo ? esc_attr($mt_rinfo['name'] . ': ' . $mt_rinfo['definition'] . ' (Gate: Lv.' . $mt_rinfo['level_gate'] . ')') : ''; ?>">
+                                                <?php echo $mt_rinfo ? esc_html($mt_rinfo['icon'] . ' ' . $mt_rinfo['name']) : 'Rank ' . esc_html($mt_rank); ?>
                                             </span>
                                             <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $mt->team_id, 'open_task' => $mt->id, 'filter' => 'my-tasks' ], home_url( '/' ) ) ); ?>" class="sgd-dash-task-open-btn" title="Buka Kartu Tugas">
                                                 Buka Kartu ➔
