@@ -444,7 +444,7 @@ $kanban_columns = [
                         <div class="sgd-inline-task-form" id="inline-form-<?php echo sanitize_title( $col_key ); ?>" style="display:none;">
                             <form method="post" class="sgd-form-create-task" data-column="<?php echo esc_attr( $col_key ); ?>">
                                 <input type="hidden" name="sgd_action" value="sgd_create_quest_task">
-                                <input type="hidden" name="team_id" value="<?php echo esc_attr( $current_team->id ); ?>">
+                                <input type="hidden" name="team_id" value="<?php echo (int) ( $current_team ? $current_team->id : $team_id ); ?>">
                                 <input type="hidden" name="column_name" value="<?php echo esc_attr( $col_key ); ?>">
                                 <div class="sgd-form-group" style="margin-bottom:8px;">
                                     <input type="text" name="task_title" class="sgd-form-input sgd-input-task-name" placeholder="Ketik nama tugas..." required maxlength="255" autocomplete="off">
@@ -1483,6 +1483,7 @@ window.SGD_QUESTS_CONFIG = {
     currentUserLevel: <?php echo (int) ( ( $current_user_id && function_exists('sgd_get_user_xp_data') ) ? sgd_get_user_xp_data($current_user_id)['level'] : 1 ); ?>,
     currentTeamId: <?php echo (int) $team_id; ?>,
     openTaskId: <?php echo (int) $open_task_id; ?>,
+    highlightTaskId: <?php echo (int) ( $_GET['highlight_task'] ?? 0 ); ?>,
     initialFilter: "<?php echo esc_js( sanitize_text_field( $_GET['filter'] ?? '' ) ); ?>",
     initialRank: "<?php echo esc_js( sanitize_text_field( $_GET['filter_rank'] ?? '' ) ); ?>",
     canManageTeam: <?php echo $can_manage_team ? 'true' : 'false'; ?>

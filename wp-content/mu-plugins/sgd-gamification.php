@@ -2621,8 +2621,8 @@ function sgd_get_quest_tasks( $team_id, $column_name = '' ) {
         $assigned_ids = array_filter( array_map( 'intval', explode( ',', $t->assigned_members ?? '' ) ) );
         $is_secret = ! empty( $t->is_secret );
 
-        // If task is secret, only visible to assigned members (and creator)
-        if ( $is_secret ) {
+        // If task is secret, only visible to assigned members (and creator) or administrators
+        if ( $is_secret && ! current_user_can( 'administrator' ) ) {
             $is_task_member = in_array( (int) $current_uid, $assigned_ids, true ) || ( (int) ( $t->created_by ?? 0 ) === (int) $current_uid );
             if ( ! $is_task_member ) {
                 continue; // Hidden from non-members
@@ -2709,8 +2709,8 @@ function sgd_get_quest_task( $task_id ) {
     $current_uid = get_current_user_id();
     $assigned_ids = array_filter( array_map( 'intval', explode( ',', $task->assigned_members ?? '' ) ) );
 
-    // If task is secret, verify current user is a task member or creator
-    if ( ! empty( $task->is_secret ) ) {
+    // If task is secret, verify current user is a task member or creator (administrators can view all)
+    if ( ! empty( $task->is_secret ) && ! current_user_can( 'administrator' ) ) {
         $is_task_member = in_array( (int) $current_uid, $assigned_ids, true ) || ( (int) ( $task->created_by ?? 0 ) === (int) $current_uid );
         if ( ! $is_task_member ) {
             return null; // Forbidden / Hidden to anyone else
@@ -4416,6 +4416,9 @@ function sgd_handle_form_actions() {
         // 9. Create New Task (Tugas) in a Column
         if ( $action === 'sgd_create_quest_task' ) {
             $team_id = (int) ( $_POST['team_id'] ?? 0 );
+            if ( $team_id <= 0 ) {
+                $team_id = (int) $wpdb->get_var( "SELECT id FROM {$wpdb->prefix}sgd_quest_teams ORDER BY id ASC LIMIT 1" );
+            }
             $team = sgd_get_quest_team( $team_id );
             if ( ! $team ) {
                 if ( ! empty( $_POST['is_ajax'] ) ) {
@@ -4426,11 +4429,18 @@ function sgd_handle_form_actions() {
                 exit;
             }
 
-            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+            // Allow admins, team managers, team members, or any authenticated user with quests access to create tasks
+            $team_member_ids = array_filter( array_map( 'intval', explode( ',', $team->member_ids ?? '' ) ) );
+            $can_create = current_user_can( 'administrator' )
+                || sgd_user_can_manage_quest( $team, $current_user_id )
+                || in_array( (int) $current_user_id, $team_member_ids, true )
+                || ( function_exists('sgd_user_can_access_quests') && sgd_user_can_access_quests( $current_user_id ) );
+
+            if ( ! $can_create ) {
                 if ( ! empty( $_POST['is_ajax'] ) ) {
-                    wp_send_json_error( [ 'message' => 'Hanya Manager Tim atau Administrator yang dapat membuat tugas.' ] );
+                    wp_send_json_error( [ 'message' => 'Anda tidak memiliki izin untuk membuat tugas di grup ini.' ] );
                 }
-                sgd_set_flash( 'error', '⛔ Hanya Manager Tim atau Administrator yang dapat membuat tugas.' );
+                sgd_set_flash( 'error', '⛔ Anda tidak memiliki izin untuk membuat tugas di grup ini.' );
                 wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $team_id ], home_url( '/' ) ) );
                 exit;
             }
@@ -4500,9 +4510,13 @@ function sgd_handle_form_actions() {
             if ( ! $assigned_user_id ) {
                 $assigned_user_id = $current_user_id ?: 1;
             }
-            $assigned_members_str = (string) $assigned_user_id;
-
+            $assigned_members_arr = [ $assigned_user_id ];
             $is_secret = ! empty( $_POST['is_secret'] ) ? 1 : 0;
+            // If task is secret, always include the creator so they can never accidentally lock themselves out
+            if ( $is_secret && $current_user_id && ! in_array( (int) $current_user_id, $assigned_members_arr, true ) ) {
+                $assigned_members_arr[] = (int) $current_user_id;
+            }
+            $assigned_members_str = implode( ',', array_unique( $assigned_members_arr ) );
 
             $wpdb->insert( $table_quest_tasks, [
                 'team_id'          => $team_id,
@@ -4533,7 +4547,11 @@ function sgd_handle_form_actions() {
             }
 
             sgd_set_flash( 'celebration', "✅ Tugas baru '{$title}' berhasil dibuat di kolom {$column_name}!" );
-            wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $team_id ], home_url( '/' ) ) );
+            wp_safe_redirect( add_query_arg( [
+                'sgd_page'       => 'quests',
+                'team_id'        => $team_id,
+                'highlight_task' => $new_task_id,
+            ], home_url( '/' ) ) );
             exit;
         }
 

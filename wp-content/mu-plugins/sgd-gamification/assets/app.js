@@ -1381,6 +1381,30 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
+        // Handle inline task form validation & submission feedback
+        document.querySelectorAll('.sgd-form-create-task').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const titleInput = form.querySelector('.sgd-input-task-name');
+                if (!titleInput || !titleInput.value.trim()) {
+                    e.preventDefault();
+                    if (titleInput) {
+                        titleInput.focus();
+                        titleInput.style.borderColor = '#ff4444';
+                        setTimeout(() => { titleInput.style.borderColor = ''; }, 2000);
+                    }
+                    return;
+                }
+                const submitBtn = form.querySelector('.sgd-btn-buat-tugas');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '⏳ Menyimpan...';
+                }
+                if (typeof sfxSuccess === 'function') {
+                    try { sfxSuccess(); } catch(err) {}
+                }
+            });
+        });
+
         // 4. WYSIWYG Editor Controls
         const wysiwygEditor = document.getElementById('modal-task-editor');
         const wysiwygHidden = document.getElementById('modal-task-desc-hidden');
@@ -2966,6 +2990,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => {
                         cardEl.classList.remove('sgd-card-highlighted');
                     }, 5000);
+                }
+            }, 300);
+        }
+
+        // Auto-highlight newly created task if ?highlight_task=X is present in URL
+        if (window.SGD_QUESTS_CONFIG && window.SGD_QUESTS_CONFIG.highlightTaskId) {
+            const hId = window.SGD_QUESTS_CONFIG.highlightTaskId;
+            // Clear any active search/filter so new card is immediately visible
+            const searchInput = document.getElementById('sgd-kanban-search');
+            if (searchInput) searchInput.value = '';
+            const rankSelect = document.getElementById('sgd-filter-rank');
+            if (rankSelect) rankSelect.value = '';
+            document.querySelectorAll('.sgd-filter-pill').forEach(p => p.classList.remove('active'));
+            document.querySelector('.sgd-filter-pill[data-filter="all"]')?.classList.add('active');
+
+            setTimeout(() => {
+                const cardEl = document.querySelector(`.sgd-kanban-card[data-task-id="${hId}"]`);
+                if (cardEl) {
+                    cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    cardEl.classList.add('sgd-card-highlighted');
+                    setTimeout(() => {
+                        cardEl.classList.remove('sgd-card-highlighted');
+                    }, 6000);
                 }
             }, 300);
         }
