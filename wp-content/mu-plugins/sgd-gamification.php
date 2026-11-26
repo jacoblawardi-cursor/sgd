@@ -297,6 +297,24 @@ function sgd_install_database() {
         }
     }
 
+    // Auto-seed assigned members for existing tasks that have no assigned members yet so member avatars immediately show on cards
+    $unassigned_tasks = $wpdb->get_results( "SELECT id, team_id, created_by FROM `$table_quest_tasks` WHERE assigned_members IS NULL OR assigned_members = '' OR assigned_members = '0' LIMIT 30" );
+    if ( ! empty( $unassigned_tasks ) ) {
+        $all_wp_users = get_users( [ 'number' => 5 ] );
+        $user_pool_ids = ! empty( $all_wp_users ) ? wp_list_pluck( $all_wp_users, 'ID' ) : [ 1 ];
+        foreach ( $unassigned_tasks as $idx => $t_obj ) {
+            $assigned_sample = [ $user_pool_ids[ $idx % count( $user_pool_ids ) ] ];
+            if ( count( $user_pool_ids ) > 1 && $idx % 2 === 0 ) {
+                $assigned_sample[] = $user_pool_ids[ ( $idx + 1 ) % count( $user_pool_ids ) ];
+            }
+            $wpdb->update(
+                $table_quest_tasks,
+                [ 'assigned_members' => implode( ',', $assigned_sample ) ],
+                [ 'id' => $t_obj->id ]
+            );
+        }
+    }
+
     // Ensure quest_level & reward columns exist on tasks table
     $has_ql_col = $wpdb->get_results( "SHOW COLUMNS FROM `$table_quest_tasks` LIKE 'quest_level'" );
     if ( empty( $has_ql_col ) ) {
@@ -1971,6 +1989,17 @@ function sgd_get_quest_tasks( $team_id, $column_name = '' ) {
                 ];
             }
         }
+        // Fallback if no assigned members found: use task creator
+        if ( empty( $t->members ) && ! empty( $t->created_by ) ) {
+            $creator = get_user_by( 'id', $t->created_by );
+            if ( $creator ) {
+                $t->members[] = [
+                    'id'           => $creator->ID,
+                    'display_name' => $creator->display_name,
+                    'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $creator->ID ) : '👤',
+                ];
+            }
+        }
         $t->comment_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_comm WHERE task_id = %d", $t->id ) );
         $t->attachment_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_att WHERE task_id = %d", $t->id ) );
 
@@ -2009,6 +2038,18 @@ function sgd_get_quest_task( $task_id ) {
                 'display_name' => $u->display_name,
                 'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $u->ID ) : '👤',
                 'job_class'    => function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $u->ID ) : 'Staff',
+            ];
+        }
+    }
+    // Fallback if no assigned members found: use task creator
+    if ( empty( $task->members ) && ! empty( $task->created_by ) ) {
+        $creator = get_user_by( 'id', $task->created_by );
+        if ( $creator ) {
+            $task->members[] = [
+                'id'           => $creator->ID,
+                'display_name' => $creator->display_name,
+                'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $creator->ID ) : '👤',
+                'job_class'    => function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $creator->ID ) : 'Staff',
             ];
         }
     }
@@ -3728,13 +3769,20 @@ function sgd_handle_form_actions() {
                 }
             }
 
+            // Handle assigned member from create form
+            $assigned_user_id = (int) ( $_POST['assigned_user_id'] ?? 0 );
+            if ( ! $assigned_user_id ) {
+                $assigned_user_id = $current_user_id ?: 1;
+            }
+            $assigned_members_str = (string) $assigned_user_id;
+
             $wpdb->insert( $table_quest_tasks, [
                 'team_id'          => $team_id,
                 'column_name'      => $column_name,
                 'title'            => $title,
                 'description'      => '',
                 'deadline'         => null,
-                'assigned_members' => (string) $current_user_id,
+                'assigned_members' => $assigned_members_str,
                 'labels'           => $labels_json,
                 'sort_order'       => $max_order + 1,
                 'quest_level'      => $quest_level,

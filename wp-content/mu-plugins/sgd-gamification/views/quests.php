@@ -287,6 +287,20 @@ $kanban_columns = [
         </div>
 
         <!-- THE 4 KANBAN COLUMNS CONTAINER -->
+        <?php
+        $team_members_pool = $current_team ? ( $current_team->members ?? [] ) : [];
+        if ( empty( $team_members_pool ) ) {
+            $all_users = get_users();
+            foreach ( $all_users as $u ) {
+                $team_members_pool[] = [
+                    'id'           => $u->ID,
+                    'display_name' => $u->display_name,
+                    'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $u->ID ) : '👤',
+                    'job_class'    => function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $u->ID ) : 'Staff',
+                ];
+            }
+        }
+        ?>
         <div class="sgd-kanban-board-container" id="sgd-kanban-board" data-team-id="<?php echo esc_attr( $current_team->id ); ?>">
             <?php 
             foreach ( $kanban_columns as $col_key => $col_meta ): 
@@ -321,7 +335,7 @@ $kanban_columns = [
                                 <div class="sgd-form-group" style="margin-bottom:8px;">
                                     <input type="text" name="task_title" class="sgd-form-input sgd-input-task-name" placeholder="Ketik nama tugas..." required maxlength="255" autocomplete="off">
                                 </div>
-                                <div class="sgd-inline-meta-row" style="display:flex; gap:8px; margin-bottom:10px;">
+                                <div class="sgd-inline-meta-row" style="display:flex; gap:8px; margin-bottom:8px;">
                                     <div style="flex:1;">
                                         <label style="font-size:10px; color:#ffd700; display:block; margin-bottom:2px; font-weight:bold;">⚔️ Lvl Quest:</label>
                                         <input type="number" name="quest_level" min="1" max="50" value="1" class="sgd-form-input" style="font-size:11px; padding:4px 6px;">
@@ -345,6 +359,21 @@ $kanban_columns = [
                                             <option value="Review">📋 Review</option>
                                             <option value="Urgent">🔴 Urgent</option>
                                             <option value="Optimasi">⚡ Optimasi</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="sgd-inline-meta-row" style="display:flex; gap:8px; margin-bottom:10px;">
+                                    <div style="flex:1;">
+                                        <label style="font-size:10px; color:#a55eea; display:block; margin-bottom:2px; font-weight:bold;">👤 Tugaskan Anggota Tim:</label>
+                                        <select name="assigned_user_id" class="sgd-form-select" style="font-size:11px; padding:4px 6px;">
+                                            <option value="<?php echo esc_attr( $current_user_id ?: 1 ); ?>">👤 Saya Sendiri (<?php echo esc_html( wp_get_current_user()->display_name ?: 'Admin' ); ?>)</option>
+                                            <?php foreach ( $team_members_pool as $tmb ): 
+                                                if ( (int) $tmb['id'] !== (int) $current_user_id ):
+                                            ?>
+                                                <option value="<?php echo esc_attr( $tmb['id'] ); ?>">
+                                                    <?php echo $tmb['avatar'] . ' ' . esc_html( $tmb['display_name'] ); ?>
+                                                </option>
+                                            <?php endif; endforeach; ?>
                                         </select>
                                     </div>
                                 </div>
@@ -544,16 +573,27 @@ $kanban_columns = [
                                                     📎 <?php echo $task->attachment_count; ?>
                                                 </span>
                                             <?php endif; ?>
+                                            <?php if ( empty( $deadline_badge ) && $task->comment_count == 0 && $task->attachment_count == 0 ): ?>
+                                                <span class="sgd-card-team-label">👥 Tim</span>
+                                            <?php endif; ?>
                                         </div>
 
                                         <div class="sgd-card-footer-right">
                                             <!-- Assigned Member Avatars -->
-                                            <div class="sgd-card-member-chips">
-                                                <?php foreach ( $task->members as $tm ): ?>
-                                                    <span class="sgd-card-avatar" title="<?php echo esc_attr( $tm['display_name'] ); ?>">
-                                                        <?php echo $tm['avatar']; ?>
+                                            <div class="sgd-card-member-chips" title="<?php echo ! empty( $task->members ) ? esc_attr( 'Anggota: ' . implode( ', ', array_column( $task->members, 'display_name' ) ) ) : 'Belum ada anggota ditugaskan'; ?>">
+                                                <?php if ( ! empty( $task->members ) ): ?>
+                                                    <?php foreach ( $task->members as $idx => $tm ): 
+                                                        $tm_job = function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $tm['id'] ) : 'Staff';
+                                                    ?>
+                                                        <span class="sgd-card-avatar" title="<?php echo esc_attr( $tm['display_name'] . ' (' . $tm_job . ')' ); ?>" style="z-index:<?php echo 10 - $idx; ?>;">
+                                                            <span class="sgd-avatar-icon"><?php echo $tm['avatar']; ?></span>
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                <?php elseif ( $can_manage_team ): ?>
+                                                    <span class="sgd-card-avatar sgd-card-avatar-unassigned" title="Belum ada anggota yang ditugaskan. Klik kartu untuk menugaskan anggota.">
+                                                        👤+
                                                     </span>
-                                                <?php endforeach; ?>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>

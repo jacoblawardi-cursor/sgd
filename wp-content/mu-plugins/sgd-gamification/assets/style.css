@@ -6982,25 +6982,66 @@ body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
 }
 
 .sgd-card-member-chips {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  padding: 2px 0;
 }
 
 .sgd-card-avatar {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: #1e293b;
-  border: 1px solid var(--wow-gold);
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 2px solid #ffd700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  margin-left: -5px;
+  font-size: 14px;
+  margin-left: -7px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .sgd-card-avatar:first-child {
   margin-left: 0;
+}
+
+.sgd-card-avatar:hover {
+  transform: translateY(-3px) scale(1.25);
+  border-color: #00e5ff;
+  box-shadow: 0 4px 12px rgba(0, 229, 255, 0.5);
+  z-index: 30 !important;
+}
+
+.sgd-card-avatar .sgd-avatar-icon {
+  line-height: 1;
+  display: inline-block;
+}
+
+.sgd-card-avatar-unassigned {
+  border: 1.5px dashed rgba(143, 160, 189, 0.4);
+  background: rgba(143, 160, 189, 0.1);
+  color: #8fa0bd;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.sgd-kanban-card:hover .sgd-card-avatar-unassigned {
+  border-color: #ffd700;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.15);
+}
+
+.sgd-card-team-label {
+  font-size: 10px;
+  color: #8fa0bd;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 /* Quick Move Bar on card bottom */
