@@ -21,6 +21,21 @@ $users = get_users();
 // If team_id is specified, load that team's Kanban board
 $current_team = null;
 $can_manage_team = false;
+
+// Auto-resolve team_id if open_task or filter_rank is requested without explicit team_id
+if ( $team_id <= 0 && $open_task_id > 0 ) {
+    $t_task = $wpdb->get_row( $wpdb->prepare( "SELECT team_id FROM {$wpdb->prefix}sgd_quest_tasks WHERE id = %d", $open_task_id ) );
+    if ( $t_task && $t_task->team_id ) {
+        $team_id = (int) $t_task->team_id;
+    }
+}
+if ( $team_id <= 0 && ( ! empty( $_GET['filter_rank'] ) || ! empty( $_GET['filter'] ) ) ) {
+    $found_team_id = (int) $wpdb->get_var( "SELECT id FROM {$wpdb->prefix}sgd_quest_teams ORDER BY id ASC LIMIT 1" );
+    if ( $found_team_id > 0 ) {
+        $team_id = $found_team_id;
+    }
+}
+
 if ( $team_id > 0 ) {
     $current_team = sgd_get_quest_team( $team_id );
     if ( $current_team ) {
@@ -382,6 +397,16 @@ $kanban_columns = [
                     <?php endforeach; ?>
                 </select>
 
+                <!-- Rank Filter Dropdown (S / A / B / C / D / E / F) -->
+                <select id="sgd-filter-rank" class="sgd-toolbar-select" title="Filter tugas berdasarkan Tier Rank">
+                    <option value="">⚔️ Semua Rank (S - F)</option>
+                    <?php foreach ( sgd_get_quest_ranks() as $rk => $rdata ): ?>
+                        <option value="<?php echo esc_attr( $rk ); ?>">
+                            <?php echo esc_html( $rdata['icon'] . ' Rank ' . $rk . ' (Lv.' . $rdata['level_gate'] . '+)' ); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+
                 <!-- Reset Filters Button -->
                 <button type="button" id="sgd-btn-reset-filters" class="sgd-btn-reset-filters" title="Reset semua filter">
                     🔄 Reset
@@ -573,6 +598,7 @@ $kanban_columns = [
                                 $is_secret_task = ! empty( $task->is_secret );
                                 $my_task_class = $is_my_task ? 'sgd-card-is-mine' : '';
                                 $secret_task_class = $is_secret_task ? 'sgd-card-is-secret' : '';
+                                $card_rank_code = sgd_normalize_quest_rank( $task->quest_level ?? 'F' );
                                 ?>
                                 <div class="sgd-kanban-card <?php echo esc_attr( $card_deadline_class ); ?> <?php echo esc_attr( $my_task_class ); ?> <?php echo esc_attr( $secret_task_class ); ?> sgd-card-manager-draggable"
                                      draggable="true"
@@ -584,6 +610,7 @@ $kanban_columns = [
                                      data-is-secret="<?php echo $is_secret_task ? 'true' : 'false'; ?>"
                                      data-deadline-status="<?php echo esc_attr( $dl_status ); ?>"
                                      data-has-files="<?php echo ( $task->attachment_count > 0 ) ? 'true' : 'false'; ?>"
+                                     data-rank="<?php echo esc_attr( $card_rank_code ); ?>"
                                      data-tags="<?php echo esc_attr( $tag_names_str ); ?>">
 
                                     <?php if ( $is_my_task ): ?>
@@ -665,10 +692,11 @@ $kanban_columns = [
                                     ?>
                                     <div class="sgd-card-quest-meta-row">
                                         <span class="sgd-quest-rank-badge rank-<?php echo esc_attr( strtolower( $rank_code ) ); ?> <?php echo $user_scaling ? 'diff-' . esc_attr($user_scaling['difficulty']) : ''; ?>" 
-                                              style="background:<?php echo esc_attr( $rank_info['badge_bg'] ); ?>; border:1px solid <?php echo esc_attr( $rank_info['badge_border'] ); ?>; color:<?php echo esc_attr( $rank_info['color'] ); ?>; box-shadow:<?php echo esc_attr( $rank_info['glow'] ); ?>; font-size:10px; padding:2px 7px; border-radius:4px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;"
-                                              title="<?php echo esc_attr( $rank_info['name'] . ': ' . $rank_info['definition'] . ' (' . $rank_info['scope'] . ') • Gate: Lv.' . $rank_info['level_gate'] . ($user_scaling ? ' • Porsi Hadiah: ' . $user_scaling['percent'] . '%' : '') ); ?>">
-                                            <span><?php echo $rank_info['icon']; ?></span>
-                                            <span><?php echo esc_html( $rank_info['name'] ); ?></span>
+                                              onclick="sgdFilterByRank('<?php echo esc_js( $rank_code ); ?>', event);"
+                                              style="cursor:pointer; background:<?php echo esc_attr( $rank_info['badge_bg'] ); ?>; border:1px solid <?php echo esc_attr( $rank_info['badge_border'] ); ?>; color:<?php echo esc_attr( $rank_info['color'] ); ?>; box-shadow:<?php echo esc_attr( $rank_info['glow'] ); ?>; font-size:10px; padding:2px 7px; border-radius:4px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;"
+                                              title="<?php echo esc_attr( $rank_info['name'] . ': ' . $rank_info['definition'] . ' (' . $rank_info['scope'] . ') • Gate: Lv.' . $rank_info['level_gate'] . ($user_scaling ? ' • Porsi Hadiah: ' . $user_scaling['percent'] . '%' : '') . ' • Klik untuk filter Rank ' . $rank_code ); ?>">
+                                            <span style="pointer-events:none;"><?php echo $rank_info['icon']; ?></span>
+                                            <span style="pointer-events:none;"><?php echo esc_html( $rank_info['name'] ); ?></span>
                                         </span>
 
                                         <?php if ( $rt === 'xp' || $rt === 'both' ): ?>
@@ -1265,9 +1293,9 @@ $kanban_columns = [
                                             data-rank="<?php echo esc_attr( $rk ); ?>"
                                             onclick="sgdSetQuestLevel('<?php echo esc_js( $rk ); ?>');"
                                             title="<?php echo esc_attr( $rdata['name'] . ': ' . $rdata['definition'] . ' (' . $rdata['scope'] . ') • Syarat Hero: Lv.' . $rdata['level_gate'] . '+' ); ?>"
-                                            style="border:1px solid <?php echo esc_attr( $rdata['badge_border'] ); ?>; padding:5px 0; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer; background:rgba(0,0,0,0.5); color:<?php echo esc_attr( $rdata['color'] ); ?>;">
-                                        <div style="font-size:12px;"><?php echo $rdata['icon']; ?></div>
-                                        <div><?php echo esc_html( $rk ); ?></div>
+                                            style="border:1px solid <?php echo esc_attr( $rdata['badge_border'] ); ?>; padding:6px 0; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer; background:rgba(0,0,0,0.5); color:<?php echo esc_attr( $rdata['color'] ); ?>;">
+                                        <div style="font-size:12px; pointer-events:none;"><?php echo $rdata['icon']; ?></div>
+                                        <div style="pointer-events:none;"><?php echo esc_html( $rk ); ?></div>
                                     </button>
                                 <?php endforeach; ?>
                             </div>
@@ -1456,6 +1484,7 @@ window.SGD_QUESTS_CONFIG = {
     currentTeamId: <?php echo (int) $team_id; ?>,
     openTaskId: <?php echo (int) $open_task_id; ?>,
     initialFilter: "<?php echo esc_js( sanitize_text_field( $_GET['filter'] ?? '' ) ); ?>",
+    initialRank: "<?php echo esc_js( sanitize_text_field( $_GET['filter_rank'] ?? '' ) ); ?>",
     canManageTeam: <?php echo $can_manage_team ? 'true' : 'false'; ?>
 };
 </script>

@@ -10311,6 +10311,17 @@ body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
   transform: translateY(-1px);
 }
 
+.sgd-quest-rank-badge {
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.sgd-quest-rank-badge:hover {
+  transform: translateY(-1px) scale(1.04);
+  filter: brightness(1.25);
+}
+
 .sgd-quest-rank-badge.rank-s {
   background: linear-gradient(135deg, #7a0c0c 0%, #3d0505 100%) !important;
   border: 1.5px solid #ff4d4d !important;

@@ -1717,6 +1717,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Expose globally for rank button clicks and Kanban integration
+        window.updateQuestLevelPreview = updateQuestLevelPreview;
+        window.normalizeQuestRank = normalizeQuestRank;
+        window.SGD_QUEST_RANKS = SGD_QUEST_RANKS;
+
         // ========================================================
         // Label & Tag Manager (Admin Need Button & Color Options)
         // ========================================================
@@ -2733,6 +2738,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const filterPills = document.querySelectorAll('.sgd-filter-pill');
             const tagSelect = document.getElementById('sgd-filter-tag');
             const memberSelect = document.getElementById('sgd-filter-member');
+            const rankSelect = document.getElementById('sgd-filter-rank');
             const btnReset = document.getElementById('sgd-btn-reset-filters');
             const currentUserId = String(window.SGD_QUESTS_CONFIG?.currentUserId || '');
 
@@ -2765,6 +2771,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const query = (searchInput?.value || '').trim().toLowerCase();
                 const selectedTag = (tagSelect?.value || '').trim().toLowerCase();
                 const selectedMember = (memberSelect?.value || '').trim();
+                const selectedRank = (rankSelect?.value || '').trim().toUpperCase();
 
                 if (searchClear) {
                     searchClear.style.display = query ? 'flex' : 'none';
@@ -2780,6 +2787,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const assigned = (card.getAttribute('data-assigned') || '').split(',');
                         const dlStatus = card.getAttribute('data-deadline-status') || '';
                         const hasFiles = card.getAttribute('data-has-files') === 'true';
+                        const cardRank = (card.getAttribute('data-rank') || 'F').toUpperCase();
 
                         let matches = true;
 
@@ -2805,6 +2813,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         // 4. Member filter
                         if (matches && selectedMember) {
                             if (!assigned.includes(selectedMember)) matches = false;
+                        }
+
+                        // 5. Rank filter (S / A / B / C / D / E / F)
+                        if (matches && selectedRank) {
+                            if (cardRank !== selectedRank) matches = false;
                         }
 
                         if (matches) {
@@ -2860,12 +2873,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (tagSelect) tagSelect.addEventListener('change', applyFilters);
             if (memberSelect) memberSelect.addEventListener('change', applyFilters);
+            if (rankSelect) rankSelect.addEventListener('change', applyFilters);
 
             if (btnReset) {
                 btnReset.addEventListener('click', function() {
                     if (searchInput) searchInput.value = '';
                     if (tagSelect) tagSelect.value = '';
                     if (memberSelect) memberSelect.value = '';
+                    if (rankSelect) rankSelect.value = '';
                     filterPills.forEach(p => p.classList.remove('active'));
                     document.querySelector('.sgd-filter-pill[data-filter="all"]')?.classList.add('active');
                     currentActivePill = 'all';
@@ -2884,10 +2899,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     applyFilters();
                 }
             }
+
+            // Auto-apply initial rank filter if passed from URL (e.g. ?filter_rank=S)
+            const initialRank = window.SGD_QUESTS_CONFIG?.initialRank;
+            if (initialRank && rankSelect) {
+                rankSelect.value = initialRank.toUpperCase();
+                applyFilters();
+            }
+
+            // Expose rank filtering function globally for card badge clicks
+            window.sgdFilterByRank = function(rk, ev) {
+                if (ev) {
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                }
+                const targetRank = (rk || '').toUpperCase();
+                if (rankSelect) {
+                    rankSelect.value = (rankSelect.value === targetRank) ? '' : targetRank;
+                    applyFilters();
+                }
+            };
         }
 
         // Initialize Kanban Filters
         initKanbanFilters();
+
+        // Delegate click handler for rank preset buttons in modal to guarantee instant response
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.sgd-rank-preset-btn');
+            if (btn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const rk = btn.getAttribute('data-rank');
+                if (rk) {
+                    window.sgdSetQuestLevel(rk);
+                }
+            }
+        });
 
         // Listeners for Reward Choice and Quest Level in Modal
         const rewardTypeSelect = document.getElementById('modal-task-reward-type');
@@ -2941,8 +2989,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (input) {
             input.value = lvl;
         }
-        if (typeof updateQuestLevelPreview === 'function') {
+        if (typeof window.updateQuestLevelPreview === 'function') {
+            window.updateQuestLevelPreview(lvl);
+        } else if (typeof updateQuestLevelPreview === 'function') {
             updateQuestLevelPreview(lvl);
+        }
+        if (typeof sfxClick === 'function') {
+            try { sfxClick(); } catch(e) {}
         }
     };
 });

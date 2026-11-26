@@ -259,9 +259,10 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
             <?php foreach ( $quest_ranks_def as $rk => $rdata ): 
                 $count_done = (int) ( $my_rank_stats['ranks'][ $rk ] ?? 0 );
             ?>
-                <a href="<?php echo esc_url( sgd_get_portal_url('quests') ); ?>" class="sgd-rank-stat-tile rank-tile-<?php echo esc_attr( strtolower( $rk ) ); ?>"
+                <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'quests', 'filter_rank' => $rk ], home_url( '/' ) ) ); ?>" 
+                   class="sgd-rank-stat-tile rank-tile-<?php echo esc_attr( strtolower( $rk ) ); ?>"
                    style="background:<?php echo esc_attr( $rdata['badge_bg'] ); ?>; border:1.5px solid <?php echo esc_attr( $rdata['badge_border'] ); ?>; text-decoration:none; color:inherit;"
-                   title="<?php echo esc_attr( $rdata['name'] . ': ' . $rdata['definition'] . ' (' . $rdata['scope'] . ') • Gate: Lv.' . $rdata['level_gate'] ); ?>">
+                   title="<?php echo esc_attr( $rdata['name'] . ': ' . $rdata['definition'] . ' (' . $rdata['scope'] . ') • Gate: Lv.' . $rdata['level_gate'] . ' • Klik untuk melihat tugas Rank ' . $rk ); ?>">
                     
                     <div class="sgd-rank-tile-top">
                         <span class="sgd-rank-tile-badge" style="color:<?php echo esc_attr( $rdata['color'] ); ?>;">

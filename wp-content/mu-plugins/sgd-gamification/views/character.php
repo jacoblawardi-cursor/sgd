@@ -593,10 +593,12 @@ $class_meta = $class_titles[ $active_rpg_class ] ?? $class_titles['paladin'];
                         <?php foreach ( $char_ranks_def as $rk => $rdata ): 
                             $cnt = (int) ($char_rank_stats['ranks'][$rk] ?? 0);
                         ?>
-                            <div style="background:<?php echo esc_attr($rdata['badge_bg']); ?>; border:1px solid <?php echo esc_attr($rdata['badge_border']); ?>; border-radius:6px; padding:6px 2px; text-align:center;" title="<?php echo esc_attr($rdata['name'] . ': ' . $rdata['definition'] . ' (Gate Lv.' . $rdata['level_gate'] . ')'); ?>">
+                            <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'quests', 'filter_rank' => $rk ], home_url( '/' ) ) ); ?>" 
+                               style="text-decoration:none; display:block; background:<?php echo esc_attr($rdata['badge_bg']); ?>; border:1px solid <?php echo esc_attr($rdata['badge_border']); ?>; border-radius:6px; padding:6px 2px; text-align:center; transition:transform 0.15s ease;" 
+                               title="<?php echo esc_attr($rdata['name'] . ': ' . $rdata['definition'] . ' (Gate Lv.' . $rdata['level_gate'] . ') • Klik untuk filter tugas'); ?>">
                                 <div style="font-family:var(--font-pixel); font-size:10px; color:<?php echo esc_attr($rdata['color']); ?>; font-weight:bold;"><?php echo esc_html($rk); ?></div>
                                 <div style="font-size:13px; font-weight:bold; color:#fff; margin-top:2px;"><?php echo $cnt; ?></div>
-                            </div>
+                            </a>
                         <?php endforeach; ?>
                     </div>
                 </div>
