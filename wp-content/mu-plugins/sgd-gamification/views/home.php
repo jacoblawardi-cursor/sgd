@@ -37,9 +37,7 @@ $my_active_count = (int) $wpdb->get_var( $wpdb->prepare(
 ) );
 
 $first_my_task = ! empty( $my_active_tasks ) ? $my_active_tasks[0] : null;
-$my_tasks_link = $first_my_task 
-    ? add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $first_my_task->team_id, 'open_task' => $first_my_task->id, 'filter' => 'my-tasks' ], home_url( '/' ) )
-    : add_query_arg( [ 'sgd_page' => 'quests', 'filter' => 'my-tasks' ], home_url( '/' ) );
+$my_tasks_link = sgd_get_portal_url( 'quests' );
 
 // 2. Urgent / Approaching Deadline Tasks (<= 3 Days, Today, or Overdue across all teams)
 $urgent_deadline_tasks = $wpdb->get_results(
@@ -215,17 +213,13 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
             </div>
         </a>
 
-        <a href="<?php echo esc_url( $my_tasks_link ); ?>" class="sgd-kpi-card kpi-tasks" title="<?php echo $first_my_task ? 'Klik untuk langsung membuka tugas aktif teratas: ' . esc_attr($first_my_task->title) : 'Lihat tugas aktif Anda di papan Kanban'; ?>">
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-kpi-card kpi-tasks" title="Buka Papan Kanban">
             <div class="sgd-kpi-icon" style="color:#2ecc71;">🎯</div>
             <div class="sgd-kpi-content">
                 <div class="sgd-kpi-label">Tugas Aktif Saya</div>
                 <div class="sgd-kpi-value" style="color:#2ecc71;"><?php echo $my_active_count; ?> Tugas</div>
                 <div class="sgd-kpi-sub">
-                    <?php if ( $first_my_task ): ?>
-                        Buka: <strong><?php echo esc_html( wp_trim_words( $first_my_task->title, 4 ) ); ?></strong> ➔
-                    <?php else: ?>
-                        Di Papan Kanban Quests ➔
-                    <?php endif; ?>
+                    Buka Papan Kanban ➔
                 </div>
             </div>
         </a>
@@ -316,8 +310,8 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
                             <?php echo count($my_active_tasks); ?> Berjalan
                         </span>
                     </h3>
-                    <a href="<?php echo esc_url( $my_tasks_link ); ?>" class="sgd-dash-card-link">
-                        <?php echo $first_my_task ? 'Buka Tugas Pertama ➔' : 'Buka Semua di Kanban ➔'; ?>
+                    <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-dash-card-link">
+                        Buka Semua di Kanban ➔
                     </a>
                 </div>
                 <div class="sgd-dash-card-body">

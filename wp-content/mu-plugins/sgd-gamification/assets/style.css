@@ -8831,6 +8831,63 @@ body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
   z-index: 5;
 }
 
+/* User's Own Tasks Visual Highlighting on Kanban Board */
+.sgd-kanban-card.sgd-card-is-mine {
+  border-color: rgba(0, 229, 255, 0.45);
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.06) 0%, #111827 80%);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 3px 0 0 #00e5ff;
+}
+
+.sgd-kanban-card.sgd-card-is-mine:hover {
+  border-color: #00e5ff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 229, 255, 0.35);
+}
+
+.sgd-card-my-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.16);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  padding: 1px 6px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.sgd-kanban-card.sgd-card-is-mine .sgd-card-title {
+  color: #ffffff;
+}
+
+/* Overview Task Group Card with Active User Tasks */
+.sgd-team-card.sgd-team-card-has-my-tasks {
+  border-color: rgba(0, 229, 255, 0.45);
+  box-shadow: 0 4px 18px rgba(0, 229, 255, 0.12);
+}
+
+.sgd-team-card.sgd-team-card-has-my-tasks:hover {
+  border-color: #00e5ff;
+  box-shadow: 0 6px 24px rgba(0, 229, 255, 0.25);
+}
+
+.sgd-my-team-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.18);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
 /* Leaderboard Top 3 Podium */
 .sgd-podium-list {
   display: flex;

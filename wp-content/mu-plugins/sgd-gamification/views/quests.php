@@ -116,6 +116,23 @@ $kanban_columns = [
 
         <?php 
         $teams_list = sgd_get_quest_teams( $filter_type );
+        // Fetch active tasks assigned to current user across teams for overview indicators
+        global $wpdb;
+        $table_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+        $my_team_task_counts = [];
+        if ( $current_user_id ) {
+            $my_tasks_by_team = $wpdb->get_results( $wpdb->prepare(
+                "SELECT team_id, COUNT(*) as cnt 
+                 FROM $table_tasks 
+                 WHERE column_name != 'Selesai' AND column_name != 'Batal' 
+                 AND (FIND_IN_SET(%d, assigned_members) OR assigned_members LIKE %s OR created_by = %d)
+                 GROUP BY team_id",
+                $current_user_id, '%' . $wpdb->esc_like( (string) $current_user_id ) . '%', $current_user_id
+            ), OBJECT_K );
+            foreach ( $my_tasks_by_team as $t_id => $row ) {
+                $my_team_task_counts[ $t_id ] = (int) $row->cnt;
+            }
+        }
         ?>
 
         <?php if ( empty( $teams_list ) ): ?>
@@ -138,12 +155,20 @@ $kanban_columns = [
                     $total = $t->counts['total'];
                     $done = $t->counts['Selesai'];
                     $progress_percent = $total > 0 ? round( ( $done / $total ) * 100 ) : 0;
+                    $my_count_in_team = $my_team_task_counts[ $t->id ] ?? 0;
                 ?>
-                    <div class="sgd-team-card">
+                    <div class="sgd-team-card <?php echo $my_count_in_team > 0 ? 'sgd-team-card-has-my-tasks' : ''; ?>">
                         <div class="sgd-team-card-header">
-                            <span class="sgd-team-type-badge <?php echo esc_attr( $badge_class ); ?>">
-                                <?php echo esc_html( $type_label ); ?>
-                            </span>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span class="sgd-team-type-badge <?php echo esc_attr( $badge_class ); ?>">
+                                    <?php echo esc_html( $type_label ); ?>
+                                </span>
+                                <?php if ( $my_count_in_team > 0 ): ?>
+                                    <span class="sgd-my-team-badge" title="Anda memiliki <?php echo $my_count_in_team; ?> tugas aktif di grup ini">
+                                        👤 <?php echo $my_count_in_team; ?> Tugas Saya
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                             <div class="sgd-team-card-actions">
                                 <button type="button" class="sgd-team-edit-btn" data-team-id="<?php echo esc_attr( $t->id ); ?>" data-team-name="<?php echo esc_attr( $t->name ); ?>" data-team-type="<?php echo esc_attr( $t->type ); ?>" data-team-desc="<?php echo esc_attr( $t->description ); ?>" data-team-mgr="<?php echo esc_attr( $t->manager_id ); ?>" data-team-members="<?php echo esc_attr( $t->member_ids ); ?>" title="Edit Pengaturan Tim">
                                     ⚙️
@@ -527,13 +552,16 @@ $kanban_columns = [
                                 $assigned_member_ids = array_column( $task->members ?? [], 'id' );
                                 $tag_names_str = strtolower( implode( ' ', array_column( $task->tags ?? [], 'name' ) ) );
                                 $has_cover = ( ! empty( $task->cover_image ) && $task->cover_image !== 'none' );
+                                $is_my_task = $current_user_id && in_array( (int) $current_user_id, array_map('intval', $assigned_member_ids), true );
+                                $my_task_class = $is_my_task ? 'sgd-card-is-mine' : '';
                                 ?>
-                                <div class="sgd-kanban-card <?php echo esc_attr( $card_deadline_class ); ?> sgd-card-manager-draggable"
+                                <div class="sgd-kanban-card <?php echo esc_attr( $card_deadline_class ); ?> <?php echo esc_attr( $my_task_class ); ?> sgd-card-manager-draggable"
                                      draggable="true"
                                      data-task-id="<?php echo esc_attr( $task->id ); ?>"
                                      data-column="<?php echo esc_attr( $task->column_name ); ?>"
                                      data-title="<?php echo esc_attr( strtolower( $task->title ) ); ?>"
                                      data-assigned="<?php echo esc_attr( implode( ',', $assigned_member_ids ) ); ?>"
+                                     data-is-mine="<?php echo $is_my_task ? 'true' : 'false'; ?>"
                                      data-deadline-status="<?php echo esc_attr( $dl_status ); ?>"
                                      data-has-files="<?php echo ( $task->attachment_count > 0 ) ? 'true' : 'false'; ?>"
                                      data-tags="<?php echo esc_attr( $tag_names_str ); ?>">
@@ -564,9 +592,12 @@ $kanban_columns = [
                                     </div>
 
                                     <div class="sgd-card-top">
-                                        <div style="display:flex; align-items:center; gap:6px; flex:1;">
+                                        <div style="display:flex; align-items:center; gap:6px; flex:1; flex-wrap:wrap;">
                                             <span class="sgd-card-drag-handle" title="⭐ Drag kartu untuk memindahkan status tugas">⠿</span>
                                             <h4 class="sgd-card-title"><?php echo esc_html( $task->title ); ?></h4>
+                                            <?php if ( $is_my_task ): ?>
+                                                <span class="sgd-card-my-badge" title="Tugas ini ditugaskan kepada Anda">👤 Tugas Saya</span>
+                                            <?php endif; ?>
                                         </div>
                                         <div class="sgd-card-quick-actions">
                                             <label class="sgd-card-quick-btn sgd-btn-quick-cover" title="Unggah Foto Sampul (Cover Image)" onclick="event.stopPropagation();">
