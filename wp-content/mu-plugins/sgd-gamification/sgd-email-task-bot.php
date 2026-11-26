@@ -60,11 +60,12 @@ Task Attributes to extract:
 2. description: Well-formatted HTML (<p>, <strong>, <ul>, <li>) summarizing the goals, instructions, and context.
 3. quest_level: One uppercase letter from 'S', 'A', 'B', 'C', 'D', 'E', 'F'. Default to 'D' if standard.
 4. deadline: Exact date/time in 'YYYY-MM-DD HH:MM:SS' format calculated relative to current date (" . current_time( 'Y-m-d H:i:s' ) . "), or null if not mentioned.
-5. assigned_names: Array of strings of mentioned team member names or handles (e.g. ['Jacob', 'Sarah']).
+5. assigned_names: Array of strings of mentioned team member names or handles (e.g. ['Jacob', 'Sarah', 'jaina']).
 6. checklist: Array of actionable subtask strings extracted from the email.
-7. is_secret: Boolean true if the email has markers like [RAHASIA], [SECRET], 'rahasia', or confidential matters.
-8. reward_xp: Integer (e.g. S=1000, A=700, B=500, C=350, D=200, E=120, F=60).
-9. reward_gold: Integer (e.g. S=250, A=150, B=100, C=70, D=40, E=20, F=10).
+7. team_hint: Name of team or project mentioned in the email if any (e.g. 'Proyek', 'Frontend', 'HQ'), or null.
+8. is_secret: Boolean true if the email has markers like [RAHASIA], [SECRET], 'rahasia', or confidential matters.
+9. reward_xp: Integer (e.g. S=1000, A=700, B=500, C=350, D=200, E=120, F=60).
+10. reward_gold: Integer (e.g. S=250, A=150, B=100, C=70, D=40, E=20, F=10).
 
 Return ONLY a valid JSON object matching the keys above. No markdown code blocks, no other text.";
 
@@ -76,6 +77,7 @@ Return ONLY a valid JSON object matching the keys above. No markdown code blocks
         'deadline'       => null,
         'assigned_names' => [],
         'checklist'      => [],
+        'team_hint'      => null,
         'is_secret'      => false,
         'reward_xp'      => 200,
         'reward_gold'    => 50,
@@ -129,7 +131,39 @@ Return ONLY a valid JSON object matching the keys above. No markdown code blocks
 }
 
 /**
- * Main function: Connect via IMAP, fetch unread emails, and generate tasks
+ * Helper to extract clean plain text from IMAP email message
+ */
+function sgd_extract_clean_email_body( $inbox, $msg_id ) {
+    $structure = @imap_fetchstructure( $inbox, $msg_id );
+    $body = '';
+
+    if ( ! empty( $structure->parts ) ) {
+        // Multi-part message: try part 1 (usually text/plain)
+        $body = imap_fetchbody( $inbox, $msg_id, "1" );
+        if ( empty( $body ) ) {
+            $body = imap_fetchbody( $inbox, $msg_id, "1.1" );
+        }
+        if ( empty( $body ) ) {
+            $body = imap_body( $inbox, $msg_id );
+        }
+    } else {
+        $body = imap_body( $inbox, $msg_id );
+    }
+
+    // Decode quoted-printable or base64 if needed
+    if ( preg_match( '/=[0-9A-F]{2}/', $body ) ) {
+        $body = quoted_printable_decode( $body );
+    }
+
+    // Strip HTML tags and extra boundary markers
+    $body = strip_tags( $body );
+    $body = preg_replace( '/------=_Part_[a-zA-Z0-9_\-\.\=]+/', '', $body );
+    $body = preg_replace( '/Content-Type:[\s\S]*?7bit/i', '', $body );
+    return trim( $body );
+}
+
+/**
+ * Main function: Connect via IMAP, fetch unimported emails, and generate tasks
  */
 function sgd_process_email_tasks() {
     $cfg = sgd_get_email_bot_config();
@@ -163,56 +197,80 @@ function sgd_process_email_tasks() {
         ];
     }
 
-    // Search for unread emails
-    $unseen_ids = imap_search( $inbox, 'UNSEEN' );
+    // Get list of already imported Message-IDs to prevent duplicates
+    $imported_message_ids = get_option( 'sgd_imported_email_ids', [] );
+    if ( ! is_array( $imported_message_ids ) ) {
+        $imported_message_ids = [];
+    }
 
-    if ( empty( $unseen_ids ) ) {
+    // Search for unseen or recent messages
+    $unseen_ids = imap_search( $inbox, 'UNSEEN' );
+    $recent_all = imap_search( $inbox, 'ALL' );
+
+    $candidate_ids = [];
+    if ( ! empty( $unseen_ids ) ) {
+        $candidate_ids = array_merge( $candidate_ids, $unseen_ids );
+    }
+    // Also include the latest 10 messages from ALL
+    if ( ! empty( $recent_all ) ) {
+        $latest_all = array_slice( $recent_all, -10 );
+        $candidate_ids = array_merge( $candidate_ids, $latest_all );
+    }
+    $candidate_ids = array_unique( $candidate_ids );
+
+    if ( empty( $candidate_ids ) ) {
         imap_close( $inbox );
         return [
             'success'   => true,
             'processed' => 0,
-            'message'   => 'Kotak masuk sudah dicek. Tidak ada email baru (belum dibaca) di ' . $cfg['email']
+            'message'   => 'Kotak masuk sudah dicek. Tidak ada email baru di ' . $cfg['email']
         ];
     }
 
     global $wpdb;
     $all_users = get_users();
+    $all_teams = $wpdb->get_results( "SELECT id, name FROM {$wpdb->prefix}sgd_quest_teams ORDER BY id ASC" );
     $created_tasks = [];
     $processed_count = 0;
 
-    // Resolve target team
-    $target_team_id = $cfg['default_team_id'];
-    $team_row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}sgd_quest_teams WHERE id = %d", $target_team_id ) );
-    if ( ! $team_row ) {
-        $target_team_id = (int) $wpdb->get_var( "SELECT id FROM {$wpdb->prefix}sgd_quest_teams ORDER BY id ASC LIMIT 1" );
-    }
+    foreach ( $candidate_ids as $msg_id ) {
+        $header = @imap_headerinfo( $inbox, $msg_id );
+        if ( ! $header ) continue;
 
-    foreach ( $unseen_ids as $msg_id ) {
-        $header = imap_headerinfo( $inbox, $msg_id );
-        
-        $subject = isset( $header->subject ) ? ( function_exists('mb_decode_mimeheader') ? mb_decode_mimeheader( $header->subject ) : $header->subject ) : 'Tugas Baru';
-        $from    = isset( $header->fromaddress ) ? ( function_exists('mb_decode_mimeheader') ? mb_decode_mimeheader( $header->fromaddress ) : $header->fromaddress ) : '';
-
-        // Fetch body
-        $body = imap_body( $inbox, $msg_id );
-        // If quoted-printable encoded
-        if ( isset( $header->encoding ) && $header->encoding == 4 ) {
-            $body = quoted_printable_decode( $body );
+        $message_id_key = trim( $header->message_id ?? ( $header->Date . '_' . $header->subject ) );
+        if ( in_array( $message_id_key, $imported_message_ids, true ) ) {
+            continue; // Already processed
         }
-        $body_clean = strip_tags( $body );
-        $body_clean = trim( $body_clean );
+
+        $from = isset( $header->fromaddress ) ? ( function_exists('mb_decode_mimeheader') ? mb_decode_mimeheader( $header->fromaddress ) : $header->fromaddress ) : '';
+        $subject = isset( $header->subject ) ? ( function_exists('mb_decode_mimeheader') ? mb_decode_mimeheader( $header->subject ) : $header->subject ) : 'Tugas Baru';
 
         // Ignore automated security / alert emails from Google
-        if ( preg_match( '/(no-reply|accounts\.google\.com|mailer-daemon|notifications@google)/i', $from ) ) {
-            // Mark as seen and skip task creation
+        if ( preg_match( '/(no-reply|accounts\.google\.com|mailer-daemon|notifications@google|google\.com)/i', $from ) ) {
+            $imported_message_ids[] = $message_id_key;
             imap_setflag_full( $inbox, (string)$msg_id, "\\Seen" );
             continue;
         }
 
+        // Fetch and clean body
+        $body_clean = sgd_extract_clean_email_body( $inbox, $msg_id );
+
         // Decipher email using Gemini AI
         $parsed = sgd_ai_decipher_email( $subject, $body_clean, $from );
 
-        // Match assigned members
+        // Resolve Target Team
+        $target_team_id = $cfg['default_team_id'];
+        if ( ! empty( $parsed['team_hint'] ) && ! empty( $all_teams ) ) {
+            $hint = strtolower( trim( $parsed['team_hint'] ) );
+            foreach ( $all_teams as $tm ) {
+                if ( stripos( strtolower( $tm->name ), $hint ) !== false ) {
+                    $target_team_id = (int) $tm->id;
+                    break;
+                }
+            }
+        }
+
+        // Match assigned members (e.g. @jaina -> Jaina the Archmage, user ID 3)
         $assigned_ids = [];
         if ( ! empty( $parsed['assigned_names'] ) && is_array( $parsed['assigned_names'] ) ) {
             foreach ( $parsed['assigned_names'] as $name_mention ) {
@@ -239,11 +297,6 @@ function sgd_process_email_tasks() {
             if ( $matched_user ) {
                 $sender_user_id = (int) $matched_user->ID;
             }
-        }
-
-        // If no members were explicitly matched, assign to sender (if not admin) or leave unassigned
-        if ( empty( $assigned_ids ) && $sender_user_id > 1 ) {
-            $assigned_ids[] = $sender_user_id;
         }
 
         // Format checklist items
@@ -319,6 +372,7 @@ function sgd_process_email_tasks() {
                 'from'        => $from,
             ];
             $processed_count++;
+            $imported_message_ids[] = $message_id_key;
         }
 
         // Mark message as seen in Gmail
@@ -328,7 +382,11 @@ function sgd_process_email_tasks() {
     // Expunge and close connection
     imap_close( $inbox, CL_EXPUNGE );
 
-    // Save sync audit log
+    // Keep up to 500 recent imported message IDs
+    if ( count( $imported_message_ids ) > 500 ) {
+        $imported_message_ids = array_slice( $imported_message_ids, -500 );
+    }
+    update_option( 'sgd_imported_email_ids', $imported_message_ids );
     update_option( 'sgd_email_bot_last_sync', current_time( 'mysql' ) );
     update_option( 'sgd_email_bot_last_count', $processed_count );
 
@@ -347,6 +405,11 @@ add_action( 'init', function() {
     if ( isset( $_POST['sgd_action'] ) && $_POST['sgd_action'] === 'sgd_sync_email_tasks' ) {
         if ( ! current_user_can( 'administrator' ) ) {
             wp_die( 'Akses ditolak.' );
+        }
+
+        // Save default team if selected
+        if ( isset( $_POST['sgd_email_bot_team_id'] ) ) {
+            update_option( 'sgd_email_bot_team_id', (int) $_POST['sgd_email_bot_team_id'] );
         }
 
         $result = sgd_process_email_tasks();
