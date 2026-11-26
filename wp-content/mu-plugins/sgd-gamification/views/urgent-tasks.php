@@ -72,7 +72,7 @@ $urgent_tasks = $wpdb->get_results( "SELECT * FROM $table_tasks WHERE type = 'ur
                     <?php if ( ! empty( $task->external_url ) ): ?>
                         <div style="margin-top:10px;">
                             <a href="<?php echo esc_url( $task->external_url ); ?>" target="_blank" class="sgd-btn sgd-btn-sm sgd-btn-purple" style="font-size:8px; padding:3px 10px; display:inline-flex; align-items:center; gap:5px; text-decoration:none;">
-                                🔗 Open Card in Cicle ↗
+                                🔗 Buka Tautan Tugas ↗
                             </a>
                         </div>
                     <?php endif; ?>

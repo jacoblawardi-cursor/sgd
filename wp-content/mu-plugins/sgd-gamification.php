@@ -877,7 +877,7 @@ function sgd_seed_default_data() {
         $wpdb->insert( $table_quest_teams, [
             'name'        => 'Tim Frontend & Gamification',
             'type'        => 'tim',
-            'description' => 'Divisi pengembangan fitur interaktif, optimasi Kanban board, sistem reward gamifikasi, dan integrasi visual Cicle.',
+            'description' => 'Divisi pengembangan fitur interaktif, optimasi Kanban board, dan sistem reward gamifikasi.',
             'manager_id'  => $emp2_uid, // Jaina
             'member_ids'  => implode( ',', [ $adm_uid, $emp1_uid, $emp2_uid, $emp3_uid ] ),
             'created_by'  => $adm_uid,
@@ -926,7 +926,7 @@ function sgd_seed_default_data() {
                 'team_id'          => $team_tim_id,
                 'column_name'      => 'Selesai',
                 'title'            => 'Perancangan Tata Letak 4 Kolom: To do list, Dikerjakan, Selesai, Batal',
-                'description'      => '<p>Papan Kanban dengan 4 kontainer utama telah selesai diimplementasikan sesuai acuan Cicle dengan warna aksen tematik.</p>',
+                'description'      => '<p>Papan Kanban dengan 4 kontainer utama telah selesai diimplementasikan dengan warna aksen tematik.</p>',
                 'deadline'         => date( 'Y-m-d H:i:s', $now - 86400 * 2 ),
                 'assigned_members' => implode( ',', [ $emp2_uid ] ),
                 'sort_order'       => 1,
@@ -5102,11 +5102,11 @@ function sgd_template_loader( $template ) {
     return $template;
 }
 
-// 4. WP-Admin Quests (Cicle Kanban) Menu for Administrators
+// 4. WP-Admin Quests (Kanban) Menu for Administrators
 add_action( 'admin_menu', 'sgd_register_quests_admin_menu' );
 function sgd_register_quests_admin_menu() {
     add_menu_page(
-        __( 'Quests (Cicle Kanban)', 'sgd' ),
+        __( 'Quests (Kanban)', 'sgd' ),
         __( 'Quests', 'sgd' ),
         'manage_options',
         'sgd-quests',

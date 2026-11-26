@@ -71,10 +71,10 @@ $kanban_columns = [
             <span class="sgd-quests-icon">🎯</span>
             <div>
                 <h1 class="sgd-quests-title">
-                    QUESTS — CICLE KANBAN BOARD
+                    QUESTS — KANBAN BOARD
                 </h1>
                 <p class="sgd-quests-subtitle">
-                    Sistem manajemen tugas terintegrasi: Task Group (HQ, Tim, Proyek) & Papan Kanban 4 Kolom ala Cicle
+                    Sistem manajemen tugas terintegrasi: Task Group (HQ, Tim, Proyek) & Papan Kanban 4 Kolom
                 </p>
             </div>
         </div>
