@@ -301,7 +301,7 @@ $flash = sgd_get_flash();
     <?php if ( $active_tab !== 'home' ): ?>
         <nav class="sgd-nav-tabs">
             <a href="<?php echo esc_url( sgd_get_portal_url() ); ?>" class="sgd-tab-btn" style="border-color:var(--wow-gold-light); color:var(--wow-gold-light);">
-                ◀ MAIN MENU
+                ◀ DASHBOARD
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'achievements' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'achievements' ) ? 'active' : ''; ?>">
                 🏆 ACHIEVEMENT

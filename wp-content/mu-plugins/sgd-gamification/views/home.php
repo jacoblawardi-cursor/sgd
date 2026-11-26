@@ -5,104 +5,114 @@ $user_id = get_current_user_id();
 $diamonds = sgd_get_diamonds( $user_id );
 $is_logged_in = is_user_logged_in();
 $current_user = wp_get_current_user();
+$is_admin = current_user_can( 'administrator' );
+
+$home_xp = sgd_get_user_xp_data( $user_id );
+$home_streak = sgd_get_user_streak( $user_id );
+$home_job_class = sgd_get_user_job_class( $user_id );
+$home_avatar = sgd_get_user_avatar( $user_id );
+$lvl30_candidates = $is_admin ? sgd_get_level_30_candidates() : [];
 
 global $wpdb;
+$table_quest_tasks = $wpdb->prefix . 'sgd_quest_tasks';
+$table_quest_teams = $wpdb->prefix . 'sgd_quest_teams';
 $table_tasks = $wpdb->prefix . 'sgd_tasks';
-if ( current_user_can( 'administrator' ) ) {
-    $daily_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_tasks WHERE type = 'daily' AND status != 'completed'" );
-} else {
-    $daily_count = (int) $wpdb->get_var( $wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_tasks WHERE type = 'daily' AND status != 'completed' AND (assigned_to = 0 OR assigned_to = %d)",
-        $user_id
-    ) );
+$table_daily_reports = $wpdb->prefix . 'sgd_daily_reports';
+
+// 1. My Active Assigned Kanban Tasks
+$my_active_tasks = $wpdb->get_results( $wpdb->prepare(
+    "SELECT t.*, tm.name as team_name, tm.type as team_type 
+     FROM $table_quest_tasks t 
+     LEFT JOIN $table_quest_teams tm ON t.team_id = tm.id 
+     WHERE t.column_name != 'Selesai' AND t.column_name != 'Batal' 
+     AND (FIND_IN_SET(%d, t.assigned_members) OR t.assigned_members LIKE %s OR t.created_by = %d)
+     ORDER BY (t.deadline IS NULL OR t.deadline = '0000-00-00 00:00:00') ASC, t.deadline ASC, t.id DESC 
+     LIMIT 5",
+    $user_id, '%' . $wpdb->esc_like( (string) $user_id ) . '%', $user_id
+) );
+
+$my_active_count = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COUNT(*) FROM $table_quest_tasks WHERE column_name != 'Selesai' AND column_name != 'Batal' AND (FIND_IN_SET(%d, assigned_members) OR assigned_members LIKE %s OR created_by = %d)",
+    $user_id, '%' . $wpdb->esc_like( (string) $user_id ) . '%', $user_id
+) );
+
+// 2. Urgent / Approaching Deadline Tasks (<= 3 Days, Today, or Overdue across all teams)
+$urgent_deadline_tasks = $wpdb->get_results(
+    "SELECT t.*, tm.name as team_name, tm.type as team_type 
+     FROM $table_quest_tasks t 
+     LEFT JOIN $table_quest_teams tm ON t.team_id = tm.id 
+     WHERE t.column_name != 'Selesai' AND t.column_name != 'Batal' 
+     AND t.deadline IS NOT NULL AND t.deadline != '0000-00-00 00:00:00' 
+     AND t.deadline <= DATE_ADD(NOW(), INTERVAL 3 DAY) 
+     ORDER BY t.deadline ASC LIMIT 4"
+);
+
+// 3. Leaderboard Top 3 & User Rank
+$leaderboard_all = function_exists('sgd_get_leaderboard_data') ? sgd_get_leaderboard_data() : [];
+$leaderboard_top = array_slice( $leaderboard_all, 0, 3 );
+$my_rank = 1;
+foreach ( $leaderboard_all as $idx => $lb_user ) {
+    if ( (int) ( $lb_user['user_id'] ?? 0 ) === (int) $user_id ) {
+        $my_rank = $idx + 1;
+        break;
+    }
 }
+
+// 4. Daily Check-in & Tasks
+$today = current_time( 'Y-m-d' );
+$has_daily_report_today = (bool) $wpdb->get_var( $wpdb->prepare(
+    "SELECT id FROM $table_daily_reports WHERE user_id = %d AND report_date = %s LIMIT 1",
+    $user_id, $today
+) );
+$has_spun_wheel_today = ( get_user_meta( $user_id, 'sgd_last_wheel_spin', true ) === $today );
+
+// 5. Classic Daily / Urgent Tasks Count
+$daily_count = (int) $wpdb->get_var( $wpdb->prepare(
+    "SELECT COUNT(*) FROM $table_tasks WHERE type = 'daily' AND status != 'completed' AND (assigned_to = 0 OR assigned_to = %d)",
+    $user_id
+) );
 $urgent_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_tasks WHERE type = 'urgent' AND status != 'completed'" );
-$is_admin = current_user_can( 'administrator' );
+
+// 6. Admin / Manager Alerts
 $sos_requests = $is_admin ? $wpdb->get_results( "SELECT * FROM $table_tasks WHERE help_status = 'requested' ORDER BY need_help_time DESC" ) : [];
 $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}sgd_redemptions WHERE status = 'pending'" ) : 0;
+$all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_teams() : [];
 ?>
 
-<div class="sgd-main-menu-container">
-    
-    <!-- 16-BIT / WOW / GENSHIN / HEARTHSTONE GAME TITLE BANNER -->
-    <div class="sgd-game-header">
-        <div class="sgd-realm-badge">
-            <span class="sgd-theme-text-wow">⚔️ 16-BIT GAMIFICATION REALM • WORLD OF WARCRAFT ⚔️</span>
-            <span class="sgd-theme-text-genshin">✦ TEYVAT ADVENTURERS' GUILD • GENSHIN REALM ✦</span>
-            <span class="sgd-theme-text-hearthstone">🍺 THE INNKEEPER'S TAVERN • HEARTHSTONE REALM 🍺</span>
-        </div>
-        <h1 class="sgd-game-title">
-            <span class="sgd-theme-text-wow">EMPLOYEE QUEST & CASH SHOP</span>
-            <span class="sgd-theme-text-genshin">ADVENTURER COMMISSIONS & SOUVENIR SHOP</span>
-            <span class="sgd-theme-text-hearthstone">TAVERN QUEST LOG & CARD PACK STORE</span>
-        </h1>
-        <div class="sgd-player-summary-bar">
-            <?php 
-            $home_xp = sgd_get_user_xp_data( $user_id ); 
-            $home_streak = sgd_get_user_streak( $user_id );
-            $home_job_class = sgd_get_user_job_class( $user_id );
-            $home_avatar = sgd_get_user_avatar( $user_id );
-            $lvl30_candidates = $is_admin ? sgd_get_level_30_candidates() : [];
-            ?>
-            <span>
-                <span class="sgd-theme-text-wow">PLAYER:</span>
-                <span class="sgd-theme-text-genshin">TRAVELER:</span> 
-                <span class="sgd-theme-text-hearthstone">CHALLENGER:</span>
-                <strong style="color:#fff;"><?php echo $is_logged_in ? esc_html($current_user->display_name) : 'GUEST'; ?></strong>
-                <span class="sgd-job-class-pill <?php echo strtolower($home_job_class) === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>" style="margin-left:6px;">
-                    <?php echo ( strtolower($home_job_class) === 'manager' ? '⭐ ' : '🎖️ ' ) . esc_html($home_job_class); ?>
-                </span>
-            </span>
-            <span style="color:#ffd700;">
-                ★ LEVEL <?php echo $home_xp['level']; ?> 
-                (<span class="sgd-theme-text-wow"><?php echo esc_html($home_xp['faction']); ?></span><span class="sgd-theme-text-genshin">AR <?php echo $home_xp['level']; ?> • <?php echo esc_html($home_xp['faction']); ?></span><span class="sgd-theme-text-hearthstone">Rank <?php echo max(1, 26 - $home_xp['level']); ?> • <?php echo esc_html($home_xp['faction']); ?></span>)
-            </span>
-            <span style="color:#00e5ff;">
-                <span class="sgd-theme-text-wow">💎 TOTAL DIAMONDS:</span>
-                <span class="sgd-theme-text-genshin">✦ PRIMOGEMS:</span> 
-                <span class="sgd-theme-text-hearthstone">💠 ARCANE MANA:</span>
-                <strong style="color:#fff;"><?php echo number_format($diamonds); ?></strong>
-            </span>
-            <span style="color:#ff9f43;">
-                🔥 <span class="sgd-theme-text-wow">STREAK:</span><span class="sgd-theme-text-genshin">COMMISSION STREAK:</span><span class="sgd-theme-text-hearthstone">WIN STREAK:</span> 
-                <strong style="color:#fff;"><?php echo $home_streak['current']; ?> DAYS</strong>
-                <?php if ( $home_streak['bonus_percent'] > 0 ) echo ' <span style="background:rgba(255,159,67,0.25); border:1px solid #ff9f43; padding:1px 6px; border-radius:3px; font-size:9px; color:#ffc048;">+' . $home_streak['bonus_percent'] . '% XP BONUS ⭐</span>'; ?>
-            </span>
-        </div>
-    </div>
+<div class="sgd-dashboard-wrap">
 
     <!-- FLASHING EMERGENCY SOS HELP ALERT BANNER (FOR ADMIN) -->
     <?php if ( $is_admin && ! empty( $sos_requests ) ): ?>
-        <div class="sgd-sos-active-alert" style="background:radial-gradient(circle at 50% 20%, #4a1010 0%, #200505 100%); border:3px solid #ff4444; border-radius:8px; padding:16px 20px; margin-bottom:20px; box-shadow:0 0 25px rgba(255,68,68,0.5); animation:pulse-urgent 1.2s infinite; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div class="sgd-sos-active-alert" style="background:radial-gradient(circle at 50% 20%, #4a1010 0%, #200505 100%); border:3px solid #ff4444; border-radius:10px; padding:16px 20px; margin-bottom:20px; box-shadow:0 0 25px rgba(255,68,68,0.5); animation:pulse-urgent 1.2s infinite; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div style="display:flex; align-items:center; gap:14px;">
                 <span style="font-size:32px;">🚨</span>
                 <div>
-                    <div style="font-family:var(--font-pixel); font-size:9px; color:#ff9999; letter-spacing:1px; text-transform:uppercase;">
-                        EMERGENCY SOS: <?php echo count($sos_requests); ?> EMPLOYEE(S) NEED HELP!
+                    <div style="font-family:var(--font-pixel); font-size:10px; color:#ff9999; letter-spacing:1px; text-transform:uppercase;">
+                        EMERGENCY SOS: <?php echo count($sos_requests); ?> KARYAWAN MEMBUTUHKAN BANTUAN!
                     </div>
                     <div style="font-size:13px; color:#fff; margin-top:3px;">
                         <?php 
                         $first_sos = $sos_requests[0];
                         $sos_emp = get_user_by('id', $first_sos->need_help_by);
-                        echo '<strong>' . ($sos_emp ? esc_html($sos_emp->display_name) : 'An employee') . '</strong> requested help on: <em>' . esc_html($first_sos->title) . '</em> (' . esc_html($first_sos->need_help_time) . ')';
+                        echo '<strong>' . ($sos_emp ? esc_html($sos_emp->display_name) : 'Karyawan') . '</strong> meminta bantuan pada: <em>' . esc_html($first_sos->title) . '</em>';
                         ?>
                     </div>
                 </div>
             </div>
             <a href="<?php echo esc_url( sgd_get_portal_url('admin') ); ?>" class="sgd-btn sgd-btn-sm sgd-btn-gold" style="white-space:nowrap;">
-                🛡️ Open SOS Dispatch Board ➔
+                🛡️ Buka SOS Dispatch Board ➔
             </a>
         </div>
     <?php endif; ?>
 
     <!-- LEVEL 30 PROMOTION ALERT BANNER (FOR ADMIN) -->
     <?php if ( $is_admin && ! empty( $lvl30_candidates ) ): ?>
-        <div class="sgd-lvl30-home-banner" style="background:radial-gradient(circle at 50% 20%, #2e240a 0%, #151105 100%); border:3px solid #ffd700; border-radius:8px; padding:16px 20px; margin-bottom:20px; box-shadow:0 0 25px rgba(255,215,0,0.5); animation:pulse-urgent 2s infinite; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div class="sgd-lvl30-home-banner" style="background:radial-gradient(circle at 50% 20%, #2e240a 0%, #151105 100%); border:3px solid #ffd700; border-radius:10px; padding:16px 20px; margin-bottom:20px; box-shadow:0 0 25px rgba(255,215,0,0.5); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div style="display:flex; align-items:center; gap:14px;">
                 <span style="font-size:34px;">👑</span>
                 <div>
-                    <div style="font-family:var(--font-pixel); font-size:9px; color:#ffd700; letter-spacing:1px; text-transform:uppercase;">
-                        ⭐ LEVEL 30 PROMOTION NOTICE: <?php echo count($lvl30_candidates); ?> HERO(ES) REACHED LEVEL 30!
+                    <div style="font-family:var(--font-pixel); font-size:10px; color:#ffd700; letter-spacing:1px; text-transform:uppercase;">
+                        ⭐ PEMBERITAHUAN PROMOSI LEVEL 30 (CALON MANAGER):
                     </div>
                     <div style="font-size:13px; color:#fff; margin-top:3px;">
                         <?php 
@@ -111,346 +121,452 @@ $pending_orders_count = $is_admin ? (int) $wpdb->get_var( "SELECT COUNT(*) FROM 
                             $names_list[] = '<strong>' . esc_html($c['display_name']) . '</strong> (' . esc_html($c['job_class']) . ')';
                         }
                         echo implode(', ', $names_list);
-                        ?> reached Level 30! Assign special custom task and promote them from Staff to Manager.
+                        ?> telah mencapai Level 30! Silakan evaluasi dan promosikan menjadi Manager.
                     </div>
                 </div>
             </div>
             <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'admin', 'admin_tab' => 'promotion' ], home_url( '/' ) ) ); ?>" class="sgd-btn sgd-btn-sm sgd-btn-gold" style="white-space:nowrap;">
-                👑 Open Promotion Hall ➔
+                👑 Buka Promotion Hall ➔
             </a>
         </div>
     <?php endif; ?>
 
-    <!-- FANCY HERO PROGRESSION & XP SHOWCASE WIDGET (FOR EMPLOYEES) -->
-    <?php if ( $is_logged_in && ! $is_admin ): 
-        $p_status = get_user_meta( $user_id, 'sgd_promotion_status', true );
-        $is_lvl30 = ( $home_xp['level'] >= 30 );
-    ?>
-        <div class="sgd-employee-hero-showcase <?php echo $is_lvl30 ? 'sgd-hero-lvl30-active' : ''; ?>">
-            <div class="sgd-showcase-left">
-                <div class="sgd-showcase-avatar-ring <?php echo $is_lvl30 ? 'ring-gold-mythic' : ''; ?>">
-                    <span class="sgd-showcase-avatar-icon"><?php echo $home_avatar; ?></span>
-                    <span class="sgd-showcase-lvl-badge <?php echo $is_lvl30 ? 'badge-gold-30' : ''; ?>">
-                        <?php echo $home_xp['level']; ?>
-                    </span>
+    <!-- 1. HERO WELCOME & LEVEL PROGRESSION -->
+    <div class="sgd-dashboard-hero">
+        <div class="sgd-hero-top">
+            <div class="sgd-hero-profile">
+                <div class="sgd-hero-avatar-ring">
+                    <span><?php echo $home_avatar; ?></span>
+                    <span class="sgd-hero-lvl-tag">Lv.<?php echo $home_xp['level']; ?></span>
                 </div>
-                <div class="sgd-showcase-meta">
-                    <div class="sgd-showcase-name-row">
-                        <span class="sgd-showcase-name"><?php echo esc_html( $current_user->display_name ); ?></span>
+                <div>
+                    <h2 class="sgd-hero-greeting">
+                        Selamat Datang kembali, <?php echo $is_logged_in ? esc_html($current_user->display_name) : 'Guest Hero'; ?>!
                         <span class="sgd-job-class-pill <?php echo strtolower($home_job_class) === 'manager' ? 'sgd-job-class-manager' : 'sgd-job-class-staff'; ?>">
                             <?php echo ( strtolower($home_job_class) === 'manager' ? '⭐ MANAGER' : '🎖️ STAFF' ); ?>
                         </span>
-                        <?php if ( $is_lvl30 ): ?>
-                            <span class="sgd-status-badge" style="background:#ffd700; color:#000; font-weight:bold; font-size:7px;">
-                                👑 LEVEL 30 MASTER
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="sgd-showcase-title-row">
-                        <span style="color:#ffd700; font-family:var(--font-title); font-size:13px;">👑 <?php echo esc_html( $home_xp['title'] ); ?></span>
-                        <span style="color:#7f8fa6;">• <?php echo esc_html( $home_xp['faction'] ); ?></span>
-                    </div>
+                    </h2>
+                    <p class="sgd-hero-subtitle">
+                        <?php echo esc_html( $home_xp['title'] ); ?> • Divisi: <strong style="color:#00e5ff;"><?php echo esc_html( $home_xp['faction'] ); ?></strong>
+                    </p>
+                </div>
+            </div>
 
-                    <!-- Level 30 Promotion Status Notice for Employee -->
-                    <?php if ( $is_lvl30 ): ?>
-                        <div class="sgd-promo-status-banner">
-                            <?php if ( strtolower($home_job_class) === 'manager' || $p_status === 'promoted' ): ?>
-                                <span style="color:#2ecc71;">🎉 <strong>PROMOTED TO MANAGER!</strong> You have successfully earned executive guild status!</span>
-                            <?php elseif ( $p_status === 'task_completed' ): ?>
-                                <span style="color:#ffd700;">✨ <strong>SPECIAL PROMOTION TRIAL SUBMITTED!</strong> Grand Marshal Admin is reviewing your leadership proof for Manager promotion.</span>
-                            <?php elseif ( $p_status === 'task_assigned' ): ?>
-                                <span style="color:#00e5ff;">🌟 <strong>SPECIAL PROMOTION TRIAL ASSIGNED!</strong> Complete your custom task on the Daily Tasks board to qualify for Manager!</span>
-                            <?php else: ?>
-                                <span style="color:#f39c12;">🎓 <strong>LEVEL 30 MILESTONE REACHED!</strong> Grand Marshal Admin notified for your Manager promotion evaluation.</span>
-                            <?php endif; ?>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-btn sgd-btn-gold" style="font-weight:bold; box-shadow:0 0 15px rgba(255,215,0,0.35);">
+                    🎯 Buka Papan Kanban ➔
+                </a>
+            </div>
+        </div>
+
+        <!-- Experience Bar -->
+        <div class="sgd-hero-xp-section">
+            <div class="sgd-hero-xp-info">
+                <span style="color:#ffd700; font-weight:bold;">👑 Progres Level Hero:</span>
+                <span style="color:#fff;">
+                    <strong><?php echo number_format($home_xp['xp_in_level']); ?></strong> / <?php echo number_format($home_xp['xp_needed']); ?> XP
+                    <span style="color:#ffd700; font-weight:bold;">(<?php echo $home_xp['percent']; ?>%)</span>
+                </span>
+            </div>
+            <div class="sgd-hero-xp-track">
+                <div class="sgd-hero-xp-fill" style="width:<?php echo $home_xp['percent']; ?>%;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:10px; color:#8fa0bd;">
+                <span>Level <?php echo $home_xp['level']; ?></span>
+                <span>✨ Total: <?php echo number_format($home_xp['total_xp']); ?> XP</span>
+                <span>Target: Level <?php echo min(60, $home_xp['level'] + 1); ?></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. HIGH-IMPACT 4 KPI STATS METRIC CARDS -->
+    <div class="sgd-kpi-grid">
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'shop' ) ); ?>" class="sgd-kpi-card kpi-diamonds" title="Klik untuk belanja di Cash Shop">
+            <div class="sgd-kpi-icon" style="color:#00e5ff;">💎</div>
+            <div class="sgd-kpi-content">
+                <div class="sgd-kpi-label">Saldo Diamonds / Gold</div>
+                <div class="sgd-kpi-value" style="color:#00e5ff;"><?php echo number_format($diamonds); ?> 💎</div>
+                <div class="sgd-kpi-sub">Tukar Voucher & Cuti ➔</div>
+            </div>
+        </a>
+
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'achievements' ) ); ?>" class="sgd-kpi-card kpi-xp" title="Klik untuk melihat Pencapaian & Feats">
+            <div class="sgd-kpi-icon" style="color:#ffd700;">⭐</div>
+            <div class="sgd-kpi-content">
+                <div class="sgd-kpi-label">Level & Total XP</div>
+                <div class="sgd-kpi-value" style="color:#ffd700;">Lv. <?php echo $home_xp['level']; ?></div>
+                <div class="sgd-kpi-sub"><?php echo number_format($home_xp['total_xp']); ?> Total XP • <?php echo $home_xp['ach_count']; ?> Badges</div>
+            </div>
+        </a>
+
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'daily' ) ); ?>" class="sgd-kpi-card kpi-streak" title="Login harian untuk mempertahankan streak">
+            <div class="sgd-kpi-icon" style="color:#ff9f43;">🔥</div>
+            <div class="sgd-kpi-content">
+                <div class="sgd-kpi-label">Daily Login Streak</div>
+                <div class="sgd-kpi-value" style="color:#ff9f43;"><?php echo (int) $home_streak['current']; ?> Hari</div>
+                <div class="sgd-kpi-sub">
+                    <?php echo $home_streak['bonus_percent'] > 0 ? "+{$home_streak['bonus_percent']}% XP Bonus Aktif!" : "Pertahankan streak tiap hari"; ?>
+                </div>
+            </div>
+        </a>
+
+        <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-kpi-card kpi-tasks" title="Lihat tugas yang sedang Anda kerjakan">
+            <div class="sgd-kpi-icon" style="color:#2ecc71;">🎯</div>
+            <div class="sgd-kpi-content">
+                <div class="sgd-kpi-label">Tugas Aktif Saya</div>
+                <div class="sgd-kpi-value" style="color:#2ecc71;"><?php echo $my_active_count; ?> Tugas</div>
+                <div class="sgd-kpi-sub">Di Papan Kanban Quests ➔</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- 3. QUICK LAUNCHPAD TOOLBAR (ALL MODULES IN 1 CLICK) -->
+    <div class="sgd-quick-launchpad">
+        <div class="sgd-launchpad-title">
+            <span>⚡ Akses Cepat Modul Utama (Quick Launchpad)</span>
+        </div>
+        <div class="sgd-launchpad-tiles">
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-launch-tile highlight" title="Papan Kanban Tugas Terintegrasi">
+                <span class="sgd-tile-icon">🎯</span>
+                <span>Papan Kanban</span>
+            </a>
+
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'laporan-harian' ) ); ?>" class="sgd-launch-tile" title="Laporan Harian Lapangan Suara & AI Decipher">
+                <span class="sgd-tile-icon">📋</span>
+                <span>Laporan Harian</span>
+                <?php if ( ! $has_daily_report_today ): ?>
+                    <span class="sgd-tile-badge">+200XP</span>
+                <?php endif; ?>
+            </a>
+
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'wheel' ) ); ?>" class="sgd-launch-tile" title="Putar Roda Keberuntungan Harian">
+                <span class="sgd-tile-icon">🎰</span>
+                <span>Fortune Wheel</span>
+                <?php if ( ! $has_spun_wheel_today ): ?>
+                    <span class="sgd-tile-badge">Free</span>
+                <?php endif; ?>
+            </a>
+
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'shop' ) ); ?>" class="sgd-launch-tile" title="Tukar Diamonds dengan Voucher Uang & Cuti">
+                <span class="sgd-tile-icon">💎</span>
+                <span>Cash Shop</span>
+            </a>
+
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'leaderboard' ) ); ?>" class="sgd-launch-tile" title="Peringkat Karyawan & Skuad Tim">
+                <span class="sgd-tile-icon">👑</span>
+                <span>Hall of Fame</span>
+            </a>
+
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'daily' ) ); ?>" class="sgd-launch-tile" title="Tugas Harian / Daily Commissions">
+                <span class="sgd-tile-icon">📜</span>
+                <span>Daily Tasks</span>
+                <?php if ( $daily_count > 0 ): ?>
+                    <span class="sgd-tile-badge"><?php echo $daily_count; ?></span>
+                <?php endif; ?>
+            </a>
+
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'urgent' ) ); ?>" class="sgd-launch-tile" title="Tugas Mendesak Kritis (+1,000 Diamonds)">
+                <span class="sgd-tile-icon">⚡</span>
+                <span>Urgent Tasks</span>
+                <?php if ( $urgent_count > 0 ): ?>
+                    <span class="sgd-tile-badge"><?php echo $urgent_count; ?></span>
+                <?php endif; ?>
+            </a>
+
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'bounties' ) ); ?>" class="sgd-launch-tile" title="Papan Permintaan Bantuan Rekan Kerja">
+                <span class="sgd-tile-icon">🤝</span>
+                <span>Bounty Board</span>
+            </a>
+
+            <?php if ( $is_admin ): ?>
+                <a href="<?php echo esc_url( sgd_get_portal_url( 'admin' ) ); ?>" class="sgd-launch-tile admin-tile" title="Pusat Kendali Administrator">
+                    <span class="sgd-tile-icon">🛡️</span>
+                    <span>Admin Center</span>
+                    <?php if ( $pending_orders_count > 0 || ! empty( $sos_requests ) ): ?>
+                        <span class="sgd-tile-badge">!</span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- 4. MAIN DASHBOARD 2-COLUMN GRID -->
+    <div class="sgd-dashboard-grid">
+
+        <!-- LEFT COLUMN: FOCUS & ACTIONABLES -->
+        <div class="sgd-dash-col-left">
+
+            <!-- CARD 1: TUGAS AKTIF SAYA -->
+            <div class="sgd-dash-card">
+                <div class="sgd-dash-card-header">
+                    <h3 class="sgd-dash-card-title">
+                        <span>🎯 Tugas & Misi Saya Hari Ini</span>
+                        <span style="font-size:11px; background:rgba(0,229,255,0.15); color:#00e5ff; padding:2px 8px; border-radius:10px; font-weight:normal;">
+                            <?php echo count($my_active_tasks); ?> Berjalan
+                        </span>
+                    </h3>
+                    <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-dash-card-link">
+                        Buka Semua di Kanban ➔
+                    </a>
+                </div>
+                <div class="sgd-dash-card-body">
+                    <?php if ( empty( $my_active_tasks ) ): ?>
+                        <div style="text-align:center; padding:26px 12px; color:#8fa0bd;">
+                            <span style="font-size:36px; display:block; margin-bottom:8px;">🎉</span>
+                            <div style="font-weight:bold; color:#fff; margin-bottom:4px;">Semua tugas Anda saat ini telah selesai!</div>
+                            <div style="font-size:12px; margin-bottom:14px;">Belum ada tugas aktif yang ditugaskan kepada Anda.</div>
+                            <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-btn sgd-btn-sm sgd-btn-blue">
+                                + Ambil Tugas Baru di Kanban
+                            </a>
+                        </div>
+                    <?php else: ?>
+                        <div class="sgd-dash-task-list">
+                            <?php foreach ( $my_active_tasks as $mt ): 
+                                $mt_d_ts = ! empty( $mt->deadline ) && $mt->deadline !== '0000-00-00 00:00:00' ? strtotime( $mt->deadline ) : null;
+                                $mt_dl_badge = '';
+                                if ( $mt_d_ts ) {
+                                    $diff_days = (int) round( ( strtotime( 'today', $mt_d_ts ) - strtotime( 'today', current_time('timestamp') ) ) / 86400 );
+                                    if ( $diff_days < 0 ) {
+                                        $mt_dl_badge = '<span class="sgd-task-deadline-pill overdue">⚠️ Lewat: ' . date('d M', $mt_d_ts) . '</span>';
+                                    } elseif ( $diff_days === 0 ) {
+                                        $mt_dl_badge = '<span class="sgd-task-deadline-pill today">🚨 Hari Ini (' . date('H:i', $mt_d_ts) . ')</span>';
+                                    } elseif ( $diff_days === 1 ) {
+                                        $mt_dl_badge = '<span class="sgd-task-deadline-pill urgent-3days">⏰ Besok</span>';
+                                    } else {
+                                        $mt_dl_badge = '<span class="sgd-task-deadline-pill safe">📅 ' . date('d M', $mt_d_ts) . '</span>';
+                                    }
+                                }
+
+                                // Checklist completion ratio
+                                $chk_raw = json_decode( $mt->checklist ?? '[]', true );
+                                $chk_total = is_array($chk_raw) ? count($chk_raw) : 0;
+                                $chk_done = is_array($chk_raw) ? count(array_filter($chk_raw, fn($c) => !empty($c['completed']))) : 0;
+                            ?>
+                                <div class="sgd-dash-task-item">
+                                    <div class="sgd-dash-task-top">
+                                        <div style="flex:1;">
+                                            <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $mt->team_id, 'open_task' => $mt->id ], home_url( '/' ) ) ); ?>" class="sgd-dash-task-title">
+                                                <?php echo esc_html( $mt->title ); ?>
+                                            </a>
+                                            <div style="font-size:11px; color:#8fa0bd; margin-top:2px;">
+                                                Grup: <strong><?php echo esc_html( $mt->team_name ?: 'Tim' ); ?></strong>
+                                            </div>
+                                        </div>
+                                        <div style="text-align:right;">
+                                            <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.08); color:#ffd700; font-family:var(--font-pixel, monospace); font-weight:bold;">
+                                                Lv.<?php echo max(1, (int)$mt->quest_level); ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="sgd-dash-task-meta">
+                                        <span class="sgd-card-status-pill" style="font-size:10px; padding:1px 6px; border-radius:4px; background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.3); color:#00e5ff;">
+                                            <?php echo esc_html( $mt->column_name ); ?>
+                                        </span>
+                                        <?php if ( $mt_dl_badge ) echo $mt_dl_badge; ?>
+                                        <?php if ( $chk_total > 0 ): ?>
+                                            <span style="font-size:10px; color:#8fa0bd;">
+                                                ☑️ Checklist: <strong><?php echo $chk_done; ?>/<?php echo $chk_total; ?></strong>
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ( ! empty($mt->cover_image) && $mt->cover_image !== 'none' ): ?>
+                                            <span style="font-size:10px; color:#ffd700;">🖼️ Cover</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <!-- FANCY ANIMATED GOLDEN XP BAR -->
-            <div class="sgd-showcase-xp-block">
-                <div class="sgd-showcase-xp-top">
-                    <span class="sgd-showcase-xp-tag">👑 HERO EXPERIENCE PROGRESSION (GOLDEN PATH):</span>
-                    <strong class="sgd-showcase-xp-ratio">
-                        <?php echo number_format($home_xp['xp_in_level']); ?> / <?php echo number_format($home_xp['xp_needed']); ?> XP 
-                        <span class="sgd-gold-xp-pill"><?php echo $home_xp['percent']; ?>%</span>
-                    </strong>
+            <!-- CARD 2: PERINGATAN DEADLINE MENDESAK -->
+            <div class="sgd-dash-card" style="border-color:rgba(255,71,87,0.35);">
+                <div class="sgd-dash-card-header" style="background:rgba(255,71,87,0.06);">
+                    <h3 class="sgd-dash-card-title" style="color:#ff6b81;">
+                        <span>🚨 Peringatan Deadline Mendesak (&le; 3 Hari)</span>
+                    </h3>
+                    <span style="font-size:11px; color:#8fa0bd;">Semua Tim</span>
                 </div>
-                <div class="sgd-showcase-xp-bar-outer">
-                    <div class="sgd-showcase-xp-bar-fill" style="width:<?php echo $home_xp['percent']; ?>%;">
-                        <span class="sgd-showcase-xp-gloss"></span>
-                        <span class="sgd-showcase-xp-light-sweep"></span>
-                        <span class="sgd-showcase-xp-spark">
-                            <span class="sgd-spark-star">✦</span>
-                        </span>
-                    </div>
-                </div>
-                <div class="sgd-showcase-xp-bottom">
-                    <span>Current Floor: <strong>Level <?php echo $home_xp['level']; ?></strong></span>
-                    <span class="sgd-total-xp-counter">✨ <?php echo number_format($home_xp['total_xp']); ?> Total XP Earned</span>
-                    <span>Target: <strong>Level <?php echo min(60, $home_xp['level'] + 1); ?></strong> ➔</span>
+                <div class="sgd-dash-card-body">
+                    <?php if ( empty( $urgent_deadline_tasks ) ): ?>
+                        <div style="text-align:center; padding:16px 12px; color:#2ecc71; font-size:12px;">
+                            ✅ Tidak ada tugas yang mendekati deadline mendesak saat ini. Semua jadwal aman!
+                        </div>
+                    <?php else: ?>
+                        <div class="sgd-dash-task-list">
+                            <?php foreach ( $urgent_deadline_tasks as $ut ): 
+                                $ut_d_ts = strtotime( $ut->deadline );
+                                $diff_days = (int) round( ( strtotime( 'today', $ut_d_ts ) - strtotime( 'today', current_time('timestamp') ) ) / 86400 );
+                                $urgency_tag = '';
+                                if ( $diff_days < 0 ) {
+                                    $urgency_tag = '<span class="sgd-task-deadline-pill overdue">⚠️ Lewat: ' . date('d M', $ut_d_ts) . '</span>';
+                                } elseif ( $diff_days === 0 ) {
+                                    $urgency_tag = '<span class="sgd-task-deadline-pill today">🚨 Hari Ini (' . date('H:i', $ut_d_ts) . ')</span>';
+                                } elseif ( $diff_days === 1 ) {
+                                    $urgency_tag = '<span class="sgd-task-deadline-pill urgent-3days">⏰ Besok</span>';
+                                } else {
+                                    $urgency_tag = '<span class="sgd-task-deadline-pill urgent-3days">⏰ ' . $diff_days . ' hari lagi</span>';
+                                }
+                            ?>
+                                <div class="sgd-dash-task-item" style="border-left:3px solid #ff4757;">
+                                    <div class="sgd-dash-task-top">
+                                        <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $ut->team_id, 'open_task' => $ut->id ], home_url( '/' ) ) ); ?>" class="sgd-dash-task-title">
+                                            <?php echo esc_html( $ut->title ); ?>
+                                        </a>
+                                        <?php echo $urgency_tag; ?>
+                                    </div>
+                                    <div class="sgd-dash-task-meta">
+                                        <span style="color:#8fa0bd;">Grup: <strong><?php echo esc_html( $ut->team_name ?: 'Tim' ); ?></strong></span>
+                                        <span style="color:#718093;">• Kolom: <?php echo esc_html( $ut->column_name ); ?></span>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
+
         </div>
-    <?php endif; ?>
 
-    <!-- THE MAIN HOMEPAGE BUTTONS -->
-    <div class="sgd-main-menu-list">
-        
-        <!-- 1. ACHIEVEMENT BUTTON -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'achievements' ) ); ?>" class="sgd-wow-menu-btn btn-achievement">
-            <span class="sgd-menu-btn-icon">🏆</span>
-            <div class="sgd-menu-btn-content">
-                <span class="sgd-menu-btn-label">
-                    <span class="sgd-theme-text-wow">ACHIEVEMENT</span>
-                    <span class="sgd-theme-text-genshin">✦ WONDERS OF THE WORLD</span>
-                    <span class="sgd-theme-text-hearthstone">🎴 HALL OF FAME FEATS</span>
-                </span>
-                <span class="sgd-menu-btn-desc">
-                    <span class="sgd-theme-text-wow">List of employee achievements, badges & feats of honor</span>
-                    <span class="sgd-theme-text-genshin">Adventurer feats, Primogem milestones & memories of Teyvat</span>
-                    <span class="sgd-theme-text-hearthstone">Legendary card achievements, tavern milestones & golden glory</span>
-                </span>
-            </div>
-            <span class="sgd-menu-btn-arrow">➔</span>
-        </a>
+        <!-- RIGHT COLUMN: OVERVIEW & PROGRESSION -->
+        <div class="sgd-dash-col-right">
 
-        <!-- 2. DAILY TASK BUTTON -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'daily' ) ); ?>" class="sgd-wow-menu-btn btn-daily">
-            <span class="sgd-menu-btn-icon">📜</span>
-            <div class="sgd-menu-btn-content">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="sgd-menu-btn-label">
-                        <span class="sgd-theme-text-wow">DAILY TASK</span>
-                        <span class="sgd-theme-text-genshin">✦ DAILY COMMISSIONS</span>
-                        <span class="sgd-theme-text-hearthstone">📜 TAVERN QUEST LOG</span>
-                    </span>
-                    <span class="sgd-pill-reward">
-                        <span class="sgd-theme-text-wow">+200 XP ⭐ REWARD</span>
-                        <span class="sgd-theme-text-genshin">+200 XP ⭐ REWARD</span>
-                        <span class="sgd-theme-text-hearthstone">+200 XP ⭐ REWARD</span>
-                    </span>
-                    <?php if ( $daily_count > 0 ): ?>
-                        <span class="sgd-pill-count"><?php echo $daily_count; ?> Available</span>
-                    <?php endif; ?>
+            <!-- CARD 3: TOP 3 LEADERBOARD (HALL OF FAME) -->
+            <div class="sgd-dash-card">
+                <div class="sgd-dash-card-header">
+                    <h3 class="sgd-dash-card-title">
+                        <span>👑 Peringkat Karyawan (Top 3)</span>
+                    </h3>
+                    <a href="<?php echo esc_url( sgd_get_portal_url( 'leaderboard' ) ); ?>" class="sgd-dash-card-link">
+                        Peringkat Lengkap ➔
+                    </a>
                 </div>
-                <span class="sgd-menu-btn-desc">
-                    <span class="sgd-theme-text-wow">Contains jobs to do • "Need Help" & "Finish Job" with photo proof</span>
-                    <span class="sgd-theme-text-genshin">Katheryne's Guild • Complete daily commissions & claim XP</span>
-                    <span class="sgd-theme-text-hearthstone">Daily tavern duties • Complete quests to earn experience & level up</span>
-                </span>
-            </div>
-            <span class="sgd-menu-btn-arrow">➔</span>
-        </a>
-
-        <!-- 2.5 LAPORAN HARIAN (DAILY WORK REPORT) BUTTON -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'laporan-harian' ) ); ?>" class="sgd-wow-menu-btn btn-laporan" style="border-color:#00e5ff; background:radial-gradient(ellipse at 10% 50%, rgba(0, 229, 255, 0.15) 0%, rgba(13, 20, 38, 0.95) 75%);">
-            <span class="sgd-menu-btn-icon" style="filter:drop-shadow(0 0 10px #00e5ff);">📋</span>
-            <div class="sgd-menu-btn-content">
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span class="sgd-menu-btn-label" style="color:#00e5ff;">
-                        <span class="sgd-theme-text-wow">LAPORAN HARIAN (DAILY REPORT)</span>
-                        <span class="sgd-theme-text-genshin">✦ EXPEDITION & FIELD CHRONICLE</span>
-                        <span class="sgd-theme-text-hearthstone">📋 INNKEEPER'S DAILY CHRONICLE</span>
-                    </span>
-                    <span class="sgd-pill-reward" style="background:rgba(0,229,255,0.2); border-color:#00e5ff; color:#00e5ff;">
-                        <span class="sgd-theme-text-wow">+200 XP ⭐ REWARD</span>
-                        <span class="sgd-theme-text-genshin">+200 XP ⭐ REWARD</span>
-                        <span class="sgd-theme-text-hearthstone">+200 XP ⭐ REWARD</span>
-                    </span>
-                    <span style="font-family:var(--font-pixel); font-size:8px; background:#70a1ff; color:#0b1933; padding:2px 6px; border-radius:3px;">🎙️ VOICE & AI DECIPHER</span>
-                </div>
-                <span class="sgd-menu-btn-desc">Input via teks / suara • Smart AI decipher: cuaca per jam, tenaga kerja, material masuk, alat, K3 & 3 foto progress</span>
-            </div>
-            <span class="sgd-menu-btn-arrow" style="color:#00e5ff;">➔</span>
-        </a>
-
-        <!-- 3. URGENT TASK BUTTON -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'urgent' ) ); ?>" class="sgd-wow-menu-btn btn-urgent">
-            <span class="sgd-menu-btn-icon" style="animation: pulse-urgent 1.2s infinite;">⚡</span>
-            <div class="sgd-menu-btn-content">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="sgd-menu-btn-label" style="color:#ff8577;">
-                        <span class="sgd-theme-text-wow">URGENT TASK</span>
-                        <span class="sgd-theme-text-genshin">✦ TROUNCE DOMAIN & CRISIS</span>
-                        <span class="sgd-theme-text-hearthstone">⚔️ HEROIC TAVERN BRAWL</span>
-                    </span>
-                    <span class="sgd-pill-reward urgent-reward">
-                        <span class="sgd-theme-text-wow">+1,000 💎 REWARD</span>
-                        <span class="sgd-theme-text-genshin">+1,000 ✦ PRIMOGEMS</span>
-                        <span class="sgd-theme-text-hearthstone">+1,000 💠 MANA</span>
-                    </span>
-                    <?php if ( $urgent_count > 0 ): ?>
-                        <span class="sgd-pill-count urgent-count"><?php echo $urgent_count; ?> Critical</span>
-                    <?php endif; ?>
-                </div>
-                <span class="sgd-menu-btn-desc">
-                    <span class="sgd-theme-text-wow">Emergency jobs anyone could take • "Take Job" & "Finish Job" with photo proof</span>
-                    <span class="sgd-theme-text-genshin">High priority domain challenges • Take job & submit proof for rewards</span>
-                    <span class="sgd-theme-text-hearthstone">Heroic tavern boss challenges • Slay urgent emergencies for massive rewards</span>
-                </span>
-            </div>
-            <span class="sgd-menu-btn-arrow">➔</span>
-        </a>
-
-        <!-- 4. CASH SHOP BUTTON -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'shop' ) ); ?>" class="sgd-wow-menu-btn btn-cash-shop">
-            <span class="sgd-menu-btn-icon">💎</span>
-            <div class="sgd-menu-btn-content">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="sgd-menu-btn-label" style="color:#80deea;">
-                        <span class="sgd-theme-text-wow">CASH SHOP</span>
-                        <span class="sgd-theme-text-genshin">✦ PAIMON'S BARGAINS & SOUVENIRS</span>
-                        <span class="sgd-theme-text-hearthstone">💎 TAVERN VAULT & DUST CRAFT</span>
-                    </span>
-                    <span class="sgd-pill-reward shop-reward">
-                        <span class="sgd-theme-text-wow">TRADE DIAMONDS</span>
-                        <span class="sgd-theme-text-genshin">TRADE PRIMOGEMS</span>
-                        <span class="sgd-theme-text-hearthstone">SPEND MANA</span>
-                    </span>
-                </div>
-                <span class="sgd-menu-btn-desc">IDR 200k Voucher (1k 💎) • 1 Day Paid Leave (20k 💎) • Holiday Trip (100k 💎)</span>
-            </div>
-            <span class="sgd-menu-btn-arrow">➔</span>
-        </a>
-
-        <!-- 5. HALL OF LEGENDS & GUILDS BUTTON -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'leaderboard' ) ); ?>" class="sgd-wow-menu-btn btn-leaderboard" style="background:linear-gradient(180deg, #2b134d 0%, #0f071f 100%); border-color:#9b59b6;">
-            <span class="sgd-menu-btn-icon" style="border-color:#9b59b6;">👑</span>
-            <div class="sgd-menu-btn-content">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="sgd-menu-btn-label" style="color:#e056fd;">
-                        <span class="sgd-theme-text-wow">HALL OF LEGENDS & GUILDS</span>
-                        <span class="sgd-theme-text-genshin">✦ SPIRAL ABYSS & ADVENTURER RANKINGS</span>
-                        <span class="sgd-theme-text-hearthstone">👑 LEGEND LADDER & TAVERN DECKS</span>
-                    </span>
-                    <span class="sgd-pill-reward" style="background:#8e44ad; border-color:#be2edd;">RANKINGS & SQUADS</span>
-                </div>
-                <span class="sgd-menu-btn-desc">Guild Standings • Department Squad Vaults • Peer Mana & Kudos (50 💎)</span>
-            </div>
-            <span class="sgd-menu-btn-arrow" style="color:#e056fd;">➔</span>
-        </a>
-
-        <!-- 6. GOBLIN DAILY FORTUNE WHEEL -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'wheel' ) ); ?>" class="sgd-wow-menu-btn btn-wheel" style="background:linear-gradient(180deg, #3d2c07 0%, #171003 100%); border-color:#ffd700;">
-            <span class="sgd-menu-btn-icon" style="border-color:#ffd700;">🎰</span>
-            <div class="sgd-menu-btn-content">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="sgd-menu-btn-label" style="color:#ffd700;">
-                        <span class="sgd-theme-text-wow">GOBLIN FORTUNE WHEEL</span>
-                        <span class="sgd-theme-text-genshin">✦ STELLA FORTUNA (WISH PRAYER)</span>
-                        <span class="sgd-theme-text-hearthstone">🎴 GOLDEN PACK OPENING (WHEEL)</span>
-                    </span>
-                    <span class="sgd-pill-reward" style="background:#d49a00; color:#000; font-weight:bold;">
-                        <span class="sgd-theme-text-wow">1 FREE DAILY SPIN</span>
-                        <span class="sgd-theme-text-genshin">1 FREE DAILY WISH</span>
-                        <span class="sgd-theme-text-hearthstone">1 FREE DAILY DRAW</span>
-                    </span>
-                </div>
-                <span class="sgd-menu-btn-desc">Spin for +500 💎 Jackpots, Streak Shields, Coffee Tokens & Arcane XP</span>
-            </div>
-            <span class="sgd-menu-btn-arrow" style="color:#ffd700;">➔</span>
-        </a>
-
-        <!-- 7. PEER BOUNTY BOARD -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'bounties' ) ); ?>" class="sgd-wow-menu-btn btn-bounties" style="background:linear-gradient(180deg, #351c08 0%, #140b03 100%); border-color:#ff9f43;">
-            <span class="sgd-menu-btn-icon" style="border-color:#ff9f43;">🤝</span>
-            <div class="sgd-menu-btn-content">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="sgd-menu-btn-label" style="color:#ff9f43;">
-                        <span class="sgd-theme-text-wow">PEER BOUNTY BOARD</span>
-                        <span class="sgd-theme-text-genshin">✦ TEYVAT REPUTATION BOUNTIES</span>
-                        <span class="sgd-theme-text-hearthstone">🤝 MERCENARY CONTRACTS & FAVORS</span>
-                    </span>
-                    <span class="sgd-pill-reward" style="background:#e67e22; border-color:#f39c12;">COMMISSIONS</span>
-                </div>
-                <span class="sgd-menu-btn-desc">Post a bounty from your own wallet to hire a teammate, or complete favors for bonus diamonds</span>
-            </div>
-            <span class="sgd-menu-btn-arrow" style="color:#ff9f43;">➔</span>
-        </a>
-
-        <!-- 8. LOG IN BUTTON -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'login' ) ); ?>" class="sgd-wow-menu-btn btn-login">
-            <span class="sgd-menu-btn-icon">🔑</span>
-            <div class="sgd-menu-btn-content">
-                <span class="sgd-menu-btn-label"><?php echo $is_logged_in ? 'MY ACCOUNT & LOG IN' : 'LOG IN'; ?></span>
-                <span class="sgd-menu-btn-desc"><?php echo $is_logged_in ? 'Logged in as ' . esc_html($current_user->display_name) . ' • 1-Click Demo Switcher • Admin Command' : 'Authenticate hero account • Demo quick-login'; ?></span>
-            </div>
-            <span class="sgd-menu-btn-arrow">➔</span>
-        </a>
-
-        <!-- QUESTS (KANBAN) SHORTCUT -->
-        <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #072a38 0%, #03131c 100%); border-color:#00e5ff; box-shadow:0 0 15px rgba(0,229,255,0.25);">
-            <span class="sgd-menu-btn-icon" style="border-color:#00e5ff; color:#00e5ff;">🎯</span>
-            <div class="sgd-menu-btn-content">
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span class="sgd-menu-btn-label" style="color:#00e5ff;">QUESTS (KANBAN)</span>
-                    <span class="sgd-pill-reward" style="background:rgba(0,229,255,0.2); border-color:#00e5ff; color:#00e5ff;">🏢 HQ • 👥 TIM • 🚀 PROYEK</span>
-                    <span style="font-family:var(--font-pixel); font-size:8px; background:#00e5ff; color:#03131c; padding:2px 6px; border-radius:3px;">4 KOLOM KANBAN</span>
-                </div>
-                <span class="sgd-menu-btn-desc">Sistem manajemen tugas: Buat grup tugas (HQ, Tim, Proyek), 4 kolom Kanban (To do list, Dikerjakan, Selesai, Batal), WYSIWYG editor & diskusi obrolan</span>
-            </div>
-            <span class="sgd-menu-btn-arrow" style="color:#00e5ff;">➔</span>
-        </a>
-
-        <?php if ( current_user_can('administrator') ): ?>
-            <!-- ADMIN COMMAND CENTER SHORTCUT -->
-            <a href="<?php echo esc_url( sgd_get_portal_url( 'admin' ) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #3d2b07 0%, #171003 100%); border-color:#ffd700;">
-                <span class="sgd-menu-btn-icon" style="border-color:#ffd700;">🛡️</span>
-                <div class="sgd-menu-btn-content">
-                    <span class="sgd-menu-btn-label" style="color:#ffd700;">ADMIN COMMAND CENTER</span>
-                    <span class="sgd-menu-btn-desc">Add/Edit/Delete Tasks • Dispatch Help • Manage Employee Achievements & Diamonds</span>
-                </div>
-                <span class="sgd-menu-btn-arrow" style="color:#ffd700;">➔</span>
-            </a>
-
-            <!-- ADMIN DIRECT SHORTCUT TO CASH SHOP ORDERS -->
-            <a href="<?php echo esc_url( add_query_arg(['sgd_page' => 'admin', 'tab' => 'orders'], home_url('/')) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #2b1f07 0%, #110c02 100%); border-color:#ffd700;">
-                <span class="sgd-menu-btn-icon" style="border-color:#ffd700;">🎁</span>
-                <div class="sgd-menu-btn-content">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span class="sgd-menu-btn-label" style="color:#ffd700;">CASH SHOP ORDERS & APPROVALS</span>
-                        <?php if ( $pending_orders_count > 0 ): ?>
-                            <span class="sgd-pill-count" style="background:#e67e22; border-color:#f39c12;"><?php echo $pending_orders_count; ?> Pending</span>
-                        <?php endif; ?>
+                <div class="sgd-dash-card-body">
+                    <div class="sgd-podium-list">
+                        <?php 
+                        $medals = [ '🥇', '🥈', '🥉' ];
+                        foreach ( $leaderboard_top as $idx => $lead_user ): 
+                        ?>
+                            <div class="sgd-podium-item rank-<?php echo $idx + 1; ?>">
+                                <div class="sgd-podium-left">
+                                    <span class="sgd-podium-rank"><?php echo $medals[$idx] ?? '#' . ($idx + 1); ?></span>
+                                    <span style="font-size:22px;"><?php echo $lead_user['avatar'] ?? '👤'; ?></span>
+                                    <div>
+                                        <div class="sgd-podium-name"><?php echo esc_html( $lead_user['display_name'] ); ?></div>
+                                        <div class="sgd-podium-sub">
+                                            Lv.<?php echo $lead_user['level']; ?> • <?php echo esc_html($lead_user['job_class']); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="sgd-podium-score">
+                                    <?php echo number_format($lead_user['total_xp']); ?> XP
+                                    <div style="font-size:10px; color:#00e5ff; font-weight:normal;"><?php echo number_format($lead_user['diamonds']); ?> 💎</div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                    <span class="sgd-menu-btn-desc">Review employee reward claims (IDR 200k, leave, holidays), fulfill orders, or refund diamonds</span>
-                </div>
-                <span class="sgd-menu-btn-arrow" style="color:#ffd700;">➔</span>
-            </a>
 
-            <!-- ADMIN DIRECT SHORTCUT TO SUBMITTED PHOTO PROOFS -->
-            <a href="<?php echo esc_url( add_query_arg(['sgd_page' => 'admin', 'tab' => 'proofs'], home_url('/')) ); ?>" class="sgd-wow-menu-btn" style="background:linear-gradient(180deg, #172417 0%, #0a140a 100%); border-color:#2ecc71;">
-                <span class="sgd-menu-btn-icon" style="border-color:#2ecc71;">📸</span>
-                <div class="sgd-menu-btn-content">
-                    <span class="sgd-menu-btn-label" style="color:#2ecc71;">REVIEW PHOTO PROOFS</span>
-                    <span class="sgd-menu-btn-desc">Inspect all photos and screenshots submitted by employees for completed jobs</span>
+                    <div style="margin-top:14px; padding:10px 12px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2); border-radius:6px; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#8fa0bd;">Posisi Peringkat Anda:</span>
+                        <strong style="color:#00e5ff; font-size:13px;">#<?php echo $my_rank; ?> dari <?php echo count($leaderboard_all); ?> Hero</strong>
+                    </div>
                 </div>
-                <span class="sgd-menu-btn-arrow" style="color:#2ecc71;">➔</span>
-            </a>
-        <?php endif; ?>
+            </div>
+
+            <!-- CARD 4: DAILY CHECK-IN & REWARDS -->
+            <div class="sgd-dash-card">
+                <div class="sgd-dash-card-header">
+                    <h3 class="sgd-dash-card-title">
+                        <span>🎁 Check-in Harian & Reward</span>
+                    </h3>
+                </div>
+                <div class="sgd-dash-card-body">
+                    <div class="sgd-checkin-list">
+                        <div class="sgd-checkin-item done">
+                            <span>🔥 Daily Streak Login</span>
+                            <span class="sgd-checkin-status done">✅ <?php echo (int) $home_streak['current']; ?> Hari Aktif</span>
+                        </div>
+
+                        <div class="sgd-checkin-item <?php echo $has_spun_wheel_today ? 'done' : ''; ?>">
+                            <span>🎰 Fortune Wheel (Spin Harian)</span>
+                            <?php if ( $has_spun_wheel_today ): ?>
+                                <span class="sgd-checkin-status done">✅ Selesai</span>
+                            <?php else: ?>
+                                <a href="<?php echo esc_url( sgd_get_portal_url( 'wheel' ) ); ?>" class="sgd-btn sgd-btn-sm sgd-btn-gold" style="font-size:10px; padding:2px 8px;">
+                                    Putar Sekarang ➔
+                                </a>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="sgd-checkin-item <?php echo $has_daily_report_today ? 'done' : ''; ?>">
+                            <span>📋 Laporan Harian Proyek (+200 XP)</span>
+                            <?php if ( $has_daily_report_today ): ?>
+                                <span class="sgd-checkin-status done">✅ Terkirim</span>
+                            <?php else: ?>
+                                <a href="<?php echo esc_url( sgd_get_portal_url( 'laporan-harian' ) ); ?>" class="sgd-btn sgd-btn-sm sgd-btn-blue" style="font-size:10px; padding:2px 8px;">
+                                    Isi Laporan ➔
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 5: TIM & PROYEK SAYA (WORKSPACES) -->
+            <div class="sgd-dash-card">
+                <div class="sgd-dash-card-header">
+                    <h3 class="sgd-dash-card-title">
+                        <span>🏢 Grup & Tim Workspace</span>
+                    </h3>
+                    <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-dash-card-link">
+                        Lihat Semua ➔
+                    </a>
+                </div>
+                <div class="sgd-dash-card-body">
+                    <div class="sgd-team-chips-list">
+                        <?php foreach ( $all_teams as $atm ): 
+                            $type_icon = $atm->type === 'hq' ? '🏢' : ( $atm->type === 'project' ? '🚀' : '👥' );
+                            $member_count = count( $atm->members ?? [] );
+                        ?>
+                            <a href="<?php echo esc_url( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $atm->id ], home_url( '/' ) ) ); ?>" class="sgd-team-chip-item">
+                                <div class="sgd-team-chip-left">
+                                    <span style="font-size:18px;"><?php echo $type_icon; ?></span>
+                                    <div>
+                                        <div class="sgd-team-chip-title"><?php echo esc_html( $atm->name ); ?></div>
+                                        <div style="font-size:10px; color:#8fa0bd;"><?php echo strtoupper( $atm->type ); ?> • <?php echo $member_count; ?> Anggota</div>
+                                    </div>
+                                </div>
+                                <span class="sgd-team-chip-count">Buka ➔</span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+
+        </div>
 
     </div>
 
-    <!-- QUICK DEMO SWITCHER FOOTNOTE -->
-    <div class="sgd-menu-demo-helper">
-        <span style="font-family:var(--font-pixel); font-size:8px; color:#8fa0bd;">QUICK DEMO ROLE SWITCHER:</span>
-        <form method="post" style="display:inline;">
-            <input type="hidden" name="sgd_action" value="sgd_switch_user">
-            <input type="hidden" name="target_user" value="employee">
-            <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-blue">⚔️ Play as Arthas (Emp 1)</button>
-        </form>
-        <form method="post" style="display:inline;">
-            <input type="hidden" name="sgd_action" value="sgd_switch_user">
-            <input type="hidden" name="target_user" value="employee2">
-            <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-purple" style="background:#8e44ad; border-color:#be2edd; color:#fff;">🧙‍♀️ Play as Jaina (Emp 2)</button>
-        </form>
-        <form method="post" style="display:inline;">
-            <input type="hidden" name="sgd_action" value="sgd_switch_user">
-            <input type="hidden" name="target_user" value="admin">
-            <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-gold">👑 Play as Admin (Admin123!)</button>
-        </form>
+    <!-- QUICK DEMO ROLE SWITCHER (FOOTNOTE) -->
+    <div style="margin-top:25px; padding:14px 18px; background:#090e1a; border:1px solid rgba(255,215,0,0.2); border-radius:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <span style="font-family:var(--font-pixel); font-size:9px; color:#8fa0bd;">QUICK DEMO ROLE SWITCHER:</span>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <form method="post" style="display:inline;">
+                <input type="hidden" name="sgd_action" value="sgd_switch_user">
+                <input type="hidden" name="target_user" value="employee">
+                <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-blue">⚔️ Arthas (Staff)</button>
+            </form>
+            <form method="post" style="display:inline;">
+                <input type="hidden" name="sgd_action" value="sgd_switch_user">
+                <input type="hidden" name="target_user" value="employee2">
+                <button type="submit" class="sgd-btn sgd-btn-sm" style="background:#8e44ad; border-color:#be2edd; color:#fff;">🧙‍♀️ Jaina (Staff 2)</button>
+            </form>
+            <form method="post" style="display:inline;">
+                <input type="hidden" name="sgd_action" value="sgd_switch_user">
+                <input type="hidden" name="target_user" value="admin">
+                <button type="submit" class="sgd-btn sgd-btn-sm sgd-btn-gold">👑 Admin / Manager</button>
+            </form>
+        </div>
     </div>
 
 </div>
