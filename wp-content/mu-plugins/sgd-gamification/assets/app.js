@@ -1535,6 +1535,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Labels / Tags
             renderLabels(task.tags || []);
 
+            // Checklist / Subtasks
+            renderModalChecklist(task.checklist || [], task.id);
+
             // Attachments
             renderAttachments(task.attachments || []);
 
@@ -1758,6 +1761,297 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
+
+        // ========================================================
+        // Task Checklist Manager (Card & Modal Interactive Subtasks)
+        // ========================================================
+        let currentModalChecklist = [];
+        let currentModalTaskId = 0;
+
+        function renderModalChecklist(items, taskId) {
+            currentModalChecklist = Array.isArray(items) ? items : [];
+            currentModalTaskId = taskId || (document.getElementById('modal-task-id') ? document.getElementById('modal-task-id').value : 0);
+            const container = document.getElementById('modal-checklist-items');
+            const hiddenInput = document.getElementById('modal-task-checklist-hidden');
+            const counter = document.getElementById('modal-chk-counter');
+            const progBar = document.getElementById('modal-chk-progress-bar');
+
+            if (hiddenInput) {
+                hiddenInput.value = JSON.stringify(currentModalChecklist);
+            }
+
+            const total = currentModalChecklist.length;
+            const done = currentModalChecklist.filter(it => it.completed).length;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+            if (counter) counter.textContent = `${done}/${total} selesai (${pct}%)`;
+            if (progBar) {
+                progBar.style.width = pct + '%';
+                progBar.classList.toggle('done', pct === 100 && total > 0);
+            }
+
+            if (!container) return;
+
+            if (total === 0) {
+                container.innerHTML = '<p class="sgd-comments-empty" style="padding:10px 0; color:#718093; font-size:12px; margin:0;">Belum ada item checklist verifikasi.</p>';
+                return;
+            }
+
+            let html = '';
+            currentModalChecklist.forEach(item => {
+                const isC = !!item.completed;
+                const itemId = escapeHtml(item.id || '');
+                const text = escapeHtml(item.text || '');
+                html += `
+                    <div class="sgd-modal-chk-item ${isC ? 'completed' : ''}" id="modal-chk-row-${itemId}">
+                        <input type="checkbox" class="sgd-card-chk-box" data-task-id="${currentModalTaskId}" data-item-id="${itemId}" ${isC ? 'checked' : ''} style="cursor:pointer; width:15px; height:15px;">
+                        <span class="sgd-card-chk-text ${isC ? 'completed' : ''}">${text}</span>
+                        <button type="button" class="sgd-card-chk-del-btn" data-task-id="${currentModalTaskId}" data-item-id="${itemId}" title="Hapus item">&times;</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // Modal Add Checklist Item
+        const btnModalAddChk = document.getElementById('modal-btn-add-chk');
+        const inputModalNewChk = document.getElementById('modal-new-chk-input');
+        if (btnModalAddChk && inputModalNewChk) {
+            btnModalAddChk.addEventListener('click', function(e) {
+                e.preventDefault();
+                const text = inputModalNewChk.value.trim();
+                const taskId = document.getElementById('modal-task-id').value;
+                if (!text || !taskId) return;
+                submitChecklistItem(taskId, text, () => {
+                    inputModalNewChk.value = '';
+                });
+            });
+            inputModalNewChk.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    btnModalAddChk.click();
+                }
+            });
+        }
+
+        function toggleChecklistItem(taskId, itemId, completed, checkboxEl) {
+            const formData = new FormData();
+            formData.append('sgd_action', 'sgd_toggle_quest_checklist_item');
+            formData.append('task_id', taskId);
+            formData.append('item_id', itemId);
+            formData.append('completed', completed);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success && res.data) {
+                    sfxSuccess();
+                    updateChecklistDOM(taskId, res.data);
+                } else {
+                    if (checkboxEl) checkboxEl.checked = !completed;
+                    alert((res.data && res.data.message) ? res.data.message : 'Gagal memperbarui checklist.');
+                }
+            })
+            .catch(() => {
+                if (checkboxEl) checkboxEl.checked = !completed;
+            });
+        }
+
+        function submitChecklistItem(taskId, text, callback) {
+            const formData = new FormData();
+            formData.append('sgd_action', 'sgd_add_quest_checklist_item');
+            formData.append('task_id', taskId);
+            formData.append('text', text);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success && res.data) {
+                    sfxSuccess();
+                    if (typeof callback === 'function') callback();
+                    // Append item into card items list
+                    const cardList = document.getElementById(`chk-items-${taskId}`);
+                    if (cardList && res.data.new_item) {
+                        const it = res.data.new_item;
+                        const row = document.createElement('label');
+                        row.className = 'sgd-card-chk-item';
+                        row.id = `chk-item-row-${it.id}`;
+                        row.innerHTML = `
+                            <input type="checkbox" class="sgd-card-chk-box" data-task-id="${taskId}" data-item-id="${it.id}">
+                            <span class="sgd-card-chk-text">${escapeHtml(it.text)}</span>
+                            <button type="button" class="sgd-card-chk-del-btn" data-task-id="${taskId}" data-item-id="${it.id}" title="Hapus item">&times;</button>
+                        `;
+                        cardList.appendChild(row);
+                    }
+                    updateChecklistDOM(taskId, res.data);
+                    // Also refresh modal if open for this task
+                    const modalTaskId = document.getElementById('modal-task-id');
+                    if (modalTaskId && String(modalTaskId.value) === String(taskId)) {
+                        renderModalChecklist(res.data.checklist, taskId);
+                    }
+                } else {
+                    alert((res.data && res.data.message) ? res.data.message : 'Gagal menambahkan checklist.');
+                }
+            })
+            .catch(() => {});
+        }
+
+        function deleteChecklistItem(taskId, itemId) {
+            const formData = new FormData();
+            formData.append('sgd_action', 'sgd_delete_quest_checklist_item');
+            formData.append('task_id', taskId);
+            formData.append('item_id', itemId);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success && res.data) {
+                    sfxClick();
+                    const rowCard = document.getElementById(`chk-item-row-${itemId}`);
+                    if (rowCard) rowCard.remove();
+                    const rowModal = document.getElementById(`modal-chk-row-${itemId}`);
+                    if (rowModal) rowModal.remove();
+                    updateChecklistDOM(taskId, res.data);
+                    const modalTaskId = document.getElementById('modal-task-id');
+                    if (modalTaskId && String(modalTaskId.value) === String(taskId)) {
+                        renderModalChecklist(res.data.checklist, taskId);
+                    }
+                }
+            })
+            .catch(() => {});
+        }
+
+        function updateChecklistDOM(taskId, data) {
+            // Update counter on card
+            const counter = document.getElementById(`chk-counter-${taskId}`);
+            if (counter) counter.textContent = `${data.done_count}/${data.total_count}`;
+
+            // Update progress wrap & bar on card
+            const progWrap = document.getElementById(`chk-progress-wrap-${taskId}`);
+            const progBar = document.getElementById(`chk-progress-bar-${taskId}`);
+            if (progWrap) progWrap.style.display = data.total_count > 0 ? '' : 'none';
+            if (progBar) {
+                progBar.style.width = data.percent + '%';
+                progBar.classList.toggle('done', !!data.all_completed);
+            }
+
+            // Sync item rows on card
+            if (data.item_id) {
+                const cardRow = document.getElementById(`chk-item-row-${data.item_id}`);
+                if (cardRow) {
+                    cardRow.classList.toggle('completed', !!data.completed);
+                    const chkBox = cardRow.querySelector('.sgd-card-chk-box');
+                    if (chkBox) chkBox.checked = !!data.completed;
+                    const textSpan = cardRow.querySelector('.sgd-card-chk-text');
+                    if (textSpan) textSpan.classList.toggle('completed', !!data.completed);
+                }
+                const modalRow = document.getElementById(`modal-chk-row-${data.item_id}`);
+                if (modalRow) {
+                    modalRow.classList.toggle('completed', !!data.completed);
+                    const chkBox = modalRow.querySelector('.sgd-card-chk-box');
+                    if (chkBox) chkBox.checked = !!data.completed;
+                    const textSpan = modalRow.querySelector('.sgd-card-chk-text');
+                    if (textSpan) textSpan.classList.toggle('completed', !!data.completed);
+                }
+            }
+
+            // Also sync modal counter/bar if same task
+            const modalTaskId = document.getElementById('modal-task-id');
+            if (modalTaskId && String(modalTaskId.value) === String(taskId)) {
+                const modalCounter = document.getElementById('modal-chk-counter');
+                const modalProg = document.getElementById('modal-chk-progress-bar');
+                if (modalCounter) modalCounter.textContent = `${data.done_count}/${data.total_count} selesai (${data.percent}%)`;
+                if (modalProg) {
+                    modalProg.style.width = data.percent + '%';
+                    modalProg.classList.toggle('done', !!data.all_completed);
+                }
+            }
+        }
+
+        // Global Event delegation for card checklist interactions
+        document.addEventListener('change', function(e) {
+            if (e.target.matches('.sgd-card-chk-box')) {
+                const chk = e.target;
+                const taskId = chk.getAttribute('data-task-id');
+                const itemId = chk.getAttribute('data-item-id');
+                const completed = chk.checked ? 1 : 0;
+                toggleChecklistItem(taskId, itemId, completed, chk);
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            // Toggle add input on card
+            const toggleBtn = e.target.closest('.sgd-btn-card-add-chk-toggle');
+            if (toggleBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const taskId = toggleBtn.getAttribute('data-task-id');
+                const addRow = document.getElementById(`chk-add-row-${taskId}`);
+                if (addRow) {
+                    const isHidden = addRow.style.display === 'none';
+                    addRow.style.display = isHidden ? 'flex' : 'none';
+                    if (isHidden) {
+                        const inp = document.getElementById(`chk-add-input-${taskId}`);
+                        if (inp) setTimeout(() => inp.focus(), 50);
+                    }
+                }
+                sfxClick();
+                return;
+            }
+
+            // Submit add item on card
+            const submitCardBtn = e.target.closest('.sgd-btn-card-add-chk-submit');
+            if (submitCardBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const taskId = submitCardBtn.getAttribute('data-task-id');
+                const inp = document.getElementById(`chk-add-input-${taskId}`);
+                if (inp && inp.value.trim()) {
+                    submitChecklistItem(taskId, inp.value.trim(), () => {
+                        inp.value = '';
+                    });
+                }
+                return;
+            }
+
+            // Delete item button on card or modal
+            const delBtn = e.target.closest('.sgd-card-chk-del-btn');
+            if (delBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const taskId = delBtn.getAttribute('data-task-id');
+                const itemId = delBtn.getAttribute('data-item-id');
+                if (confirm('Hapus item checklist ini?')) {
+                    deleteChecklistItem(taskId, itemId);
+                }
+                return;
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.target.matches('.sgd-card-chk-add-input') && e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                const taskId = e.target.id.replace('chk-add-input-', '');
+                if (e.target.value.trim()) {
+                    submitChecklistItem(taskId, e.target.value.trim(), () => {
+                        e.target.value = '';
+                    });
+                }
+            }
+        });
 
         function renderAttachments(attachments) {
             const list = document.getElementById('modal-attachments-list');

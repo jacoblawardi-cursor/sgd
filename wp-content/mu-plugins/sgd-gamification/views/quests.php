@@ -560,6 +560,55 @@ $kanban_columns = [
                                         </div>
                                     <?php endif; ?>
 
+                                    <!-- CHECKLIST / SUBTASKS WIDGET ON CARD -->
+                                    <?php
+                                    $chk_items = ! empty( $task->checklist ) && is_array( $task->checklist ) ? $task->checklist : [];
+                                    $chk_total = count( $chk_items );
+                                    $chk_done = count( array_filter( $chk_items, function( $ci ) { return ! empty( $ci['completed'] ); } ) );
+                                    $chk_pct = $chk_total > 0 ? round( ( $chk_done / $chk_total ) * 100 ) : 0;
+                                    ?>
+                                    <div class="sgd-card-checklist-box" data-task-id="<?php echo esc_attr( $task->id ); ?>" onclick="event.stopPropagation();">
+                                        <div class="sgd-card-chk-header">
+                                            <div class="sgd-card-chk-header-title">
+                                                <span class="sgd-card-chk-icon">☑️</span>
+                                                <span class="sgd-card-chk-label">Checklist:</span>
+                                                <span class="sgd-card-chk-counter" id="chk-counter-<?php echo esc_attr( $task->id ); ?>"><?php echo "{$chk_done}/{$chk_total}"; ?></span>
+                                            </div>
+                                            <?php if ( $can_manage_team ): ?>
+                                                <button type="button" class="sgd-btn-card-add-chk-toggle" data-task-id="<?php echo esc_attr( $task->id ); ?>" title="Tambah item checklist verifikasi manager">+ Item</button>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <!-- Mini Progress Bar -->
+                                        <div class="sgd-card-chk-progress-wrap" id="chk-progress-wrap-<?php echo esc_attr( $task->id ); ?>" style="<?php echo $chk_total > 0 ? '' : 'display:none;'; ?>">
+                                            <div class="sgd-card-chk-progress-bar <?php echo $chk_pct === 100 ? 'done' : ''; ?>" id="chk-progress-bar-<?php echo esc_attr( $task->id ); ?>" style="width:<?php echo $chk_pct; ?>%;"></div>
+                                        </div>
+
+                                        <!-- Checklist Items List -->
+                                        <div class="sgd-card-chk-items" id="chk-items-<?php echo esc_attr( $task->id ); ?>">
+                                            <?php foreach ( $chk_items as $item ): 
+                                                $is_c = ! empty( $item['completed'] );
+                                                $c_id = esc_attr( $item['id'] ?? uniqid('chk_') );
+                                            ?>
+                                                <label class="sgd-card-chk-item <?php echo $is_c ? 'completed' : ''; ?>" id="chk-item-row-<?php echo $c_id; ?>">
+                                                    <input type="checkbox" class="sgd-card-chk-box" data-task-id="<?php echo esc_attr( $task->id ); ?>" data-item-id="<?php echo $c_id; ?>" <?php checked( $is_c ); ?> <?php echo $can_manage_team ? '' : 'disabled title="Hanya Manager Tim atau Administrator yang berhak memverifikasi checklist"'; ?>>
+                                                    <span class="sgd-card-chk-text"><?php echo esc_html( $item['text'] ?? '' ); ?></span>
+                                                    <?php if ( $can_manage_team ): ?>
+                                                        <button type="button" class="sgd-card-chk-del-btn" data-task-id="<?php echo esc_attr( $task->id ); ?>" data-item-id="<?php echo $c_id; ?>" title="Hapus item">&times;</button>
+                                                    <?php endif; ?>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </div>
+
+                                        <!-- Quick Add Item Row for Manager -->
+                                        <?php if ( $can_manage_team ): ?>
+                                            <div class="sgd-card-chk-add-row" id="chk-add-row-<?php echo esc_attr( $task->id ); ?>" style="<?php echo $chk_total === 0 ? 'display:flex;' : 'display:none;'; ?>">
+                                                <input type="text" class="sgd-card-chk-add-input" id="chk-add-input-<?php echo esc_attr( $task->id ); ?>" placeholder="Ketik checklist verifikasi..." maxlength="255">
+                                                <button type="button" class="sgd-btn-card-add-chk-submit" data-task-id="<?php echo esc_attr( $task->id ); ?>" title="Tambahkan item">+</button>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+
                                     <div class="sgd-card-footer">
                                         <div class="sgd-card-footer-left">
                                             <?php if ( $deadline_badge ) echo $deadline_badge; ?>
@@ -931,6 +980,32 @@ $kanban_columns = [
                                 </div>
                                 <small style="color:#8fa0bd; font-size:11px;">Mendukung format gambar (JPG/PNG), PDF, Word, Excel, ZIP & Dokumen teknis.</small>
                             </div>
+                        </div>
+
+                        <!-- CHECKLIST / SUBTASKS IN MODAL -->
+                        <div class="sgd-task-section sgd-task-checklist-section">
+                            <div class="sgd-section-title-line">
+                                <h4 class="sgd-section-title">☑️ Checklist Verifikasi Manager (Subtasks)</h4>
+                                <span class="sgd-comment-count" id="modal-chk-counter">0/0 selesai</span>
+                            </div>
+
+                            <div class="sgd-card-chk-progress-wrap" id="modal-chk-progress-wrap" style="margin-bottom:12px;">
+                                <div class="sgd-card-chk-progress-bar" id="modal-chk-progress-bar" style="width:0%;"></div>
+                            </div>
+
+                            <div class="sgd-modal-checklist-list" id="modal-checklist-items">
+                                <p class="sgd-comments-empty" style="padding:10px 0;">Belum ada item checklist verifikasi.</p>
+                            </div>
+
+                            <?php if ( $can_manage_team ): ?>
+                                <div class="sgd-modal-add-chk-row" style="display:flex; gap:8px; margin-top:10px;">
+                                    <input type="text" id="modal-new-chk-input" class="sgd-form-input" placeholder="Ketik checklist verifikasi baru..." style="flex:1; font-size:12px;">
+                                    <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-green" id="modal-btn-add-chk">
+                                        + Tambah Item
+                                    </button>
+                                </div>
+                            <?php endif; ?>
+                            <input type="hidden" name="checklist" id="modal-task-checklist-hidden" value="[]">
                         </div>
 
                         <!-- CHAT & COMMENTS DISCUSSION SECTION -->

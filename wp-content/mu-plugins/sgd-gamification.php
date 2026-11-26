@@ -277,6 +277,12 @@ function sgd_install_database() {
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `labels` TEXT DEFAULT NULL AFTER `assigned_members`" );
     }
 
+    // Ensure checklist column exists on tasks table for subtasks verification
+    $has_checklist_col = $wpdb->get_results( "SHOW COLUMNS FROM `$table_quest_tasks` LIKE 'checklist'" );
+    if ( empty( $has_checklist_col ) ) {
+        $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `checklist` LONGTEXT DEFAULT NULL AFTER `labels`" );
+    }
+
     // Auto-seed initial labels for existing tasks that have no labels yet so labels/tags immediately show on cards
     $unlabeled_tasks = $wpdb->get_results( "SELECT id, title FROM `$table_quest_tasks` WHERE labels IS NULL OR labels = '' OR labels = '[]' LIMIT 30" );
     if ( ! empty( $unlabeled_tasks ) ) {
@@ -292,6 +298,37 @@ function sgd_install_database() {
             $wpdb->update(
                 $table_quest_tasks,
                 [ 'labels' => wp_json_encode( $sample_tags_pool[ $pool_idx ] ) ],
+                [ 'id' => $t_obj->id ]
+            );
+        }
+    }
+
+    // Auto-seed sample checklist items for tasks that have no checklist yet so manager can verify immediately
+    $unchecklisted_tasks = $wpdb->get_results( "SELECT id, title, column_name FROM `$table_quest_tasks` WHERE checklist IS NULL OR checklist = '' OR checklist = '[]' LIMIT 30" );
+    if ( ! empty( $unchecklisted_tasks ) ) {
+        $sample_checklists = [
+            [
+                [ 'id' => 'chk_1', 'text' => 'Review spesifikasi teknis & desain UI', 'completed' => true ],
+                [ 'id' => 'chk_2', 'text' => 'Uji fungsi pada lingkungan staging', 'completed' => false ],
+                [ 'id' => 'chk_3', 'text' => 'Verifikasi & persetujuan manager tim', 'completed' => false ],
+            ],
+            [
+                [ 'id' => 'chk_1', 'text' => 'Pemeriksaan standar mutu & keselamatan K3', 'completed' => true ],
+                [ 'id' => 'chk_2', 'text' => 'Dokumentasi bukti pekerjaan lapangan', 'completed' => false ],
+            ],
+            [
+                [ 'id' => 'chk_1', 'text' => 'Validasi input data & testing fungsional', 'completed' => true ],
+                [ 'id' => 'chk_2', 'text' => 'Konfirmasi checklist penyelesaian tugas', 'completed' => true ],
+            ],
+        ];
+        foreach ( $unchecklisted_tasks as $idx => $t_obj ) {
+            $pick = $sample_checklists[ $idx % count( $sample_checklists ) ];
+            if ( $t_obj->column_name === 'Selesai' ) {
+                foreach ( $pick as &$p_item ) { $p_item['completed'] = true; }
+            }
+            $wpdb->update(
+                $table_quest_tasks,
+                [ 'checklist' => wp_json_encode( $pick ) ],
                 [ 'id' => $t_obj->id ]
             );
         }
@@ -2012,6 +2049,16 @@ function sgd_get_quest_tasks( $team_id, $column_name = '' ) {
             }
         }
 
+        // Parse checklist JSON
+        $raw_chk = $t->checklist ?? '';
+        $t->checklist = [];
+        if ( ! empty( $raw_chk ) && is_string( $raw_chk ) ) {
+            $parsed_chk = json_decode( $raw_chk, true );
+            if ( is_array( $parsed_chk ) ) {
+                $t->checklist = $parsed_chk;
+            }
+        }
+
         // Quest Level & Rewards defaults
         $t->quest_level = max( 1, (int) ( $t->quest_level ?? 1 ) );
         $t->reward_type = $t->reward_type ?? 'both';
@@ -2058,6 +2105,16 @@ function sgd_get_quest_task( $task_id ) {
         $parsed_tags = json_decode( $task->labels, true );
         if ( is_array( $parsed_tags ) ) {
             $task->tags = $parsed_tags;
+        }
+    }
+
+    // Parse checklist JSON
+    $raw_chk = $task->checklist ?? '';
+    $task->checklist = [];
+    if ( ! empty( $raw_chk ) && is_string( $raw_chk ) ) {
+        $parsed_chk = json_decode( $raw_chk, true );
+        if ( is_array( $parsed_chk ) ) {
+            $task->checklist = $parsed_chk;
         }
     }
 
@@ -3877,6 +3934,29 @@ function sgd_handle_form_actions() {
                 }
             }
 
+            // Checklist JSON
+            $checklist_json = wp_json_encode( $task->checklist );
+            if ( isset( $_POST['checklist'] ) ) {
+                $raw_chk = stripslashes( $_POST['checklist'] );
+                $decoded_chk = json_decode( $raw_chk, true );
+                if ( is_array( $decoded_chk ) ) {
+                    $clean_chk = [];
+                    foreach ( $decoded_chk as $c_it ) {
+                        $c_txt = sanitize_text_field( $c_it['text'] ?? '' );
+                        if ( ! empty( $c_txt ) ) {
+                            $clean_chk[] = [
+                                'id'           => sanitize_text_field( $c_it['id'] ?? uniqid('chk_') ),
+                                'text'         => $c_txt,
+                                'completed'    => ! empty( $c_it['completed'] ),
+                                'completed_by' => ! empty( $c_it['completed_by'] ) ? (int) $c_it['completed_by'] : null,
+                                'completed_at' => ! empty( $c_it['completed_at'] ) ? sanitize_text_field( $c_it['completed_at'] ) : null,
+                            ];
+                        }
+                    }
+                    $checklist_json = wp_json_encode( $clean_chk );
+                }
+            }
+
             // Quest Level & Rewards
             $quest_level = max( 1, min( 50, (int) ( $_POST['quest_level'] ?? ( $task->quest_level ?? 1 ) ) ) );
             $reward_type = sanitize_text_field( $_POST['reward_type'] ?? ( $task->reward_type ?? 'both' ) );
@@ -3896,6 +3976,7 @@ function sgd_handle_form_actions() {
                     'deadline'         => $deadline,
                     'assigned_members' => $assigned_str,
                     'labels'           => $labels_json,
+                    'checklist'        => $checklist_json,
                     'quest_level'      => $quest_level,
                     'reward_type'      => $reward_type,
                     'reward_xp'        => $reward_xp,
@@ -3964,6 +4045,7 @@ function sgd_handle_form_actions() {
                 'deadline'         => $task->deadline,
                 'assigned_members' => $task->assigned_members,
                 'labels'           => $task->labels,
+                'checklist'        => wp_json_encode( $task->checklist ),
                 'quest_level'      => (int) ( $task->quest_level ?? 1 ),
                 'reward_type'      => $task->reward_type ?? 'both',
                 'reward_xp'        => (int) ( $task->reward_xp ?? 200 ),
@@ -4182,6 +4264,155 @@ function sgd_handle_form_actions() {
             $team_id = $task ? $task->team_id : 0;
             wp_safe_redirect( add_query_arg( [ 'sgd_page' => 'quests', 'team_id' => $team_id, 'open_task' => $task_id ], home_url( '/' ) ) );
             exit;
+        }
+
+        // 17. Toggle Checklist Item (Manager Verification)
+        if ( $action === 'sgd_toggle_quest_checklist_item' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $item_id = sanitize_text_field( $_POST['item_id'] ?? '' );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+            }
+
+            $team = sgd_get_quest_team( $task->team_id );
+            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+                wp_send_json_error( [ 'message' => 'Hanya Manager Tim atau Administrator yang berhak memverifikasi checklist tugas ini.' ] );
+            }
+
+            $checklist = ! empty( $task->checklist ) && is_array( $task->checklist ) ? $task->checklist : [];
+            $found = false;
+            $now_completed = false;
+
+            foreach ( $checklist as &$it ) {
+                if ( ( $it['id'] ?? '' ) === $item_id ) {
+                    $it['completed'] = ! empty( $_POST['completed'] );
+                    $it['completed_by'] = $it['completed'] ? $current_user_id : null;
+                    $it['completed_at'] = $it['completed'] ? current_time( 'mysql' ) : null;
+                    $now_completed = $it['completed'];
+                    $found = true;
+                    break;
+                }
+            }
+
+            if ( ! $found ) {
+                wp_send_json_error( [ 'message' => 'Item checklist tidak ditemukan.' ] );
+            }
+
+            $wpdb->update(
+                $wpdb->prefix . 'sgd_quest_tasks',
+                [
+                    'checklist'  => wp_json_encode( $checklist ),
+                    'updated_at' => current_time( 'mysql' ),
+                ],
+                [ 'id' => $task_id ]
+            );
+
+            $chk_total = count( $checklist );
+            $chk_done = count( array_filter( $checklist, fn( $c ) => ! empty( $c['completed'] ) ) );
+            $chk_pct = $chk_total > 0 ? round( ( $chk_done / $chk_total ) * 100 ) : 0;
+
+            wp_send_json_success( [
+                'message'       => $now_completed ? 'Item checklist diverifikasi selesai!' : 'Item checklist diubah belum selesai.',
+                'item_id'       => $item_id,
+                'completed'     => $now_completed,
+                'checklist'     => $checklist,
+                'done_count'    => $chk_done,
+                'total_count'   => $chk_total,
+                'percent'       => $chk_pct,
+                'all_completed' => ( $chk_done === $chk_total && $chk_total > 0 ),
+            ] );
+        }
+
+        // 18. Add Checklist Item
+        if ( $action === 'sgd_add_quest_checklist_item' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $text = sanitize_text_field( wp_unslash( $_POST['text'] ?? '' ) );
+            if ( empty( $text ) ) {
+                wp_send_json_error( [ 'message' => 'Teks checklist tidak boleh kosong.' ] );
+            }
+
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+            }
+
+            $team = sgd_get_quest_team( $task->team_id );
+            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+                wp_send_json_error( [ 'message' => 'Hanya Manager Tim atau Administrator yang dapat menambahkan checklist.' ] );
+            }
+
+            $checklist = ! empty( $task->checklist ) && is_array( $task->checklist ) ? $task->checklist : [];
+            $new_item = [
+                'id'           => uniqid( 'chk_' ),
+                'text'         => $text,
+                'completed'    => false,
+                'completed_by' => null,
+                'completed_at' => null,
+            ];
+            $checklist[] = $new_item;
+
+            $wpdb->update(
+                $wpdb->prefix . 'sgd_quest_tasks',
+                [
+                    'checklist'  => wp_json_encode( $checklist ),
+                    'updated_at' => current_time( 'mysql' ),
+                ],
+                [ 'id' => $task_id ]
+            );
+
+            $chk_total = count( $checklist );
+            $chk_done = count( array_filter( $checklist, fn( $c ) => ! empty( $c['completed'] ) ) );
+            $chk_pct = $chk_total > 0 ? round( ( $chk_done / $chk_total ) * 100 ) : 0;
+
+            wp_send_json_success( [
+                'message'     => 'Item checklist berhasil ditambahkan!',
+                'new_item'    => $new_item,
+                'checklist'   => $checklist,
+                'done_count'  => $chk_done,
+                'total_count' => $chk_total,
+                'percent'     => $chk_pct,
+            ] );
+        }
+
+        // 19. Delete Checklist Item
+        if ( $action === 'sgd_delete_quest_checklist_item' ) {
+            $task_id = (int) ( $_POST['task_id'] ?? 0 );
+            $item_id = sanitize_text_field( $_POST['item_id'] ?? '' );
+            $task = sgd_get_quest_task( $task_id );
+            if ( ! $task ) {
+                wp_send_json_error( [ 'message' => 'Tugas tidak ditemukan.' ] );
+            }
+
+            $team = sgd_get_quest_team( $task->team_id );
+            if ( ! sgd_user_can_manage_quest( $team, $current_user_id ) ) {
+                wp_send_json_error( [ 'message' => 'Hanya Manager Tim atau Administrator yang dapat menghapus checklist.' ] );
+            }
+
+            $checklist = ! empty( $task->checklist ) && is_array( $task->checklist ) ? $task->checklist : [];
+            $checklist = array_values( array_filter( $checklist, fn( $it ) => ( $it['id'] ?? '' ) !== $item_id ) );
+
+            $wpdb->update(
+                $wpdb->prefix . 'sgd_quest_tasks',
+                [
+                    'checklist'  => wp_json_encode( $checklist ),
+                    'updated_at' => current_time( 'mysql' ),
+                ],
+                [ 'id' => $task_id ]
+            );
+
+            $chk_total = count( $checklist );
+            $chk_done = count( array_filter( $checklist, fn( $c ) => ! empty( $c['completed'] ) ) );
+            $chk_pct = $chk_total > 0 ? round( ( $chk_done / $chk_total ) * 100 ) : 0;
+
+            wp_send_json_success( [
+                'message'     => 'Item checklist dihapus!',
+                'item_id'     => $item_id,
+                'checklist'   => $checklist,
+                'done_count'  => $chk_done,
+                'total_count' => $chk_total,
+                'percent'     => $chk_pct,
+            ] );
         }
 }
 
