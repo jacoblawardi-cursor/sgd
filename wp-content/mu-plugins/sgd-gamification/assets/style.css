@@ -7526,6 +7526,7 @@ body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
 .sgd-card-tags-list {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 5px;
   margin-bottom: 8px;
 }
@@ -7535,13 +7536,38 @@ body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
   align-items: center;
   gap: 4px;
   font-size: 10px;
-  font-weight: 600;
-  padding: 2px 7px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  padding: 2.5px 8px;
   border-radius: 12px;
   border: 1px solid var(--tag-color, #00e5ff);
-  background: rgba(0, 229, 255, 0.12);
+  background: rgba(0, 229, 255, 0.15);
   color: var(--tag-color, #00e5ff);
   line-height: 1.3;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease;
+}
+
+.sgd-card-tag-pill:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+
+.sgd-card-tag-pill-add {
+  --tag-color: #8fa0bd;
+  border-style: dashed;
+  border-color: rgba(143, 160, 189, 0.35);
+  background: rgba(143, 160, 189, 0.08);
+  color: #8fa0bd;
+  font-weight: 600;
+  opacity: 0.75;
+  cursor: pointer;
+}
+
+.sgd-kanban-card:hover .sgd-card-tag-pill-add {
+  opacity: 1;
+  border-color: #ffd700;
+  color: #ffd700;
 }
 
 .sgd-tag-dot {
@@ -7549,6 +7575,7 @@ body.sgd-theme-hearthstone .sgd-shop-item-card:hover {
   height: 6px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 /* Card Drag Handle for Manager */

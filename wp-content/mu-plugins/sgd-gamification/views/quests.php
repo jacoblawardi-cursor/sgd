@@ -326,13 +326,25 @@ $kanban_columns = [
                                         <label style="font-size:10px; color:#ffd700; display:block; margin-bottom:2px; font-weight:bold;">⚔️ Lvl Quest:</label>
                                         <input type="number" name="quest_level" min="1" max="50" value="1" class="sgd-form-input" style="font-size:11px; padding:4px 6px;">
                                     </div>
-                                    <div style="flex:1.6;">
+                                    <div style="flex:1.4;">
                                         <label style="font-size:10px; color:#00e5ff; display:block; margin-bottom:2px; font-weight:bold;">🎁 Pilihan Hadiah:</label>
                                         <select name="reward_type" class="sgd-form-select" style="font-size:11px; padding:4px 6px;">
                                             <option value="both">👑 XP & Gold</option>
                                             <option value="xp">⭐ Hanya XP</option>
                                             <option value="gold">💎 Hanya Gold</option>
                                             <option value="none">⚪ Tanpa Hadiah</option>
+                                        </select>
+                                    </div>
+                                    <div style="flex:1.3;">
+                                        <label style="font-size:10px; color:#2ecc71; display:block; margin-bottom:2px; font-weight:bold;">🏷️ Label / Tag:</label>
+                                        <select name="task_tag" class="sgd-form-select" style="font-size:11px; padding:4px 6px;">
+                                            <option value="">⚪ Tanpa Tag</option>
+                                            <option value="Fitur">✨ Fitur</option>
+                                            <option value="Bug">🐛 Bug</option>
+                                            <option value="UI/UX">🎨 UI/UX</option>
+                                            <option value="Review">📋 Review</option>
+                                            <option value="Urgent">🔴 Urgent</option>
+                                            <option value="Optimasi">⚡ Optimasi</option>
                                         </select>
                                     </div>
                                 </div>
@@ -423,19 +435,24 @@ $kanban_columns = [
                                 <div class="sgd-kanban-card <?php echo esc_attr( $card_deadline_class ); ?> <?php echo $can_manage_team ? 'sgd-card-manager-draggable' : ''; ?>" draggable="<?php echo $can_manage_team ? 'true' : 'false'; ?>" data-task-id="<?php echo esc_attr( $task->id ); ?>" data-column="<?php echo esc_attr( $task->column_name ); ?>">
                                     
                                     <!-- TAGS / LABELS ROW ON CARD -->
-                                    <?php if ( ! empty( $task->tags ) ): ?>
-                                        <div class="sgd-card-tags-list">
+                                    <div class="sgd-card-tags-list">
+                                        <?php if ( ! empty( $task->tags ) ): ?>
                                             <?php foreach ( $task->tags as $tg ): 
                                                 $tg_color = esc_attr( $tg['color'] ?? '#00e5ff' );
                                                 $tg_name = esc_html( $tg['name'] ?? '' );
                                             ?>
-                                                <span class="sgd-card-tag-pill" style="--tag-color:<?php echo $tg_color; ?>; background:<?php echo $tg_color; ?>22; border-color:<?php echo $tg_color; ?>; color:<?php echo $tg_color; ?>;" title="Label: <?php echo $tg_name; ?>">
-                                                    <span class="sgd-tag-dot" style="background:<?php echo $tg_color; ?>;"></span>
+                                                <span class="sgd-card-tag-pill" style="--tag-color:<?php echo $tg_color; ?>; background:<?php echo $tg_color; ?>26; border-color:<?php echo $tg_color; ?>; color:<?php echo $tg_color; ?>;" title="Label: <?php echo $tg_name; ?>">
+                                                    <span class="sgd-tag-dot" style="background:<?php echo $tg_color; ?>; box-shadow:0 0 6px <?php echo $tg_color; ?>;"></span>
                                                     <?php echo $tg_name; ?>
                                                 </span>
                                             <?php endforeach; ?>
-                                        </div>
-                                    <?php endif; ?>
+                                        <?php elseif ( $can_manage_team ): ?>
+                                            <span class="sgd-card-tag-pill sgd-card-tag-pill-add" title="Klik kartu untuk menambahkan label/tag">
+                                                <span class="sgd-tag-dot" style="background:#8fa0bd;"></span>
+                                                + Tag
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
 
                                     <div class="sgd-card-top">
                                         <div style="display:flex; align-items:center; gap:6px; flex:1;">

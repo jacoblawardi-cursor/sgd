@@ -277,6 +277,26 @@ function sgd_install_database() {
         $wpdb->query( "ALTER TABLE `$table_quest_tasks` ADD COLUMN `labels` TEXT DEFAULT NULL AFTER `assigned_members`" );
     }
 
+    // Auto-seed initial labels for existing tasks that have no labels yet so labels/tags immediately show on cards
+    $unlabeled_tasks = $wpdb->get_results( "SELECT id, title FROM `$table_quest_tasks` WHERE labels IS NULL OR labels = '' OR labels = '[]' LIMIT 30" );
+    if ( ! empty( $unlabeled_tasks ) ) {
+        $sample_tags_pool = [
+            [ [ 'name' => '🎨 UI/UX', 'color' => '#a55eea' ], [ 'name' => '🔴 Urgent', 'color' => '#ff4444' ] ],
+            [ [ 'name' => '✨ Fitur', 'color' => '#2ecc71' ] ],
+            [ [ 'name' => '📋 Review', 'color' => '#ffd700' ] ],
+            [ [ 'name' => '🐛 Bug', 'color' => '#ff5252' ] ],
+            [ [ 'name' => '⚡ Optimasi', 'color' => '#00e5ff' ] ],
+        ];
+        foreach ( $unlabeled_tasks as $idx => $t_obj ) {
+            $pool_idx = $idx % count( $sample_tags_pool );
+            $wpdb->update(
+                $table_quest_tasks,
+                [ 'labels' => wp_json_encode( $sample_tags_pool[ $pool_idx ] ) ],
+                [ 'id' => $t_obj->id ]
+            );
+        }
+    }
+
     // Ensure quest_level & reward columns exist on tasks table
     $has_ql_col = $wpdb->get_results( "SHOW COLUMNS FROM `$table_quest_tasks` LIKE 'quest_level'" );
     if ( empty( $has_ql_col ) ) {
@@ -3678,6 +3698,36 @@ function sgd_handle_form_actions() {
             $reward_xp = isset( $_POST['reward_xp'] ) ? max( 0, (int) $_POST['reward_xp'] ) : 200;
             $reward_gold = isset( $_POST['reward_gold'] ) ? max( 0, (int) $_POST['reward_gold'] ) : 50;
 
+            // Handle labels / tags from create form
+            $labels_json = null;
+            if ( ! empty( $_POST['task_tag'] ) ) {
+                $tag_map = [
+                    'Fitur'    => [ 'name' => '✨ Fitur', 'color' => '#2ecc71' ],
+                    'Bug'      => [ 'name' => '🐛 Bug', 'color' => '#ff5252' ],
+                    'UI/UX'    => [ 'name' => '🎨 UI/UX', 'color' => '#a55eea' ],
+                    'Review'   => [ 'name' => '📋 Review', 'color' => '#ffd700' ],
+                    'Urgent'   => [ 'name' => '🔴 Urgent', 'color' => '#ff4444' ],
+                    'Optimasi' => [ 'name' => '⚡ Optimasi', 'color' => '#00e5ff' ],
+                ];
+                $chosen = sanitize_text_field( $_POST['task_tag'] );
+                if ( isset( $tag_map[ $chosen ] ) ) {
+                    $labels_json = wp_json_encode( [ $tag_map[ $chosen ] ] );
+                }
+            } elseif ( ! empty( $_POST['labels'] ) ) {
+                $decoded = json_decode( stripslashes( $_POST['labels'] ), true );
+                if ( is_array( $decoded ) ) {
+                    $clean_labels = [];
+                    foreach ( $decoded as $lbl ) {
+                        $lname = sanitize_text_field( $lbl['name'] ?? '' );
+                        $lcolor = sanitize_hex_color( $lbl['color'] ?? '#00e5ff' ) ?: '#00e5ff';
+                        if ( ! empty( $lname ) ) {
+                            $clean_labels[] = [ 'name' => $lname, 'color' => $lcolor ];
+                        }
+                    }
+                    $labels_json = wp_json_encode( $clean_labels );
+                }
+            }
+
             $wpdb->insert( $table_quest_tasks, [
                 'team_id'          => $team_id,
                 'column_name'      => $column_name,
@@ -3685,6 +3735,7 @@ function sgd_handle_form_actions() {
                 'description'      => '',
                 'deadline'         => null,
                 'assigned_members' => (string) $current_user_id,
+                'labels'           => $labels_json,
                 'sort_order'       => $max_order + 1,
                 'quest_level'      => $quest_level,
                 'reward_type'      => $reward_type,

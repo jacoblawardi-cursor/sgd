@@ -1696,15 +1696,29 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
                 const name = this.getAttribute('data-name');
-                const color = this.getAttribute('data-color');
-                if (newTagNameInput && name) newTagNameInput.value = name;
-                if (color) {
-                    selectedLabelColor = color;
-                    document.querySelectorAll('#modal-tag-color-swatches .sgd-color-swatch').forEach(s => {
-                        s.classList.toggle('active', s.getAttribute('data-color') === color);
+                const color = this.getAttribute('data-color') || '#00e5ff';
+                if (!name) return;
+
+                // Set input & swatches
+                if (newTagNameInput) newTagNameInput.value = name;
+                selectedLabelColor = color;
+                document.querySelectorAll('#modal-tag-color-swatches .sgd-color-swatch').forEach(s => {
+                    s.classList.toggle('active', s.getAttribute('data-color') === color);
+                });
+
+                // Directly attach tag if not already in list
+                if (!currentTaskLabels.some(l => (l.name || '').toLowerCase() === name.toLowerCase())) {
+                    currentTaskLabels.push({
+                        name: name,
+                        color: color
                     });
+                    renderLabels(currentTaskLabels);
+                    if (newTagNameInput) newTagNameInput.value = '';
+                    toggleAddLabelPanel(false);
+                    sfxSuccess();
+                } else {
+                    sfxClick();
                 }
-                sfxClick();
             });
         });
 
