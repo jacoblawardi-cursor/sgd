@@ -566,6 +566,12 @@ $kanban_columns = [
                                      data-has-files="<?php echo ( $task->attachment_count > 0 ) ? 'true' : 'false'; ?>"
                                      data-tags="<?php echo esc_attr( $tag_names_str ); ?>">
 
+                                    <?php if ( $is_my_task ): ?>
+                                        <div class="sgd-card-mine-ribbon">
+                                            <span class="sgd-ribbon-text">★ TUGAS SAYA</span>
+                                        </div>
+                                    <?php endif; ?>
+
                                     <!-- CARD COVER IMAGE -->
                                     <div class="sgd-card-cover-wrap" id="card-cover-wrap-<?php echo esc_attr( $task->id ); ?>" style="<?php echo $has_cover ? '' : 'display:none;'; ?>">
                                         <img src="<?php echo $has_cover ? esc_url( $task->cover_image ) : ''; ?>" class="sgd-card-cover-img" id="card-cover-img-<?php echo esc_attr( $task->id ); ?>" alt="Cover" loading="lazy">
@@ -748,7 +754,7 @@ $kanban_columns = [
                                                     <?php foreach ( $task->members as $idx => $tm ): 
                                                         $tm_job = function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $tm['id'] ) : 'Staff';
                                                     ?>
-                                                        <span class="sgd-card-avatar" title="<?php echo esc_attr( $tm['display_name'] . ' (' . $tm_job . ')' ); ?>" style="z-index:<?php echo 10 - $idx; ?>;">
+                                                        <span class="sgd-card-avatar <?php echo ( (int)$tm['id'] === (int)$current_user_id ) ? 'sgd-card-avatar-me' : ''; ?>" title="<?php echo esc_attr( $tm['display_name'] . ' (' . $tm_job . ')' . ( (int)$tm['id'] === (int)$current_user_id ? ' - Anda' : '' ) ); ?>" style="z-index:<?php echo 10 - $idx; ?>;">
                                                             <span class="sgd-avatar-icon"><?php echo $tm['avatar']; ?></span>
                                                         </span>
                                                     <?php endforeach; ?>
