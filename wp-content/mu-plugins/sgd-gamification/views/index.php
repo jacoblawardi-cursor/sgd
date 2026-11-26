@@ -6,6 +6,9 @@ require_once __DIR__ . '/header.php';
 $page = sanitize_text_field( $_GET['sgd_page'] ?? 'home' );
 
 switch ( $page ) {
+    case 'character':
+        require_once __DIR__ . '/character.php';
+        break;
     case 'daily':
         require_once __DIR__ . '/daily-tasks.php';
         break;

@@ -1421,6 +1421,363 @@ function sgd_get_available_job_classes() {
     ];
 }
 
+// -------------------------------------------------------------
+// WoW Armory Character RPG Class & Equipment Engine
+// -------------------------------------------------------------
+function sgd_get_user_rpg_class( $user_id = null ) {
+    if ( ! $user_id ) $user_id = get_current_user_id();
+    $class = get_user_meta( $user_id, 'sgd_rpg_class', true );
+    if ( ! empty( $class ) ) {
+        return sanitize_key( $class );
+    }
+    // Infer default from username / avatar
+    $user = get_userdata( $user_id );
+    $login = $user ? $user->user_login : '';
+    if ( user_can( $user_id, 'administrator' ) || $login === 'admin' ) {
+        return 'paladin';
+    }
+    if ( $login === 'employee2' ) {
+        return 'mage';
+    }
+    if ( $login === 'employee3' ) {
+        return 'hunter';
+    }
+    if ( $login === 'employee4' ) {
+        return 'shaman';
+    }
+    return 'warrior';
+}
+
+function sgd_set_user_rpg_class( $user_id, $rpg_class ) {
+    $valid = [ 'paladin', 'warrior', 'mage', 'hunter', 'shaman' ];
+    $clean = sanitize_key( $rpg_class );
+    if ( ! in_array( $clean, $valid, true ) ) {
+        $clean = 'paladin';
+    }
+    return update_user_meta( $user_id, 'sgd_rpg_class', $clean );
+}
+
+function sgd_get_character_equipment( $user_id = null, $rpg_class = null ) {
+    if ( ! $user_id ) $user_id = get_current_user_id();
+    if ( ! $rpg_class ) $rpg_class = sgd_get_user_rpg_class( $user_id );
+
+    $xp_data = sgd_get_user_xp_data( $user_id );
+    $level = max( 1, (int) ( $xp_data['level'] ?? 1 ) );
+    $ach_count = max( 0, (int) ( $xp_data['ach_count'] ?? 0 ) );
+    
+    // Base ILVL calculation matching WoW Legion / BFA Armory scales
+    // Level 30 + 5 Achs gives ~893 ILVL
+    $base_ilvl = 800 + min( 90, (int) round( $level * 2.8 ) ) + min( 25, $ach_count * 3 );
+
+    $class_specs = [
+        'paladin' => [
+            'spec_title' => 'Protection Paladin',
+            'armor_type' => 'Plate',
+            'primary_stat' => 'Strength',
+            'head'       => [ 'name' => 'Eventide Casque', 'type' => 'Plate', 'socket' => 'gem-green', 'stats' => '+1,420 Strength, +2,580 Stamina, +610 Critical Strike', 'flavor' => 'Infused with the eternal dawn of the Silver Hand.' ],
+            'shoulders'  => [ 'name' => 'Pauldrons of Shifting Runes', 'type' => 'Plate', 'socket' => 'gemfinding', 'stats' => '+1,420 Strength, +2,580 Stamina, +680 Mastery', 'flavor' => 'Runes carved into sacred Arathor steel.' ],
+            'chest'      => [ 'name' => 'Breastplate of the Remembered King', 'type' => 'Plate', 'stats' => '+1,620 Strength, +3,150 Stamina, +890 Mastery', 'flavor' => 'Worn by defenders of the sacred realm.' ],
+            'hands'      => [ 'name' => 'Bridgebreaker Gauntlets', 'type' => 'Plate', 'stats' => '+1,380 Strength, +2,400 Stamina, +710 Critical Strike', 'flavor' => 'Forged to shatter any obstacle.' ],
+            'waist'      => [ 'name' => 'Krakenbone Waistplate', 'type' => 'Plate', 'stats' => '+1,450 Strength, +2,600 Stamina, +680 Mastery', 'flavor' => 'Reinforced with colossal sea beast plates.' ],
+            'legs'       => [ 'name' => "Vindictive Combatant's Scaled Legguards", 'type' => 'Plate', 'stats' => '+1,590 Strength, +2,980 Stamina, +820 Haste', 'flavor' => 'Battle-hardened greaves of the Alliance.' ],
+            'feet'       => [ 'name' => 'Sabatons of the Illidari Crusade', 'type' => 'Plate', 'stats' => '+1,350 Strength, +2,450 Stamina, +690 Critical Strike', 'flavor' => 'Treads unyielding upon any battlefield.' ],
+            'wrists'     => [ 'name' => 'Duskwatch Plate Bracers', 'type' => 'Plate', 'stats' => '+1,290 Strength, +2,120 Stamina, +630 Versatility', 'flavor' => 'Polished vambraces of Suramar craftsmanship.' ],
+            'main_hand'  => [ 'name' => 'The Ashbringer', 'type' => 'Artifact Two-Hand Sword', 'quality' => 'artifact', 'stats' => '+2,890 Strength, +4,600 Stamina, +1,150 Critical Strike, +980 Mastery', 'flavor' => 'Blade of the Highlord, forged of pure Light to turn darkness to ash.' ],
+            'off_hand'   => [ 'name' => 'Truthguard, Light of the Highlord', 'type' => 'Artifact Shield', 'quality' => 'artifact', 'stats' => '+1,680 Strength, +2,850 Armor, +2,900 Stamina, +750 Versatility', 'flavor' => 'An unyielding aegis crafted by Titan Keeper Tyr.' ],
+        ],
+        'warrior' => [
+            'spec_title' => 'Arms Warrior',
+            'armor_type' => 'Plate',
+            'primary_stat' => 'Strength',
+            'head'       => [ 'name' => 'Greathelm of the Iron Colossus', 'type' => 'Plate', 'socket' => 'gem-red', 'stats' => '+1,420 Strength, +2,580 Stamina, +650 Haste', 'flavor' => 'Tempered in the volcanic pits of Blackrock.' ],
+            'shoulders'  => [ 'name' => 'Spaulders of the Shattered Mountain', 'type' => 'Plate', 'socket' => 'gemfinding', 'stats' => '+1,420 Strength, +2,580 Stamina, +710 Mastery', 'flavor' => 'Heavy stone and dark iron shoulderguards.' ],
+            'chest'      => [ 'name' => 'Cuirass of Unending Carnage', 'type' => 'Plate', 'stats' => '+1,620 Strength, +3,150 Stamina, +870 Critical Strike', 'flavor' => 'Scarred by a thousand battles.' ],
+            'hands'      => [ 'name' => 'Gauntlets of the Iron Juggernaut', 'type' => 'Plate', 'stats' => '+1,380 Strength, +2,400 Stamina, +720 Haste', 'flavor' => 'Imbued with unstoppable momentum.' ],
+            'waist'      => [ 'name' => 'Girdle of the Mountain King', 'type' => 'Plate', 'stats' => '+1,450 Strength, +2,600 Stamina, +690 Mastery', 'flavor' => 'Forged in the heart of Ironforge.' ],
+            'legs'       => [ 'name' => 'Legplates of the Unconquered', 'type' => 'Plate', 'stats' => '+1,590 Strength, +2,980 Stamina, +810 Versatility', 'flavor' => 'Worn by frontline champions.' ],
+            'feet'       => [ 'name' => 'Sabatons of Iron March', 'type' => 'Plate', 'stats' => '+1,350 Strength, +2,450 Stamina, +680 Critical Strike', 'flavor' => 'Leaves craters wherever the warrior treads.' ],
+            'wrists'     => [ 'name' => 'Heavy Titansteel Bracers', 'type' => 'Plate', 'stats' => '+1,290 Strength, +2,120 Stamina, +640 Versatility', 'flavor' => 'Heavy protection for swinging massive blades.' ],
+            'main_hand'  => [ 'name' => 'Strom\'kar, the Warbreaker', 'type' => 'Artifact Two-Hand Sword', 'quality' => 'artifact', 'stats' => '+2,890 Strength, +4,600 Stamina, +1,180 Critical Strike, +950 Haste', 'flavor' => 'Ancient broadsword that united the barbarian tribes of humanity.' ],
+            'off_hand'   => [ 'name' => 'Scale of the Earth-Warder', 'type' => 'Artifact Shield', 'quality' => 'artifact', 'stats' => '+1,680 Strength, +2,900 Armor, +2,900 Stamina, +780 Mastery', 'flavor' => 'Formed from an adamantine scale of Neltharion himself.' ],
+        ],
+        'mage' => [
+            'spec_title' => 'Frost & Arcane Mage',
+            'armor_type' => 'Cloth',
+            'primary_stat' => 'Intellect',
+            'head'       => [ 'name' => 'Crown of the Arcane Tempest', 'type' => 'Cloth', 'socket' => 'gem-blue', 'stats' => '+1,420 Intellect, +2,580 Stamina, +690 Critical Strike', 'flavor' => 'Crackles with raw temporal arcane energy.' ],
+            'shoulders'  => [ 'name' => 'Mantle of the Kirin Tor', 'type' => 'Cloth', 'socket' => 'gemfinding', 'stats' => '+1,420 Intellect, +2,580 Stamina, +720 Haste', 'flavor' => 'Embroidered with Violet Citadel enchantments.' ],
+            'chest'      => [ 'name' => 'Robes of the Grand Magister', 'type' => 'Cloth', 'stats' => '+1,620 Intellect, +3,150 Stamina, +880 Mastery', 'flavor' => 'Woven from enchanted celestial silk.' ],
+            'hands'      => [ 'name' => 'Gloves of Spellweaving', 'type' => 'Cloth', 'stats' => '+1,380 Intellect, +2,400 Stamina, +710 Critical Strike', 'flavor' => 'Runes sewn into every fingertip.' ],
+            'waist'      => [ 'name' => 'Cord of the Arcane Singularity', 'type' => 'Cloth', 'stats' => '+1,450 Intellect, +2,600 Stamina, +690 Haste', 'flavor' => 'Holds a miniaturized ley-line vortex.' ],
+            'legs'       => [ 'name' => 'Breeches of Dalaran Wisdom', 'type' => 'Cloth', 'stats' => '+1,590 Intellect, +2,980 Stamina, +810 Mastery', 'flavor' => 'Resistant to all forms of magical frost.' ],
+            'feet'       => [ 'name' => 'Slippers of the Frost Lord', 'type' => 'Cloth', 'stats' => '+1,350 Intellect, +2,450 Stamina, +670 Haste', 'flavor' => 'Allows silent gliding across frozen floors.' ],
+            'wrists'     => [ 'name' => 'Cuffs of Pure Ley-Light', 'type' => 'Cloth', 'stats' => '+1,290 Intellect, +2,120 Stamina, +620 Versatility', 'flavor' => 'Stabilizes rapid incantations.' ],
+            'main_hand'  => [ 'name' => 'Alun\'eth, Greatstaff of the Magna', 'type' => 'Artifact Staff', 'quality' => 'artifact', 'stats' => '+2,890 Intellect, +4,600 Stamina, +1,220 Mastery, +910 Haste', 'flavor' => 'An entity of pure arcane power trapped within an ancient staff.' ],
+            'off_hand'   => [ 'name' => 'Tome of the Celestial Arcanum', 'type' => 'Artifact Held In Off-hand', 'quality' => 'artifact', 'stats' => '+1,680 Intellect, +2,400 Stamina, +810 Critical Strike', 'flavor' => 'Contains secrets of time and space from ancient Quel\'Thalas.' ],
+        ],
+        'hunter' => [
+            'spec_title' => 'Marksmanship Hunter',
+            'armor_type' => 'Mail',
+            'primary_stat' => 'Agility',
+            'head'       => [ 'name' => 'Hood of the Ruthless Stalker', 'type' => 'Mail', 'socket' => 'gem-green', 'stats' => '+1,420 Agility, +2,580 Stamina, +680 Critical Strike', 'flavor' => 'Conceals the wearer completely in natural shadows.' ],
+            'shoulders'  => [ 'name' => 'Pauldrons of Unseen Flight', 'type' => 'Mail', 'socket' => 'gemfinding', 'stats' => '+1,420 Agility, +2,580 Stamina, +710 Mastery', 'flavor' => 'Lightweight hawk-feather mail pauldrons.' ],
+            'chest'      => [ 'name' => 'Hauberk of the Farstrider General', 'type' => 'Mail', 'stats' => '+1,620 Agility, +3,150 Stamina, +870 Haste', 'flavor' => 'Worn by Quel\'Thalas highest military commanders.' ],
+            'hands'      => [ 'name' => 'Gloves of the Hawkeye Archer', 'type' => 'Mail', 'stats' => '+1,380 Agility, +2,400 Stamina, +740 Critical Strike', 'flavor' => 'Supple leather grips engineered for rapid arrow release.' ],
+            'waist'      => [ 'name' => 'Belt of the Shadow Ranger', 'type' => 'Mail', 'stats' => '+1,450 Agility, +2,600 Stamina, +680 Mastery', 'flavor' => 'Pouches stocked with magical fletchings.' ],
+            'legs'       => [ 'name' => 'Leggings of the Silver Covenant', 'type' => 'Mail', 'stats' => '+1,590 Agility, +2,980 Stamina, +830 Versatility', 'flavor' => 'Tailored for relentless pursuit across rough terrain.' ],
+            'feet'       => [ 'name' => 'Boots of the Windrunner Clan', 'type' => 'Mail', 'stats' => '+1,350 Agility, +2,450 Stamina, +690 Haste', 'flavor' => 'Moves as silently as a falling autumn leaf.' ],
+            'wrists'     => [ 'name' => 'Bracers of the Silent Woods', 'type' => 'Mail', 'stats' => '+1,290 Agility, +2,120 Stamina, +630 Mastery', 'flavor' => 'Protects wrists against high-tension bowstrings.' ],
+            'main_hand'  => [ 'name' => 'Thas\'dorah, Legacy of the Windrunners', 'type' => 'Artifact Bow', 'quality' => 'artifact', 'stats' => '+2,890 Agility, +4,600 Stamina, +1,240 Critical Strike, +890 Mastery', 'flavor' => 'A peerless heirloom of the Sunstrider dynasty, imbued with the wind.' ],
+            'off_hand'   => [ 'name' => 'Windrunner\'s Quiver of Eternal Arrows', 'type' => 'Artifact Quiver', 'quality' => 'artifact', 'stats' => '+1,680 Agility, +2,400 Stamina, +780 Haste', 'flavor' => 'Conjures luminous spectral arrows from pure ambient ether.' ],
+        ],
+        'shaman' => [
+            'spec_title' => 'Enhancement Shaman',
+            'armor_type' => 'Mail',
+            'primary_stat' => 'Agility',
+            'head'       => [ 'name' => 'Headdress of Howling Storms', 'type' => 'Mail', 'socket' => 'gem-cyan', 'stats' => '+1,420 Agility, +2,580 Stamina, +670 Mastery', 'flavor' => 'Echoes with the voices of ancient storm spirits.' ],
+            'shoulders'  => [ 'name' => 'Shoulderplates of the Earthfury', 'type' => 'Mail', 'socket' => 'gemfinding', 'stats' => '+1,420 Agility, +2,580 Stamina, +710 Haste', 'flavor' => 'Hewn from volcanic obsidian rock.' ],
+            'chest'      => [ 'name' => 'Harness of the Earthen Ring', 'type' => 'Mail', 'stats' => '+1,620 Agility, +3,150 Stamina, +860 Mastery', 'flavor' => 'Empowered by communion with the elements.' ],
+            'hands'      => [ 'name' => 'Grips of the Thunderclap', 'type' => 'Mail', 'stats' => '+1,380 Agility, +2,400 Stamina, +730 Critical Strike', 'flavor' => 'Crackles with kinetic lightning upon contact.' ],
+            'waist'      => [ 'name' => 'Girdle of Molten Fury', 'type' => 'Mail', 'stats' => '+1,450 Agility, +2,600 Stamina, +690 Haste', 'flavor' => 'Smolders with residual magma heat.' ],
+            'legs'       => [ 'name' => 'Kilt of the Raging Tempest', 'type' => 'Mail', 'stats' => '+1,590 Agility, +2,980 Stamina, +820 Versatility', 'flavor' => 'Traditional shamanic battle garb.' ],
+            'feet'       => [ 'name' => 'Boots of the Farseer\'s Walk', 'type' => 'Mail', 'stats' => '+1,350 Agility, +2,450 Stamina, +680 Critical Strike', 'flavor' => 'Attuned to the subtle tremors of the earth.' ],
+            'wrists'     => [ 'name' => 'Bindings of the Stormcaller', 'type' => 'Mail', 'stats' => '+1,290 Agility, +2,120 Stamina, +640 Mastery', 'flavor' => 'Channels torrential elemental surges.' ],
+            'main_hand'  => [ 'name' => 'The Doomhammer', 'type' => 'Artifact One-Hand Mace', 'quality' => 'artifact', 'stats' => '+2,890 Agility, +4,600 Stamina, +1,190 Mastery, +940 Haste', 'flavor' => 'Forged on the elemental world of Draenor from granite and elemental oak.' ],
+            'off_hand'   => [ 'name' => 'Fury of the Stonemother', 'type' => 'Artifact Shield', 'quality' => 'artifact', 'stats' => '+1,680 Agility, +2,850 Armor, +2,900 Stamina, +760 Mastery', 'flavor' => 'Carved from the deepest living bedrock of Deepholm.' ],
+        ],
+    ];
+
+    $cfg = $class_specs[ $rpg_class ] ?? $class_specs['paladin'];
+
+    // Left Column slots (8)
+    $items = [
+        'head' => [
+            'slot_name' => 'Head',
+            'name'      => $cfg['head']['name'],
+            'ilvl'      => $base_ilvl - 18,
+            'quality'   => 'epic',
+            'type'      => $cfg['head']['type'],
+            'socket'    => $cfg['head']['socket'] ?? 'gem-green',
+            'stats'     => $cfg['head']['stats'],
+            'flavor'    => $cfg['head']['flavor'],
+            'icon'      => '👑',
+        ],
+        'neck' => [
+            'slot_name' => 'Neck',
+            'name'      => 'Zealous Timestone Pendant',
+            'ilvl'      => $base_ilvl - 43,
+            'quality'   => 'epic',
+            'type'      => 'Miscellaneous',
+            'socket'    => '',
+            'stats'     => '+1,150 Stamina, +840 Critical Strike, +780 Haste',
+            'flavor'    => 'Pulsates in sync with the heartbeat of temporal sands.',
+            'icon'      => '📿',
+        ],
+        'shoulders' => [
+            'slot_name' => 'Shoulders',
+            'name'      => $cfg['shoulders']['name'],
+            'ilvl'      => $base_ilvl - 18,
+            'quality'   => 'epic',
+            'type'      => $cfg['shoulders']['type'],
+            'socket'    => 'gemfinding',
+            'stats'     => $cfg['shoulders']['stats'],
+            'flavor'    => $cfg['shoulders']['flavor'],
+            'icon'      => '🛡️',
+        ],
+        'back' => [
+            'slot_name' => 'Back',
+            'name'      => 'Greatcloak of the Highlord',
+            'ilvl'      => $base_ilvl - 13,
+            'quality'   => 'epic',
+            'type'      => 'Cloak',
+            'socket'    => '',
+            'stats'     => '+1,180 ' . $cfg['primary_stat'] . ', +1,980 Stamina, +540 Mastery',
+            'flavor'    => 'Woven with gold threads awarded for legendary service.',
+            'icon'      => '🧣',
+        ],
+        'chest' => [
+            'slot_name' => 'Chest',
+            'name'      => $cfg['chest']['name'],
+            'ilvl'      => $base_ilvl - 13,
+            'quality'   => 'epic',
+            'type'      => $cfg['chest']['type'],
+            'socket'    => '',
+            'stats'     => $cfg['chest']['stats'],
+            'flavor'    => $cfg['chest']['flavor'],
+            'icon'      => '🦺',
+        ],
+        'shirt' => [
+            'slot_name' => 'Shirt',
+            'name'      => 'Artisan Linen Doublet',
+            'ilvl'      => 1,
+            'quality'   => 'common',
+            'type'      => 'Shirt',
+            'socket'    => '',
+            'stats'     => 'Cosmetic Attire',
+            'flavor'    => 'Tailor-crafted immaculate linen shirt.',
+            'icon'      => '👕',
+        ],
+        'tabard' => [
+            'slot_name' => 'Tabard',
+            'name'      => 'SGM Guild Tabard',
+            'ilvl'      => 1,
+            'quality'   => 'rare',
+            'type'      => 'Tabard',
+            'socket'    => '',
+            'stats'     => 'Guild Uniform: Sinar Graha Mandiri',
+            'flavor'    => 'Emblazoned with the golden crest of the Guild.',
+            'icon'      => '🎗️',
+        ],
+        'wrists' => [
+            'slot_name' => 'Wrists',
+            'name'      => $cfg['wrists']['name'],
+            'ilvl'      => $base_ilvl - 3,
+            'quality'   => 'epic',
+            'type'      => $cfg['wrists']['type'],
+            'socket'    => '',
+            'stats'     => $cfg['wrists']['stats'],
+            'flavor'    => $cfg['wrists']['flavor'],
+            'icon'      => '🧤',
+        ],
+
+        // Right Column slots (8)
+        'hands' => [
+            'slot_name' => 'Hands',
+            'name'      => $cfg['hands']['name'],
+            'ilvl'      => $base_ilvl - 3,
+            'quality'   => 'epic',
+            'type'      => $cfg['hands']['type'],
+            'socket'    => '',
+            'stats'     => $cfg['hands']['stats'],
+            'flavor'    => $cfg['hands']['flavor'],
+            'icon'      => '🥊',
+        ],
+        'waist' => [
+            'slot_name' => 'Waist',
+            'name'      => $cfg['waist']['name'],
+            'ilvl'      => $base_ilvl - 13,
+            'quality'   => 'epic',
+            'type'      => $cfg['waist']['type'],
+            'socket'    => '',
+            'stats'     => $cfg['waist']['stats'],
+            'flavor'    => $cfg['waist']['flavor'],
+            'icon'      => '🥋',
+        ],
+        'legs' => [
+            'slot_name' => 'Legs',
+            'name'      => $cfg['legs']['name'],
+            'ilvl'      => $base_ilvl - 18,
+            'quality'   => 'epic',
+            'type'      => $cfg['legs']['type'],
+            'socket'    => '',
+            'stats'     => $cfg['legs']['stats'],
+            'flavor'    => $cfg['legs']['flavor'],
+            'icon'      => '👖',
+        ],
+        'feet' => [
+            'slot_name' => 'Feet',
+            'name'      => $cfg['feet']['name'],
+            'ilvl'      => $base_ilvl - 13,
+            'quality'   => 'epic',
+            'type'      => $cfg['feet']['type'],
+            'socket'    => '',
+            'stats'     => $cfg['feet']['stats'],
+            'flavor'    => $cfg['feet']['flavor'],
+            'icon'      => '👢',
+        ],
+        'finger1' => [
+            'slot_name' => 'Ring 1',
+            'name'      => 'Liadrin\'s Fury Unleashed',
+            'ilvl'      => $base_ilvl + 47,
+            'quality'   => 'legendary',
+            'type'      => 'Finger',
+            'socket'    => 'gem-gold',
+            'stats'     => '+2,480 Stamina, +1,240 Critical Strike, +980 Mastery',
+            'flavor'    => 'Equip: While Holy or Productive Power is active, productivity is increased by 15%.',
+            'icon'      => '💍',
+        ],
+        'finger2' => [
+            'slot_name' => 'Ring 2',
+            'name'      => 'Ring of Exclusive Servitude',
+            'ilvl'      => $base_ilvl - 13,
+            'quality'   => 'epic',
+            'type'      => 'Finger',
+            'socket'    => '',
+            'stats'     => '+1,980 Stamina, +910 Haste, +820 Versatility',
+            'flavor'    => 'Inscribed with an unbreakable oath of loyalty to the guild.',
+            'icon'      => '💍',
+        ],
+        'trinket1' => [
+            'slot_name' => 'Trinket 1',
+            'name'      => 'Coagulated Nightwell Residue',
+            'ilvl'      => $base_ilvl - 53,
+            'quality'   => 'epic',
+            'type'      => 'Trinket',
+            'socket'    => '',
+            'stats'     => '+1,420 Mastery, Use: Channel an arcane barrier absorbing incoming delays.',
+            'flavor'    => 'Extract from the glowing font of Suramar Nightwell.',
+            'icon'      => '🔮',
+        ],
+        'trinket2' => [
+            'slot_name' => 'Trinket 2',
+            'name'      => 'Archimonde\'s Hatred Reborn',
+            'ilvl'      => $base_ilvl + 47,
+            'quality'   => 'legendary',
+            'type'      => 'Trinket',
+            'socket'    => 'gem-green',
+            'stats'     => '+2,850 Stamina, Equip: Completing tasks releases an inspiring pulse to all teammates.',
+            'flavor'    => 'Purified demon essence turned to serve righteous diligence.',
+            'icon'      => '🧿',
+        ],
+
+        // Bottom Weapon slots (2)
+        'main_hand' => [
+            'slot_name' => 'Main Hand',
+            'name'      => $cfg['main_hand']['name'],
+            'ilvl'      => $base_ilvl + 17,
+            'quality'   => $cfg['main_hand']['quality'],
+            'type'      => $cfg['main_hand']['type'],
+            'socket'    => 'gem-gold',
+            'stats'     => $cfg['main_hand']['stats'],
+            'flavor'    => $cfg['main_hand']['flavor'],
+            'icon'      => '🗡️',
+        ],
+        'off_hand' => [
+            'slot_name' => 'Off Hand',
+            'name'      => $cfg['off_hand']['name'],
+            'ilvl'      => $base_ilvl + 17,
+            'quality'   => $cfg['off_hand']['quality'],
+            'type'      => $cfg['off_hand']['type'],
+            'socket'    => '',
+            'stats'     => $cfg['off_hand']['stats'],
+            'flavor'    => $cfg['off_hand']['flavor'],
+            'icon'      => '🛡️',
+        ],
+    ];
+
+    // Calculate exact Average ILVL (excluding shirt and tabard)
+    $valid_ilvl_slots = [ 'head', 'neck', 'shoulders', 'back', 'chest', 'wrists', 'hands', 'waist', 'legs', 'feet', 'finger1', 'finger2', 'trinket1', 'trinket2', 'main_hand', 'off_hand' ];
+    $total_ilvl = 0;
+    foreach ( $valid_ilvl_slots as $s ) {
+        $total_ilvl += $items[ $s ]['ilvl'];
+    }
+    $avg_ilvl = (int) round( $total_ilvl / count( $valid_ilvl_slots ) );
+
+    return [
+        'rpg_class'    => $rpg_class,
+        'spec_title'   => $cfg['spec_title'],
+        'armor_type'   => $cfg['armor_type'],
+        'primary_stat' => $cfg['primary_stat'],
+        'items'        => $items,
+        'avg_ilvl'     => $avg_ilvl,
+    ];
+}
+
+function sgd_get_character_ilvl( $user_id = null ) {
+    $eq = sgd_get_character_equipment( $user_id );
+    return $eq['avg_ilvl'];
+}
+
 // Query Level 30 Candidates for Admin Promotion Review
 function sgd_get_level_30_candidates() {
     $employees = get_users( [ 'role' => 'employee' ] );
@@ -2307,6 +2664,21 @@ function sgd_handle_form_actions() {
             sgd_set_flash( 'success', '🎨 Hero Avatar updated to: ' . esc_html( $avatar_icon ) );
         }
         wp_safe_redirect( sgd_get_portal_url() );
+        exit;
+    }
+
+    // Change RPG Character Class Action (WoW Armory)
+    if ( $action === 'sgd_change_rpg_class' ) {
+        $rpg_class = sanitize_text_field( $_POST['rpg_class'] ?? 'paladin' );
+        if ( ! empty( $rpg_class ) ) {
+            sgd_set_user_rpg_class( $current_user_id, $rpg_class );
+            if ( ! empty( $_POST['is_ajax'] ) ) {
+                wp_send_json_success( [ 'rpg_class' => $rpg_class ] );
+            }
+            sgd_set_flash( 'celebration', '⚔️ Character Class updated to: ' . ucfirst( $rpg_class ) . '!' );
+        }
+        $redirect_to = sanitize_text_field( $_POST['redirect_to'] ?? 'character' );
+        wp_safe_redirect( sgd_get_portal_url( $redirect_to ) );
         exit;
     }
 

@@ -140,10 +140,12 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
     <div class="sgd-dashboard-hero">
         <div class="sgd-hero-top">
             <div class="sgd-hero-profile">
-                <div class="sgd-hero-avatar-ring">
-                    <span><?php echo $home_avatar; ?></span>
-                    <span class="sgd-hero-lvl-tag">Lv.<?php echo $home_xp['level']; ?></span>
-                </div>
+                <a href="<?php echo esc_url( sgd_get_portal_url( 'character' ) ); ?>" title="Buka Lembar Karakter (Armory)" style="text-decoration:none;">
+                    <div class="sgd-hero-avatar-ring">
+                        <span><?php echo $home_avatar; ?></span>
+                        <span class="sgd-hero-lvl-tag">Lv.<?php echo $home_xp['level']; ?></span>
+                    </div>
+                </a>
                 <div>
                     <h2 class="sgd-hero-greeting">
                         Selamat Datang kembali, <?php echo $is_logged_in ? esc_html($current_user->display_name) : 'Guest Hero'; ?>!
@@ -157,7 +159,10 @@ $all_teams = function_exists('sgd_get_all_quest_teams') ? sgd_get_all_quest_team
                 </div>
             </div>
 
-            <div style="display:flex; align-items:center; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <a href="<?php echo esc_url( sgd_get_portal_url( 'character' ) ); ?>" class="sgd-btn" style="background:linear-gradient(180deg, #3a2205 0%, #1a1002 100%); border:1px solid var(--wow-gold); color:var(--wow-gold-light); font-weight:bold; box-shadow:0 0 10px rgba(255,215,0,0.25);">
+                    🛡️ Lembar Karakter (Armory) ➔
+                </a>
                 <a href="<?php echo esc_url( sgd_get_portal_url( 'quests' ) ); ?>" class="sgd-btn sgd-btn-gold" style="font-weight:bold; box-shadow:0 0 15px rgba(255,215,0,0.35);">
                     🎯 Buka Papan Kanban ➔
                 </a>

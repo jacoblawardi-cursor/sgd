@@ -71,8 +71,10 @@ $flash = sgd_get_flash();
             $lvl30_candidates = $is_admin ? sgd_get_level_30_candidates() : [];
             ?>
             <div class="sgd-unit-frame">
-                <div class="sgd-portrait sgd-fancy-portrait <?php echo $is_lvl30_plus ? 'sgd-portrait-lvl30' : ''; ?>" title="<?php echo $is_logged_in ? 'Click to Change Avatar' : ''; ?>">
-                    <span class="sgd-portrait-icon"><?php echo $user_avatar; ?></span>
+                <div class="sgd-portrait sgd-fancy-portrait <?php echo $is_lvl30_plus ? 'sgd-portrait-lvl30' : ''; ?>" title="<?php echo $is_logged_in ? 'Click to open Character Armory' : ''; ?>">
+                    <a href="<?php echo esc_url( sgd_get_portal_url( 'character' ) ); ?>" class="sgd-portrait-icon-link" style="text-decoration:none; display:flex; align-items:center; justify-content:center; width:100%; height:100%;" title="Buka Lembar Karakter (Armory)">
+                        <span class="sgd-portrait-icon"><?php echo $user_avatar; ?></span>
+                    </a>
                     <?php if ( $is_logged_in ): ?>
                         <button type="button" class="sgd-avatar-modal-trigger" title="Change Hero Avatar">✎</button>
                     <?php endif; ?>
@@ -302,6 +304,9 @@ $flash = sgd_get_flash();
         <nav class="sgd-nav-tabs">
             <a href="<?php echo esc_url( sgd_get_portal_url() ); ?>" class="sgd-tab-btn" style="border-color:var(--wow-gold-light); color:var(--wow-gold-light);">
                 ◀ DASHBOARD
+            </a>
+            <a href="<?php echo esc_url( sgd_get_portal_url( 'character' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'character' ) ? 'active' : ''; ?>" style="color:#f39c12; border-color:#f39c12;">
+                🛡️ CHARACTER
             </a>
             <a href="<?php echo esc_url( sgd_get_portal_url( 'achievements' ) ); ?>" class="sgd-tab-btn <?php echo ( $active_tab === 'achievements' ) ? 'active' : ''; ?>">
                 🏆 ACHIEVEMENT
