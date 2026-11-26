@@ -1455,7 +1455,7 @@ foreach ( $emp_unlocked_raw as $eu ) {
                 <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:12px;">
                     <div style="font-family:var(--font-pixel); font-size:8px; color:#8fa0bd; margin-bottom:4px;">STATUS SINKRONISASI:</div>
                     <div style="color:#ffffff; font-size:11px;">Terakhir cek: <strong><?php echo esc_html( $last_sync_time ); ?></strong></div>
-                    <div style="font-size:10px; color:#8fa0bd; margin-top:4px;">Background Auto-Check: Tiap 1 Jam via WP-Cron</div>
+                    <div style="font-size:10px; color:#8fa0bd; margin-top:4px;">Background Auto-Check: Tiap 5 Menit via WP-Cron</div>
                 </div>
             </div>
 

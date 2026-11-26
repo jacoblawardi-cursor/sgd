@@ -426,9 +426,23 @@ add_action( 'init', function() {
 } );
 
 /**
- * Register WP-Cron hook for background syncing
+ * Register 5-Minute Cron Schedule Interval
  */
-if ( ! wp_next_scheduled( 'sgd_check_email_tasks_cron' ) ) {
-    wp_schedule_event( time(), 'hourly', 'sgd_check_email_tasks_cron' );
+add_filter( 'cron_schedules', function( $schedules ) {
+    if ( ! isset( $schedules['every_five_minutes'] ) ) {
+        $schedules['every_five_minutes'] = [
+            'interval' => 300, // 5 minutes in seconds
+            'display'  => __( 'Every 5 Minutes (SGD Email Bot)', 'sgd' ),
+        ];
+    }
+    return $schedules;
+} );
+
+/**
+ * Register & Manage WP-Cron hook for background syncing (Every 5 Minutes)
+ */
+if ( wp_get_schedule( 'sgd_check_email_tasks_cron' ) !== 'every_five_minutes' ) {
+    wp_clear_scheduled_hook( 'sgd_check_email_tasks_cron' );
+    wp_schedule_event( time(), 'every_five_minutes', 'sgd_check_email_tasks_cron' );
 }
 add_action( 'sgd_check_email_tasks_cron', 'sgd_process_email_tasks' );
