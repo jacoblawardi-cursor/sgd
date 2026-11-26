@@ -804,7 +804,7 @@ $kanban_columns = [
 
                                         <div class="sgd-card-footer-right">
                                             <!-- Assigned Member Avatars -->
-                                            <div class="sgd-card-member-chips" title="<?php echo ! empty( $task->members ) ? esc_attr( 'Anggota: ' . implode( ', ', array_column( $task->members, 'display_name' ) ) ) : 'Belum ada anggota ditugaskan'; ?>">
+                                            <div class="sgd-card-member-chips" onclick="event.stopPropagation(); sgdQuickEditTaskMembers(<?php echo esc_attr( $task->id ); ?>);" style="cursor:pointer;" title="<?php echo ! empty( $task->members ) ? esc_attr( 'Anggota: ' . implode( ', ', array_column( $task->members, 'display_name' ) ) . ' • Klik untuk edit anggota' ) : 'Belum ada anggota ditugaskan. Klik untuk menugaskan anggota.'; ?>">
                                                 <?php if ( ! empty( $task->members ) ): ?>
                                                     <?php foreach ( $task->members as $idx => $tm ): 
                                                         $tm_job = function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $tm['id'] ) : 'Staff';
@@ -1086,9 +1086,24 @@ $kanban_columns = [
                     <div class="sgd-task-modal-main">
                         
                         <!-- Task Title Input -->
-                        <div class="sgd-form-group">
+                        <div class="sgd-form-group" style="margin-bottom:12px;">
                             <label class="sgd-form-label" for="modal-task-title">Judul Tugas (Task Title):</label>
                             <input type="text" name="task_title" id="modal-task-title" class="sgd-form-input sgd-title-input-large" required maxlength="255">
+                        </div>
+
+                        <!-- ASSIGNED MEMBERS QUICK SHOWCASE & JUMP BAR -->
+                        <div class="sgd-modal-members-header-bar" style="background:#0a0f1d; border:1.5px solid rgba(0,229,255,0.4); border-radius:8px; padding:10px 14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <span style="font-size:11px; font-weight:bold; color:#00e5ff; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
+                                    👥 Anggota Bertugas:
+                                </span>
+                                <div id="modal-active-members-chips" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                    <span style="font-size:11px; color:#8fa0bd; font-style:italic;">Memuat anggota...</span>
+                                </div>
+                            </div>
+                            <button type="button" class="sgd-btn sgd-btn-sm sgd-btn-blue" id="modal-btn-jump-members" style="font-size:11px; padding:4px 12px; font-weight:bold; white-space:nowrap;" title="Lihat dan centang anggota yang ditugaskan di panel samping">
+                                ✏️ Edit Anggota ➔
+                            </button>
                         </div>
 
                         <!-- SECRET TASK TOGGLE BANNER -->
@@ -1273,6 +1288,39 @@ $kanban_columns = [
                             <?php endif; ?>
                         </div>
 
+                        <!-- Assigned Members Checklist (PROMINENT TOP POSITION) -->
+                        <div class="sgd-sidebar-widget" id="modal-task-members-widget" style="background:rgba(0, 229, 255, 0.06); border:1.5px solid #00e5ff; box-shadow:0 0 10px rgba(0,229,255,0.15);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <label class="sgd-form-label" style="margin:0; color:#00e5ff; font-weight:bold; font-size:12px;">
+                                    👥 Tugaskan Anggota Tugas:
+                                </label>
+                                <span style="font-size:10px; color:#8fa0bd; font-family:var(--font-pixel);" id="modal-assigned-count-label">0 Dipilih</span>
+                            </div>
+                            <div class="sgd-task-members-selector" id="modal-task-members-list">
+                                <?php 
+                                $team_members_pool = $current_team ? $current_team->members : [];
+                                if ( empty( $team_members_pool ) ) {
+                                    foreach ( $users as $u ) {
+                                        $team_members_pool[] = [
+                                            'id'           => $u->ID,
+                                            'display_name' => $u->display_name,
+                                            'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $u->ID ) : '👤',
+                                            'job_class'    => function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $u->ID ) : 'Staff',
+                                        ];
+                                    }
+                                }
+                                foreach ( $team_members_pool as $tmb ):
+                                ?>
+                                    <label class="sgd-task-member-option">
+                                        <input type="checkbox" name="assigned_members[]" value="<?php echo esc_attr( $tmb['id'] ); ?>" class="modal-assigned-member-check" data-user-id="<?php echo esc_attr( $tmb['id'] ); ?>" data-user-name="<?php echo esc_attr( $tmb['display_name'] ); ?>" data-user-avatar="<?php echo esc_attr( $tmb['avatar'] ); ?>">
+                                        <span class="sgd-tmb-avatar"><?php echo $tmb['avatar']; ?></span>
+                                        <span class="sgd-tmb-name" style="flex:1;"><?php echo esc_html( $tmb['display_name'] ); ?></span>
+                                        <span style="font-size:9px; color:#8fa0bd;"><?php echo esc_html( $tmb['job_class'] ?? 'Staff' ); ?></span>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
                         <!-- QUEST LEVEL RANK & SCALING WIDGET (S/A/B/C/D/E/F) -->
                         <div class="sgd-sidebar-widget" id="modal-quest-level-widget">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -1404,33 +1452,6 @@ $kanban_columns = [
                                 <button type="button" class="sgd-preset-pill" onclick="sgdSetDeadlinePreset(3);">+3 Hari</button>
                                 <button type="button" class="sgd-preset-pill" onclick="sgdSetDeadlinePreset(7);">+1 Minggu</button>
                                 <button type="button" class="sgd-preset-pill" onclick="document.getElementById('modal-task-deadline').value='';">Hapus</button>
-                            </div>
-                        </div>
-
-                        <!-- Assigned Members Checklist -->
-                        <div class="sgd-sidebar-widget">
-                            <label class="sgd-form-label">Tugaskan Anggota Tugas Ini:</label>
-                            <div class="sgd-task-members-selector" id="modal-task-members-list">
-                                <?php 
-                                $team_members_pool = $current_team ? $current_team->members : [];
-                                if ( empty( $team_members_pool ) ) {
-                                    foreach ( $users as $u ) {
-                                        $team_members_pool[] = [
-                                            'id'           => $u->ID,
-                                            'display_name' => $u->display_name,
-                                            'avatar'       => function_exists('sgd_get_user_avatar') ? sgd_get_user_avatar( $u->ID ) : '👤',
-                                            'job_class'    => function_exists('sgd_get_user_job_class') ? sgd_get_user_job_class( $u->ID ) : 'Staff',
-                                        ];
-                                    }
-                                }
-                                foreach ( $team_members_pool as $tmb ):
-                                ?>
-                                    <label class="sgd-task-member-option">
-                                        <input type="checkbox" name="assigned_members[]" value="<?php echo esc_attr( $tmb['id'] ); ?>" class="modal-assigned-member-check" data-user-id="<?php echo esc_attr( $tmb['id'] ); ?>">
-                                        <span class="sgd-tmb-avatar"><?php echo $tmb['avatar']; ?></span>
-                                        <span class="sgd-tmb-name"><?php echo esc_html( $tmb['display_name'] ); ?></span>
-                                    </label>
-                                <?php endforeach; ?>
                             </div>
                         </div>
 

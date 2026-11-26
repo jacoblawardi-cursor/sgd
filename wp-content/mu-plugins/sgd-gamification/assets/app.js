@@ -1530,8 +1530,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Assigned Members
             const assignedIds = (task.assigned_members || '').toString().split(',').map(s => s.trim());
             document.querySelectorAll('.modal-assigned-member-check').forEach(chk => {
-                chk.checked = assignedIds.includes(chk.getAttribute('data-user-id'));
+                const isChecked = assignedIds.includes(chk.getAttribute('data-user-id'));
+                chk.checked = isChecked;
+                const opt = chk.closest('.sgd-task-member-option');
+                if (opt) opt.classList.toggle('checked', isChecked);
             });
+            if (typeof updateModalMembersBar === 'function') {
+                updateModalMembersBar();
+            }
 
             // Secret Task Toggle
             const secretInput = document.getElementById('modal-task-is-secret');
@@ -1745,6 +1751,74 @@ document.addEventListener('DOMContentLoaded', function() {
         window.updateQuestLevelPreview = updateQuestLevelPreview;
         window.normalizeQuestRank = normalizeQuestRank;
         window.SGD_QUEST_RANKS = SGD_QUEST_RANKS;
+
+        // ========================================================
+        // Task Assigned Members Dynamic Showcase & Quick Edit
+        // ========================================================
+        function updateModalMembersBar() {
+            const chipsContainer = document.getElementById('modal-active-members-chips');
+            const countLabel = document.getElementById('modal-assigned-count-label');
+            const checkedBoxes = Array.from(document.querySelectorAll('.modal-assigned-member-check:checked'));
+
+            if (countLabel) {
+                countLabel.textContent = `${checkedBoxes.length} Dipilih`;
+            }
+
+            if (!chipsContainer) return;
+
+            if (checkedBoxes.length === 0) {
+                chipsContainer.innerHTML = '<span style="font-size:11px; color:#8fa0bd; font-style:italic;">Belum ada anggota ditugaskan</span>';
+                return;
+            }
+
+            chipsContainer.innerHTML = checkedBoxes.map(chk => {
+                const name = chk.getAttribute('data-user-name') || 'Anggota';
+                const avatar = chk.getAttribute('data-user-avatar') || '👤';
+                return `<span style="background:rgba(0, 229, 255, 0.15); border:1px solid #00e5ff; color:#00e5ff; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:5px;">
+                    <span>${avatar}</span>
+                    <span>${name}</span>
+                </span>`;
+            }).join('');
+        }
+
+        // Bind member checkboxes change events
+        document.querySelectorAll('.modal-assigned-member-check').forEach(chk => {
+            chk.addEventListener('change', function() {
+                const opt = this.closest('.sgd-task-member-option');
+                if (opt) {
+                    opt.classList.toggle('checked', this.checked);
+                }
+                updateModalMembersBar();
+            });
+        });
+
+        // Quick jump button to member selector
+        const jumpMembersBtn = document.getElementById('modal-btn-jump-members');
+        if (jumpMembersBtn) {
+            jumpMembersBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const widget = document.getElementById('modal-task-members-widget');
+                if (widget) {
+                    widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    widget.classList.add('sgd-widget-highlight');
+                    setTimeout(() => widget.classList.remove('sgd-widget-highlight'), 1800);
+                }
+            });
+        }
+
+        // Global function to quick-edit task members from Kanban card chips
+        window.sgdQuickEditTaskMembers = function(taskId) {
+            openTaskDetail(taskId);
+            setTimeout(() => {
+                const widget = document.getElementById('modal-task-members-widget');
+                if (widget) {
+                    widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    widget.classList.add('sgd-widget-highlight');
+                    setTimeout(() => widget.classList.remove('sgd-widget-highlight'), 1800);
+                }
+            }, 200);
+        };
+        window.updateModalMembersBar = updateModalMembersBar;
 
         // ========================================================
         // Label & Tag Manager (Admin Need Button & Color Options)
