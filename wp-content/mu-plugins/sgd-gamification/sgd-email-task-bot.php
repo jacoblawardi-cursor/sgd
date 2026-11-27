@@ -36,6 +36,15 @@ function sgd_ai_decipher_email( $subject, $body, $from ) {
         $gemini_key = SGD_GEMINI_API_KEY;
     }
 
+    // Get team members for AI prompt context
+    $all_users = get_users();
+    $roster_hints = [];
+    foreach ( $all_users as $u ) {
+        $first_name = explode( ' ', $u->display_name )[0];
+        $roster_hints[] = "{$u->display_name} (tag: @{$first_name} or @{$u->user_login})";
+    }
+    $roster_str = implode( ', ', $roster_hints );
+
     $system_prompt = "You are an intelligent project management AI assistant for a gamified workplace (SGD Quests).
 Your role is to decipher an incoming email and convert it into a well-structured task card.
 
@@ -44,6 +53,10 @@ From: {$from}
 Subject: {$subject}
 Body:
 {$body}
+
+Available team members in the system:
+{$roster_str}
+If the email mentions or tags any member (e.g. '@jaina' or '@jainabeli' or 'Jaina'), extract their exact first name or username into 'assigned_names' (e.g. ['jaina']).
 
 Guidelines for Quest Rank (S/A/B/C/D/E/F):
 - S: High-level policy, company-wide, long-term strategic initiatives (Gate Lv 20).
@@ -280,8 +293,16 @@ function sgd_process_email_tasks() {
                 foreach ( $all_users as $u ) {
                     $u_login = strtolower( $u->user_login );
                     $u_disp  = strtolower( $u->display_name );
+                    $u_first = strtolower( explode( ' ', $u->display_name )[0] );
                     $u_email = strtolower( $u->user_email );
-                    if ( strpos( $u_disp, $name_clean ) !== false || strpos( $u_login, $name_clean ) !== false || strpos( $u_email, $name_clean ) !== false ) {
+
+                    if ( 
+                        strpos( $u_disp, $name_clean ) !== false || 
+                        strpos( $u_login, $name_clean ) !== false || 
+                        strpos( $u_email, $name_clean ) !== false ||
+                        ( strlen( $u_first ) >= 3 && strpos( $name_clean, $u_first ) !== false ) ||
+                        ( strlen( $u_login ) >= 3 && strpos( $name_clean, $u_login ) !== false )
+                    ) {
                         $assigned_ids[] = (int) $u->ID;
                     }
                 }
